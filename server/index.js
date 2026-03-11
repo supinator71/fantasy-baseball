@@ -1,0 +1,42 @@
+require('dotenv').config();
+const express = require('express');
+const session = require('express-session');
+const FileStore = require('session-file-store')(session);
+const cors = require('cors');
+const path = require('path');
+
+const authRoutes = require('./routes/auth');
+const yahooRoutes = require('./routes/yahoo');
+const claudeRoutes = require('./routes/claude');
+const draftRoutes = require('./routes/draft');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors({ origin: true, credentials: true }));
+app.use(express.json());
+
+app.use(session({
+  store: new FileStore({ path: './server/db/sessions', retries: 0, logFn: () => {} }),
+  secret: process.env.SESSION_SECRET || 'fantasy-baseball-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 }
+}));
+
+app.use('/auth', authRoutes);
+app.use('/api/yahoo', yahooRoutes);
+app.use('/api/claude', claudeRoutes);
+app.use('/api/draft', draftRoutes);
+
+// Serve React frontend in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+  });
+}
+
+app.listen(PORT, () => {
+  console.log(`Fantasy Baseball Server running on port ${PORT}`);
+});

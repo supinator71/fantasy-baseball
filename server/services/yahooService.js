@@ -1,0 +1,106 @@
+const axios = require('axios');
+const xml2js = require('xml2js');
+const db = require('../db/database');
+
+const YAHOO_API_BASE = 'https://fantasysports.yahooapis.com/fantasy/v2';
+
+async function getAccessToken() {
+  const row = db.prepare('SELECT * FROM tokens WHERE id = 1').get();
+  if (!row) throw new Error('Not authenticated with Yahoo');
+
+  // Auto-refresh if expired
+  if (Date.now() > row.expires_at - 60000) {
+    const axios2 = require('axios');
+    const credentials = Buffer.from(
+      `${process.env.YAHOO_CLIENT_ID}:${process.env.YAHOO_CLIENT_SECRET}`
+    ).toString('base64');
+
+    const response = await axios2.post('https://api.login.yahoo.com/oauth2/get_token',
+      new URLSearchParams({ grant_type: 'refresh_token', refresh_token: row.refresh_token }),
+      { headers: { 'Authorization': `Basic ${credentials}`, 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+
+    const { access_token, refresh_token, expires_in } = response.data;
+    const expiresAt = Date.now() + expires_in * 1000;
+    db.prepare('UPDATE tokens SET access_token = ?, refresh_token = ?, expires_at = ? WHERE id = 1')
+      .run(access_token, refresh_token, expiresAt);
+    return access_token;
+  }
+
+  return row.access_token;
+}
+
+async function yahooGet(endpoint) {
+  const token = await getAccessToken();
+  const response = await axios.get(`${YAHOO_API_BASE}${endpoint}?format=json`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data;
+}
+
+async function getLeagues() {
+  const data = await yahooGet('/users;use_login=1/games;game_keys=mlb/leagues');
+  const leagues = data.fantasy_content?.users?.[0]?.user?.[1]?.games?.[0]?.game?.[1]?.leagues;
+  if (!leagues) return [];
+
+  const result = [];
+  const count = leagues['@attributes']?.count || 0;
+  for (let i = 0; i < count; i++) {
+    const league = leagues[i]?.league?.[0];
+    if (league) result.push(league);
+  }
+  return result;
+}
+
+async function getLeague(leagueKey) {
+  const data = await yahooGet(`/league/${leagueKey}/settings`);
+  return data.fantasy_content?.league;
+}
+
+async function getRoster(leagueKey, teamKey) {
+  const data = await yahooGet(`/team/${teamKey}/roster/players`);
+  return data.fantasy_content?.team?.[1]?.roster?.[0]?.players;
+}
+
+async function getStandings(leagueKey) {
+  const data = await yahooGet(`/league/${leagueKey}/standings`);
+  return data.fantasy_content?.league?.[1]?.standings?.[0]?.teams;
+}
+
+async function getScoreboard(leagueKey) {
+  const data = await yahooGet(`/league/${leagueKey}/scoreboard`);
+  return data.fantasy_content?.league?.[1]?.scoreboard?.[0]?.matchups;
+}
+
+async function getPlayers(leagueKey, status = 'A', start = 0) {
+  const data = await yahooGet(`/league/${leagueKey}/players;status=${status};start=${start};count=25`);
+  return data.fantasy_content?.league?.[1]?.players;
+}
+
+async function getDraftResults(leagueKey) {
+  const data = await yahooGet(`/league/${leagueKey}/draftresults`);
+  return data.fantasy_content?.league?.[1]?.draft_results;
+}
+
+async function getTransactions(leagueKey) {
+  const data = await yahooGet(`/league/${leagueKey}/transactions;type=waiver`);
+  return data.fantasy_content?.league?.[1]?.transactions;
+}
+
+async function getPlayerStats(leagueKey, playerKey) {
+  const data = await yahooGet(`/league/${leagueKey}/players;player_keys=${playerKey}/stats`);
+  return data.fantasy_content?.league?.[1]?.players?.[0]?.player;
+}
+
+module.exports = {
+  getLeagues,
+  getLeague,
+  getRoster,
+  getStandings,
+  getScoreboard,
+  getPlayers,
+  getDraftResults,
+  getTransactions,
+  getPlayerStats,
+  getAccessToken
+};
