@@ -13,6 +13,9 @@ const draftRoutes = require('./routes/draft');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Required for Railway (behind reverse proxy) - enables secure cookies
+app.set('trust proxy', 1);
+
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 

@@ -8,19 +8,24 @@ const YAHOO_TOKEN_URL = 'https://api.login.yahoo.com/oauth2/get_token';
 
 // Step 1: Redirect user to Yahoo login
 router.get('/yahoo', (req, res) => {
+  console.log('Starting Yahoo auth. CLIENT_ID:', process.env.YAHOO_CLIENT_ID ? 'SET' : 'MISSING', 'REDIRECT_URI:', process.env.YAHOO_REDIRECT_URI);
   const params = new URLSearchParams({
     client_id: process.env.YAHOO_CLIENT_ID,
     redirect_uri: process.env.YAHOO_REDIRECT_URI,
     response_type: 'code',
-    scope: 'fspt-r fspt-w'
+    scope: 'fspt-r'
   });
-  res.redirect(`${YAHOO_AUTH_URL}?${params.toString()}`);
+  const redirectUrl = `${YAHOO_AUTH_URL}?${params.toString()}`;
+  console.log('Redirecting to:', redirectUrl);
+  res.redirect(redirectUrl);
 });
 
 // Step 2: Yahoo redirects back with auth code
 router.get('/callback', async (req, res) => {
-  const { code } = req.query;
-  if (!code) return res.status(400).json({ error: 'No authorization code received' });
+  console.log('OAuth callback received:', JSON.stringify(req.query));
+  const { code, error, error_description } = req.query;
+  if (error) return res.status(400).json({ error, error_description, query: req.query });
+  if (!code) return res.status(400).json({ error: 'No authorization code received', query: req.query });
 
   try {
     const credentials = Buffer.from(

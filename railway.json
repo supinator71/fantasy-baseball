@@ -5,8 +5,7 @@
     "buildCommand": "npm install && npm install --prefix client && npm run build"
   },
   "deploy": {
-    "startCommand": "node server/index.js",
-    "healthcheckPath": "/auth/status",
+    "startCommand": "NODE_ENV=production node server/index.js",
     "restartPolicyType": "ON_FAILURE"
   }
 }
