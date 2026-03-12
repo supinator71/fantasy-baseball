@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import PlayerTrends from './PlayerTrends/PlayerTrends'
 
 export default function Dashboard({ leagueSettings }) {
   const [leagues, setLeagues] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedLeague, setSelectedLeague] = useState('')
 
   useEffect(() => {
     fetchLeagues()
@@ -13,6 +15,7 @@ export default function Dashboard({ leagueSettings }) {
     try {
       const { data } = await axios.get('/api/yahoo/leagues')
       setLeagues(data)
+      if (data[0]?.league_key) setSelectedLeague(data[0].league_key)
     } catch (err) {
       console.error(err)
     } finally {
@@ -42,13 +45,13 @@ export default function Dashboard({ leagueSettings }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
         {[
-          { label: 'Draft Assistant', icon: '📋', href: '/draft', desc: 'Real-time draft help' },
-          { label: 'My Roster', icon: '👥', href: '/roster', desc: 'Manage your players' },
-          { label: 'Waiver Wire', icon: '🔄', href: '/waiver', desc: 'Find hidden gems' },
-          { label: 'Start / Sit', icon: '⚡', href: '/startsit', desc: 'Optimize your lineup' },
-          { label: 'Trade Analyzer', icon: '🤝', href: '/trade', desc: 'Evaluate trades' },
-          { label: 'Standings', icon: '🏆', href: '/standings', desc: 'Track your position' },
-          { label: 'Matchup Predictor', icon: '⚔️', href: '/matchup', desc: 'AI-powered weekly predictions' },
+          { label: 'Draft Assistant',    icon: '📋', href: '/draft',     desc: 'Real-time draft help' },
+          { label: 'My Roster',          icon: '👥', href: '/roster',    desc: 'Manage your players' },
+          { label: 'Waiver Wire',        icon: '🔄', href: '/waiver',    desc: 'Find hidden gems' },
+          { label: 'Start / Sit',        icon: '⚡', href: '/startsit',  desc: 'Optimize your lineup' },
+          { label: 'Trade Analyzer',     icon: '🤝', href: '/trade',     desc: 'Evaluate trades' },
+          { label: 'Standings',          icon: '🏆', href: '/standings', desc: 'Track your position' },
+          { label: 'Matchup Predictor',  icon: '⚔️', href: '/matchup',   desc: 'AI-powered weekly predictions' },
         ].map(item => (
           <a key={item.href} href={item.href} style={{ textDecoration: 'none' }}>
             <div className="card" style={{ cursor: 'pointer', transition: 'border-color 0.2s' }}
@@ -63,7 +66,14 @@ export default function Dashboard({ leagueSettings }) {
       </div>
 
       <div className="card">
-        <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Your Yahoo Leagues</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600 }}>Your Yahoo Leagues</h2>
+          {leagues.length > 1 && (
+            <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>
+              {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
+            </select>
+          )}
+        </div>
         {loading ? (
           <div className="loading">Loading leagues...</div>
         ) : leagues.length === 0 ? (
@@ -72,16 +82,20 @@ export default function Dashboard({ leagueSettings }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {leagues.map((league, i) => (
               <div key={i} style={{
-                background: '#122840', borderRadius: 8, padding: 16,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-              }}>
+                background: league.league_key === selectedLeague ? '#0c2c56' : '#122840',
+                border: `1px solid ${league.league_key === selectedLeague ? '#007a7a' : '#1e3d5c'}`,
+                borderRadius: 8, padding: 16,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                cursor: 'pointer', transition: 'all 0.15s'
+              }} onClick={() => setSelectedLeague(league.league_key)}>
                 <div>
                   <div style={{ fontWeight: 600 }}>{league.name || 'League'}</div>
                   <div style={{ color: '#7aafc4', fontSize: 13 }}>
                     {league.num_teams} teams • {league.scoring_type} • {league.draft_status}
                   </div>
                 </div>
-                <a href={`/setup?league=${league.league_key}`} style={{ textDecoration: 'none' }}>
+                <a href={`/setup?league=${league.league_key}`} style={{ textDecoration: 'none' }}
+                  onClick={e => e.stopPropagation()}>
                   <button className="btn btn-ghost" style={{ fontSize: 12 }}>Configure</button>
                 </a>
               </div>
@@ -89,6 +103,8 @@ export default function Dashboard({ leagueSettings }) {
           </div>
         )}
       </div>
+
+      {selectedLeague && <PlayerTrends selectedLeague={selectedLeague} />}
     </div>
   )
 }

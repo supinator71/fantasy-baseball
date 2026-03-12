@@ -178,6 +178,99 @@ router.get('/league/:leagueKey/matchup', requireAuth, async (req, res) => {
   }
 });
 
+function calculateTrend(seasonStats, recentStats, position) {
+  const hasRecent = Object.values(recentStats || {}).some(v => parseFloat(v) > 0);
+  if (!hasRecent) return 'cold';
+
+  const isPitcher = /SP|RP|P/.test(String(position));
+  let delta = 0;
+  let components = 0;
+
+  if (isPitcher) {
+    const sERA = parseFloat(seasonStats?.['26']); const rERA = parseFloat(recentStats?.['26']);
+    const sWHIP = parseFloat(seasonStats?.['27']); const rWHIP = parseFloat(recentStats?.['27']);
+    if (rERA && sERA && sERA > 0) { delta += (sERA - rERA) / sERA * 100; components++; }
+    if (rWHIP && sWHIP && sWHIP > 0) { delta += (sWHIP - rWHIP) / sWHIP * 100; components++; }
+  } else {
+    const sAVG = parseFloat(seasonStats?.['3']); const rAVG = parseFloat(recentStats?.['3']);
+    const sHR = parseFloat(seasonStats?.['7']);  const rHR = parseFloat(recentStats?.['7']);
+    const sRBI = parseFloat(seasonStats?.['12']); const rRBI = parseFloat(recentStats?.['12']);
+    if (rAVG && sAVG && sAVG > 0) { delta += (rAVG - sAVG) / sAVG * 100 * 1.5; components += 1.5; }
+    if (rHR !== undefined && sHR !== undefined && sHR >= 0) { delta += (rHR - sHR) / Math.max(sHR, 1) * 50; components++; }
+    if (rRBI !== undefined && sRBI !== undefined && sRBI >= 0) { delta += (rRBI - sRBI) / Math.max(sRBI, 1) * 25; components++; }
+  }
+
+  if (components === 0) return 'neutral';
+  const score = delta / components;
+  if (score > 20) return 'hot';
+  if (score > 7)  return 'rising';
+  if (score >= -7) return 'neutral';
+  return 'cold';
+}
+
+function trendDisplayStats(recentStats, seasonStats, position) {
+  const isPitcher = /SP|RP|P/.test(String(position));
+  if (isPitcher) {
+    return [
+      { label: 'ERA',  recent: recentStats?.['26'], season: seasonStats?.['26'], lowerBetter: true },
+      { label: 'WHIP', recent: recentStats?.['27'], season: seasonStats?.['27'], lowerBetter: true },
+      { label: 'K',    recent: recentStats?.['42'], season: seasonStats?.['42'] }
+    ].filter(s => s.recent !== undefined || s.season !== undefined);
+  }
+  return [
+    { label: 'AVG',  recent: recentStats?.['3'],  season: seasonStats?.['3'] },
+    { label: 'HR',   recent: recentStats?.['7'],  season: seasonStats?.['7'] },
+    { label: 'RBI',  recent: recentStats?.['12'], season: seasonStats?.['12'] },
+    { label: 'R',    recent: recentStats?.['60'], season: seasonStats?.['60'] },
+    { label: 'SB',   recent: recentStats?.['16'], season: seasonStats?.['16'] }
+  ].filter(s => s.recent !== undefined || s.season !== undefined);
+}
+
+router.get('/league/:leagueKey/trends', requireAuth, async (req, res) => {
+  const { leagueKey } = req.params;
+  try {
+    const myTeamKey = await yahoo.getUserTeamKey(leagueKey);
+    if (!myTeamKey) return res.json({ myPlayers: [], freeAgents: [] });
+
+    const rosterData = await yahoo.getRoster(leagueKey, myTeamKey);
+    const playerKeys = [];
+    const rosterCount = rosterData?.['@attributes']?.count || 0;
+    for (let i = 0; i < rosterCount; i++) {
+      const key = rosterData[i]?.player?.[0]?.player_key;
+      if (key) playerKeys.push(key);
+    }
+
+    const [recentMine, seasonMine, faData] = await Promise.all([
+      playerKeys.length ? yahoo.getBatchPlayerStats(leagueKey, playerKeys, 'lastweek') : [],
+      playerKeys.length ? yahoo.getBatchPlayerStats(leagueKey, playerKeys, null) : [],
+      yahoo.getFreeAgentsTrending(leagueKey, 25)
+    ]);
+
+    const seasonMap = {};
+    seasonMine.forEach(p => { seasonMap[p.key] = p.stats; });
+
+    const myPlayers = recentMine.map(p => {
+      const seasonStats = seasonMap[p.key] || {};
+      const trend = calculateTrend(seasonStats, p.stats, p.position);
+      return { ...p, recentStats: p.stats, seasonStats, trend, displayStats: trendDisplayStats(p.stats, seasonStats, p.position) };
+    }).sort((a, b) => {
+      const order = { hot: 0, rising: 1, neutral: 2, cold: 3 };
+      return (order[a.trend] ?? 2) - (order[b.trend] ?? 2);
+    });
+
+    const freeAgents = faData.map(p => ({
+      ...p,
+      trend: calculateTrend(p.seasonStats, p.recentStats, p.position),
+      displayStats: trendDisplayStats(p.recentStats, p.seasonStats, p.position)
+    })).filter(p => p.trend === 'hot' || p.trend === 'rising')
+       .sort((a, b) => (a.trend === 'hot' ? -1 : 1));
+
+    res.json({ myPlayers, freeAgents });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Save league settings to local DB
 router.post('/league/save', requireAuth, async (req, res) => {
   try {

@@ -92,6 +92,51 @@ async function getPlayerStats(leagueKey, playerKey) {
   return data.fantasy_content?.league?.[1]?.players?.[0]?.player;
 }
 
+function parsePlayersStats(raw) {
+  if (!raw) return [];
+  const count = raw['@attributes']?.count || 0;
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    const p = raw[i]?.player;
+    if (!p) continue;
+    const info = p[0] || {};
+    const statsArr = p[1]?.player_stats?.stats || p[1]?.player_season_stats?.stats || [];
+    const stats = {};
+    for (const s of statsArr) {
+      const stat = s.stat || {};
+      if (stat.stat_id !== undefined) stats[String(stat.stat_id)] = stat.value;
+    }
+    result.push({
+      key: info.player_key,
+      name: info.full_name || info.name?.full || 'Unknown',
+      position: info.display_position || info.eligible_positions?.position || '',
+      team: info.editorial_team_abbr || '',
+      stats
+    });
+  }
+  return result;
+}
+
+async function getBatchPlayerStats(leagueKey, playerKeys, type) {
+  if (!playerKeys || !playerKeys.length) return [];
+  const batch = playerKeys.slice(0, 25).join(',');
+  const typeParam = type ? `;type=${type}` : '';
+  const data = await yahooGet(`/league/${leagueKey}/players;player_keys=${batch}/stats${typeParam}`);
+  return parsePlayersStats(data.fantasy_content?.league?.[1]?.players);
+}
+
+async function getFreeAgentsTrending(leagueKey, count = 25) {
+  const [recent, season] = await Promise.all([
+    yahooGet(`/league/${leagueKey}/players;status=FA;sort=AR;count=${count}/stats;type=lastweek`),
+    yahooGet(`/league/${leagueKey}/players;status=FA;sort=AR;count=${count}/stats`)
+  ]);
+  const recentPlayers = parsePlayersStats(recent.fantasy_content?.league?.[1]?.players);
+  const seasonPlayers = parsePlayersStats(season.fantasy_content?.league?.[1]?.players);
+  const seasonMap = {};
+  seasonPlayers.forEach(p => { seasonMap[p.key] = p.stats; });
+  return recentPlayers.map(p => ({ ...p, recentStats: p.stats, seasonStats: seasonMap[p.key] || {} }));
+}
+
 async function getUserTeamKey(leagueKey) {
   try {
     const data = await yahooGet(`/users;use_login=1/games;game_keys=mlb/leagues;league_keys=${leagueKey}/teams`);
@@ -130,6 +175,8 @@ module.exports = {
   getDraftResults,
   getTransactions,
   getPlayerStats,
+  getBatchPlayerStats,
+  getFreeAgentsTrending,
   getUserTeamKey,
   getAccessToken
 };
