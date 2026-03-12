@@ -70,6 +70,7 @@ async function getLeague(leagueKey) {
 
 async function getRoster(leagueKey, teamKey) {
   const data = await yahooGet(`/team/${teamKey}/roster/players`);
+  console.log('Yahoo /roster raw response:', JSON.stringify(data, null, 2));
   const players = data.fantasy_content?.team?.[1]?.roster?.[1]?.players || data.fantasy_content?.team?.[1]?.roster?.[0]?.players;
   return toArray(players);
 }
