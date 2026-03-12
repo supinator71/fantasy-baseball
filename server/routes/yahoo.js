@@ -86,6 +86,31 @@ router.get('/league/:leagueKey/roster/:teamKey', requireAuth, async (req, res) =
   }
 })
 
+// My roster as flat player array (for AI features)
+router.get('/league/:leagueKey/myroster', requireAuth, async (req, res) => {
+  const { leagueKey } = req.params
+  const force = req.query.force === 'true'
+  try {
+    const result = await withCache(res, `myroster:${leagueKey}`, TTL.ROSTER, force, async () => {
+      const myTeamKey = await yahoo.getUserTeamKey(leagueKey)
+      if (!myTeamKey) return { players: [], teamKey: null }
+      const rosterData = await yahoo.getRoster(leagueKey, myTeamKey)
+      const playerKeys = []
+      const rosterCount = rosterData?.['@attributes']?.count || 0
+      for (let i = 0; i < rosterCount; i++) {
+        const key = rosterData[i]?.player?.[0]?.player_key
+        if (key) playerKeys.push(key)
+      }
+      if (!playerKeys.length) return { players: [], teamKey: myTeamKey }
+      const players = await yahoo.getBatchPlayerStats(leagueKey, playerKeys, null)
+      return { players, teamKey: myTeamKey }
+    })
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 router.get('/league/:leagueKey/standings', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
   const force = req.query.force === 'true'

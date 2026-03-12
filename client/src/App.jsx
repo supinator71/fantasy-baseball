@@ -12,6 +12,9 @@ import TradeAnalyzer from './components/TradeAnalyzer/TradeAnalyzer'
 import Standings from './components/Standings/Standings'
 import MatchupPredictor from './components/MatchupPredictor/MatchupPredictor'
 import LeagueSetup from './components/Layout/LeagueSetup'
+import TeamAudit from './components/TeamAudit/TeamAudit'
+import TradeFinder from './components/TradeFinder/TradeFinder'
+import GamePlan from './components/GamePlan/GamePlan'
 
 export default function App() {
   const [authStatus, setAuthStatus] = useState({ authenticated: false, loading: true })
@@ -87,7 +90,10 @@ export default function App() {
                 <Route path="/trade"     element={<TradeAnalyzer leagueSettings={leagueSettings} />} />
                 <Route path="/standings" element={<Standings leagueSettings={leagueSettings} />} />
                 <Route path="/matchup"   element={<MatchupPredictor leagueSettings={leagueSettings} />} />
-                <Route path="/setup"     element={<LeagueSetup onSave={loadLeagueSettings} />} />
+                <Route path="/setup"       element={<LeagueSetup onSave={loadLeagueSettings} />} />
+                <Route path="/audit"      element={<TeamAudit leagueSettings={leagueSettings} />} />
+                <Route path="/tradefinder" element={<TradeFinder leagueSettings={leagueSettings} />} />
+                <Route path="/gameplan"   element={<GamePlan leagueSettings={leagueSettings} />} />
               </Routes>
             )}
           </main>
@@ -107,7 +113,10 @@ function Sidebar({ authenticated, isOpen, onClose }) {
     { to: '/trade',     label: 'Trade Analyzer',     icon: '🤝' },
     { to: '/standings', label: 'Standings',          icon: '🏆' },
     { to: '/matchup',   label: 'Matchup Predictor',  icon: '⚔️' },
-    { to: '/setup',     label: 'League Setup',       icon: '⚙️' },
+    { to: '/audit',       label: 'Team Audit',         icon: '📊' },
+    { to: '/tradefinder', label: 'Trade Finder',       icon: '💡' },
+    { to: '/gameplan',    label: 'Weekly Game Plan',   icon: '📅' },
+    { to: '/setup',       label: 'League Setup',       icon: '⚙️' },
   ]
 
   return (
