@@ -157,6 +157,19 @@ async function getFreeAgentsTrending(leagueKey, count = 25) {
 async function getUserTeamKey(leagueKey) {
   try {
     const data = await yahooGet(`/users;use_login=1/games;game_keys=mlb/leagues;league_keys=${leagueKey}/teams`);
+    console.log('Yahoo /teams raw response:', JSON.stringify(data, null, 2));
+    
+    // Fallback parsing just like getLeagues
+    const leaguesList = data?.fantasy_content?.users?.['0']?.user?.[1]?.games?.['0']?.game?.[1]?.leagues;
+    if (!leaguesList) return null;
+    
+    // We already passed my leagueKey in the request URL so it should be the only league returned
+    const theLeague = leaguesList?.['0']?.league?.[1]; 
+    if (theLeague?.teams?.['0']?.team?.[0]?.[0]?.team_key) {
+      return theLeague.teams['0'].team[0][0].team_key;
+    }
+    
+    // Old legacy iteration logic as a backup
     const games = data.fantasy_content?.users?.[0]?.user?.[1]?.games;
     if (!games) return null;
     const count = games['@attributes']?.count || 0;
@@ -175,12 +188,14 @@ async function getUserTeamKey(leagueKey) {
         const tcount = teams['@attributes']?.count || teams.count || 0;
         for (let k = 0; k < tcount; k++) {
           const teamObj = teams[k] || teams[String(k)];
-          const teamKey = teamObj?.team?.[0]?.team_key;
+          const teamKey = teamObj?.team?.[0]?.team_key || teamObj?.team?.[0]?.[0]?.team_key;
           if (teamKey) return teamKey;
         }
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.log('Error fetching getUserTeamKey:', e.message);
+  }
   return null;
 }
 

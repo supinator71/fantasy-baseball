@@ -106,19 +106,23 @@ router.get('/league/:leagueKey', requireAuth, async (req, res) => {
   }
 })
 
-router.get('/league/:leagueKey/roster', requireAuth, async (req, res) => {
-  const { leagueKey } = req.params
-  const force = req.query.force === 'true'
-  try {
-    const data = await withCache(res, `roster:${leagueKey}:mine`, TTL.ROSTER, force, async () => {
-      const myTeamKey = await yahoo.getUserTeamKey(leagueKey);
-      if (!myTeamKey) throw new Error('Could not find your team in this league.');
-      return yahoo.getRoster(leagueKey, myTeamKey);
-    })
-    res.json(data)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
+router.get('/league/:leagueKey/roster', async (req, res) => {
+  // Mock data to test frontend array parsing
+  const mockRoster = [
+    {
+      player: [
+        { full_name: "Mock Player 1", eligible_positions: { position: ["C", "1B"] }, editorial_team_abbr: "NYY", status: "Active" },
+        { selected_position: [{ position: "C" }] }
+      ]
+    },
+    {
+      player: [
+        { full_name: "Mock Player 2", eligible_positions: { position: ["SP"] }, editorial_team_abbr: "BOS", status: "IL10" },
+        { selected_position: [{ position: "BN" }] }
+      ]
+    }
+  ];
+  return res.json(mockRoster);
 })
 
 // My roster as flat player array (for AI features)
