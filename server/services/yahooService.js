@@ -41,13 +41,18 @@ async function yahooGet(endpoint) {
 async function getLeagues() {
   const data = await yahooGet('/users;use_login=1/games;game_keys=mlb/leagues');
   console.log('Yahoo /leagues raw response:', JSON.stringify(data, null, 2));
-  const leagues = data.fantasy_content?.users?.[0]?.user?.[1]?.games?.[0]?.game?.[1]?.leagues;
+  
+  // The JSON structure can vary slightly depending on whether you have 1 or multiple leagues
+  const leagues = data?.fantasy_content?.users?.['0']?.user?.[1]?.games?.['0']?.game?.[1]?.leagues;
   if (!leagues) return [];
 
   const result = [];
-  const count = leagues['@attributes']?.count || 0;
+  const count = leagues['@attributes']?.count || leagues.count || 0;
+  
   for (let i = 0; i < count; i++) {
-    const league = leagues[i]?.league?.[0];
+    // Sometimes it's an array of objects `{ league: [...] }`, sometimes an object with index keys
+    const leagueObj = leagues[i] || leagues[String(i)];
+    const league = leagueObj?.league?.[0];
     if (league) result.push(league);
   }
   return result;
