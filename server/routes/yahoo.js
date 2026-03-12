@@ -91,6 +91,93 @@ router.get('/league/:leagueKey/player/:playerKey/stats', requireAuth, async (req
   }
 });
 
+const STAT_NAMES = {
+  '60': 'R', '7': 'HR', '12': 'RBI', '16': 'SB', '3': 'AVG',
+  '6': 'OBP', '5': 'SLG', '8': 'H', '10': 'BB',
+  '28': 'W', '29': 'L', '32': 'SV', '42': 'K', '26': 'ERA', '27': 'WHIP',
+  '23': 'IP', '31': 'HLD', '48': 'QS'
+};
+const LOWER_IS_BETTER = new Set(['26', '27', '29']);
+
+router.get('/league/:leagueKey/matchup', requireAuth, async (req, res) => {
+  try {
+    const { leagueKey } = req.params;
+    const [matchups, myTeamKey] = await Promise.all([
+      yahoo.getScoreboard(leagueKey),
+      yahoo.getUserTeamKey(leagueKey)
+    ]);
+
+    if (!matchups) return res.status(404).json({ error: 'No matchup data available' });
+
+    const totalMatchups = matchups['@attributes']?.count || 0;
+    const week = matchups['@attributes']?.week || null;
+
+    let foundMatchup = null;
+    for (let i = 0; i < totalMatchups; i++) {
+      const matchup = matchups[i]?.matchup;
+      if (!matchup) continue;
+      const teams = matchup.teams;
+      if (!teams) continue;
+      const teamCount = teams['@attributes']?.count || 2;
+      for (let j = 0; j < teamCount; j++) {
+        const teamKey = teams[j]?.team?.[0]?.team_key;
+        if (myTeamKey && teamKey === myTeamKey) { foundMatchup = matchup; break; }
+      }
+      if (foundMatchup) break;
+    }
+    if (!foundMatchup) foundMatchup = matchups[0]?.matchup;
+    if (!foundMatchup) return res.status(404).json({ error: 'No matchup found' });
+
+    const teams = foundMatchup.teams;
+    const teamCount = teams?.['@attributes']?.count || 2;
+    const parsedTeams = [];
+
+    for (let j = 0; j < teamCount; j++) {
+      const teamArr = teams?.[j]?.team;
+      if (!teamArr) continue;
+      const info = teamArr[0] || {};
+      const statsObj = teamArr[1]?.team_stats || teamArr[2]?.team_stats || {};
+      const statsArr = statsObj.stats || [];
+      const stats = statsArr
+        .map(s => s.stat || s)
+        .filter(s => s.stat_id !== undefined && s.value !== undefined)
+        .map(s => ({ stat_id: String(s.stat_id), name: STAT_NAMES[String(s.stat_id)] || String(s.stat_id), value: s.value }));
+      parsedTeams.push({
+        key: info.team_key,
+        name: info.name || `Team ${j + 1}`,
+        manager: info.managers?.[0]?.manager?.nickname || '',
+        stats
+      });
+    }
+
+    const myIdx = myTeamKey ? parsedTeams.findIndex(t => t.key === myTeamKey) : 0;
+    const myTeam = parsedTeams[myIdx >= 0 ? myIdx : 0];
+    const opponent = parsedTeams[myIdx === 0 ? 1 : 0];
+
+    const statMap = {};
+    (myTeam?.stats || []).forEach(s => { statMap[s.stat_id] = { ...s, my_value: s.value }; });
+    (opponent?.stats || []).forEach(s => {
+      if (statMap[s.stat_id]) statMap[s.stat_id].opp_value = s.value;
+      else statMap[s.stat_id] = { stat_id: s.stat_id, name: s.name, opp_value: s.value };
+    });
+
+    const statComparison = Object.values(statMap).map(s => {
+      const myVal = parseFloat(s.my_value) || 0;
+      const oppVal = parseFloat(s.opp_value) || 0;
+      const lowerBetter = LOWER_IS_BETTER.has(s.stat_id);
+      return {
+        ...s,
+        my_winning: myVal !== oppVal && (lowerBetter ? myVal < oppVal : myVal > oppVal),
+        opp_winning: myVal !== oppVal && (lowerBetter ? oppVal < myVal : oppVal > myVal)
+      };
+    });
+
+    res.json({ week: week || foundMatchup.week, myTeam, opponent, stats: statComparison });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Save league settings to local DB
 router.post('/league/save', requireAuth, async (req, res) => {
   try {

@@ -10,6 +10,7 @@ import WaiverWire from './components/WaiverWire/WaiverWire'
 import StartSit from './components/StartSit/StartSit'
 import TradeAnalyzer from './components/TradeAnalyzer/TradeAnalyzer'
 import Standings from './components/Standings/Standings'
+import MatchupPredictor from './components/MatchupPredictor/MatchupPredictor'
 import LeagueSetup from './components/Layout/LeagueSetup'
 
 export default function App() {
@@ -64,6 +65,7 @@ export default function App() {
               <Route path="/startsit" element={<StartSit leagueSettings={leagueSettings} />} />
               <Route path="/trade" element={<TradeAnalyzer leagueSettings={leagueSettings} />} />
               <Route path="/standings" element={<Standings leagueSettings={leagueSettings} />} />
+              <Route path="/matchup" element={<MatchupPredictor leagueSettings={leagueSettings} />} />
               <Route path="/setup" element={<LeagueSetup onSave={loadLeagueSettings} />} />
             </Routes>
           )}
@@ -82,6 +84,7 @@ function Sidebar({ authenticated }) {
     { to: '/startsit', label: 'Start / Sit', icon: '⚡' },
     { to: '/trade', label: 'Trade Analyzer', icon: '🤝' },
     { to: '/standings', label: 'Standings', icon: '🏆' },
+    { to: '/matchup', label: 'Matchup Predictor', icon: '⚔️' },
     { to: '/setup', label: 'League Setup', icon: '⚙️' },
   ]
 

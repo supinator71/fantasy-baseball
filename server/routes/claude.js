@@ -172,4 +172,55 @@ Cover: early round strategy, positional priority, when to target closers, when t
   }
 });
 
+// Matchup prediction
+router.post('/matchup/predict', async (req, res) => {
+  const { my_team, opponent, stat_categories, week } = req.body;
+  const leagueContext = getLeagueContext();
+
+  try {
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2048,
+      system: SYSTEM_PROMPT,
+      messages: [{
+        role: 'user',
+        content: `${leagueContext}
+Week ${week || 'current'} fantasy baseball matchup prediction needed.
+
+MY TEAM: ${my_team?.name || 'My Team'}
+Stats so far this week: ${JSON.stringify(my_team?.stats || [])}
+
+OPPONENT: ${opponent?.name || 'Opponent'}
+Their stats so far this week: ${JSON.stringify(opponent?.stats || [])}
+
+Scoring categories: ${JSON.stringify(stat_categories || ['R','HR','RBI','SB','AVG','W','SV','K','ERA','WHIP'])}
+
+Using these current stats as a baseline, project the full week's outcome. Return ONLY valid JSON (no markdown, no code blocks):
+{
+  "categories": [
+    { "name": "R", "my_proj": 52, "opp_proj": 45, "winner": "me", "confidence": "high", "note": "brief note" }
+  ],
+  "projected_wins": 6,
+  "projected_losses": 4,
+  "projected_ties": 0,
+  "overall_confidence": "medium",
+  "lineup_recommendations": "Specific actionable lineup changes to maximize category wins this week. Name players and specific moves.",
+  "key_matchups": "The 2-3 most competitive categories and what to focus on to swing them.",
+  "summary": "You are projected to win 6-4 with medium confidence"
+}
+Include all scoring categories. For ERA/WHIP lower is better. Be realistic and specific.`
+      }]
+    });
+
+    const text = message.content[0].text.trim();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try { return res.json(JSON.parse(jsonMatch[0])); } catch {}
+    }
+    res.json({ summary: text.split('\n')[0], raw: text });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

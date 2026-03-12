@@ -92,6 +92,34 @@ async function getPlayerStats(leagueKey, playerKey) {
   return data.fantasy_content?.league?.[1]?.players?.[0]?.player;
 }
 
+async function getUserTeamKey(leagueKey) {
+  try {
+    const data = await yahooGet(`/users;use_login=1/games;game_keys=mlb/leagues;league_keys=${leagueKey}/teams`);
+    const games = data.fantasy_content?.users?.[0]?.user?.[1]?.games;
+    if (!games) return null;
+    const count = games['@attributes']?.count || 0;
+    for (let i = 0; i < count; i++) {
+      const game = games[i]?.game;
+      if (!game) continue;
+      const leagues2 = game[1]?.leagues;
+      if (!leagues2) continue;
+      const lcount = leagues2['@attributes']?.count || 0;
+      for (let j = 0; j < lcount; j++) {
+        const league = leagues2[j]?.league;
+        if (!league) continue;
+        const teams = league[1]?.teams;
+        if (!teams) continue;
+        const tcount = teams['@attributes']?.count || 0;
+        for (let k = 0; k < tcount; k++) {
+          const teamKey = teams[k]?.team?.[0]?.team_key;
+          if (teamKey) return teamKey;
+        }
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
 module.exports = {
   getLeagues,
   getLeague,
@@ -102,5 +130,6 @@ module.exports = {
   getDraftResults,
   getTransactions,
   getPlayerStats,
+  getUserTeamKey,
   getAccessToken
 };

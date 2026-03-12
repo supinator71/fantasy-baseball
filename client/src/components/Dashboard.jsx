@@ -48,6 +48,7 @@ export default function Dashboard({ leagueSettings }) {
           { label: 'Start / Sit', icon: '⚡', href: '/startsit', desc: 'Optimize your lineup' },
           { label: 'Trade Analyzer', icon: '🤝', href: '/trade', desc: 'Evaluate trades' },
           { label: 'Standings', icon: '🏆', href: '/standings', desc: 'Track your position' },
+          { label: 'Matchup Predictor', icon: '⚔️', href: '/matchup', desc: 'AI-powered weekly predictions' },
         ].map(item => (
           <a key={item.href} href={item.href} style={{ textDecoration: 'none' }}>
             <div className="card" style={{ cursor: 'pointer', transition: 'border-color 0.2s' }}
