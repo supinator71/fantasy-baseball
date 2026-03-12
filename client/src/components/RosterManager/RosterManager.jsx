@@ -26,18 +26,21 @@ export default function RosterManager({ leagueSettings }) {
     try {
       const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/roster`)
       const playerList = []
-      if (data) {
-        const count = data['@attributes']?.count || 0
-        for (let i = 0; i < count; i++) {
-          const p = data[i]?.player
-          if (p) playerList.push({
-            name: p[0]?.full?.name || p[0]?.name?.full || 'Unknown',
-            positions: p[0]?.eligible_positions?.position || [],
-            team: p[0]?.editorial_team_abbr || '',
-            status: p[1]?.selected_position?.[1]?.position || 'BN',
-            injury: p[0]?.status || ''
-          })
-        }
+      if (Array.isArray(data)) {
+        data.forEach(item => {
+          const p = item?.player
+          if (p && Array.isArray(p)) {
+            const info = p[0] || {}
+            const stats = p[1] || {}
+            playerList.push({
+              name: info.full_name || info.name?.full || 'Unknown',
+              positions: info.eligible_positions?.position || [],
+              team: info.editorial_team_abbr || '',
+              status: stats.selected_position?.[0]?.position || 'BN',
+              injury: info.status || ''
+            })
+          }
+        })
       }
       setRoster(playerList)
     } catch (err) {
