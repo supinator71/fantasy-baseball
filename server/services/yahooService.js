@@ -70,19 +70,20 @@ async function getLeague(leagueKey) {
 
 async function getRoster(leagueKey, teamKey) {
   const data = await yahooGet(`/team/${teamKey}/roster/players`);
-  const players = data.fantasy_content?.team?.[1]?.roster?.[0]?.players;
+  const players = data.fantasy_content?.team?.[1]?.roster?.[1]?.players || data.fantasy_content?.team?.[1]?.roster?.[0]?.players;
   return toArray(players);
 }
 
 async function getStandings(leagueKey) {
   const data = await yahooGet(`/league/${leagueKey}/standings`);
-  const teams = data.fantasy_content?.league?.[1]?.standings?.[0]?.teams;
+  const teams = data.fantasy_content?.league?.[1]?.standings?.[1]?.teams || data.fantasy_content?.league?.[1]?.standings?.[0]?.teams;
   return toArray(teams);
 }
 
 async function getScoreboard(leagueKey) {
   const data = await yahooGet(`/league/${leagueKey}/scoreboard`);
-  return data.fantasy_content?.league?.[1]?.scoreboard?.[0]?.matchups;
+  const matchups = data.fantasy_content?.league?.[1]?.scoreboard?.[1]?.matchups || data.fantasy_content?.league?.[1]?.scoreboard?.[0]?.matchups;
+  return matchups;
 }
 
 async function getPlayers(leagueKey, status = 'A', start = 0) {
