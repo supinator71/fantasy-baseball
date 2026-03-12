@@ -53,7 +53,7 @@ export default function Standings({ leagueSettings }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>Standings</h1>
-          <p style={{ color: '#94a3b8' }}>Current league standings from Yahoo Fantasy</p>
+          <p style={{ color: '#7aafc4' }}>Current league standings from Yahoo Fantasy</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>
@@ -73,25 +73,25 @@ export default function Standings({ leagueSettings }) {
             </thead>
             <tbody>
               {standings.map((team, i) => (
-                <tr key={i} style={team.rank <= 4 ? { background: 'rgba(16, 185, 129, 0.05)' } : {}}>
+                <tr key={i} style={team.rank <= 4 ? { background: 'rgba(0, 168, 107, 0.05)' } : {}}>
                   <td>
                     <span style={{
                       display: 'inline-block', width: 28, height: 28, borderRadius: '50%',
-                      background: team.rank === 1 ? '#f59e0b' : team.rank <= 4 ? '#1e3a5f' : '#242938',
+                      background: team.rank === 1 ? '#f59e0b' : team.rank <= 4 ? '#0c2c56' : '#122840',
                       color: team.rank === 1 ? '#000' : '#e2e8f0',
                       textAlign: 'center', lineHeight: '28px', fontSize: 13, fontWeight: 700
                     }}>{team.rank}</span>
                   </td>
                   <td style={{ fontWeight: 600 }}>{team.name}</td>
-                  <td style={{ color: '#94a3b8' }}>{team.manager}</td>
-                  <td style={{ color: '#10b981' }}>{team.wins}</td>
+                  <td style={{ color: '#7aafc4' }}>{team.manager}</td>
+                  <td style={{ color: '#00a86b' }}>{team.wins}</td>
                   <td style={{ color: '#ef4444' }}>{team.losses}</td>
-                  <td style={{ color: '#94a3b8' }}>{team.ties}</td>
+                  <td style={{ color: '#7aafc4' }}>{team.ties}</td>
                   <td>{(+team.pct * 100).toFixed(1)}%</td>
                 </tr>
               ))}
               {standings.length === 0 && !loading && (
-                <tr><td colSpan={7} style={{ textAlign: 'center', color: '#94a3b8', padding: 32 }}>
+                <tr><td colSpan={7} style={{ textAlign: 'center', color: '#7aafc4', padding: 32 }}>
                   No standings data. Select a league above.
                 </td></tr>
               )}
@@ -101,13 +101,13 @@ export default function Standings({ leagueSettings }) {
       </div>
 
       {standings.length > 0 && (
-        <div style={{ marginTop: 12, display: 'flex', gap: 16, fontSize: 12, color: '#64748b' }}>
+        <div style={{ marginTop: 12, display: 'flex', gap: 16, fontSize: 12, color: '#4a7a94' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: '#f59e0b' }}></span>
             1st place
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: '#1e3a5f' }}></span>
+            <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: '#0c2c56' }}></span>
             Playoff position
           </span>
         </div>

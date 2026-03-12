@@ -42,7 +42,7 @@ export default function StartSit({ leagueSettings }) {
   return (
     <div>
       <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Start / Sit</h1>
-      <p style={{ color: '#94a3b8', marginBottom: 24 }}>Get AI-powered lineup decisions for your toughest choices</p>
+      <p style={{ color: '#7aafc4', marginBottom: 24 }}>Get AI-powered lineup decisions for your toughest choices</p>
 
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 style={{ marginBottom: 16 }}>Players to Compare</h3>
@@ -78,7 +78,7 @@ export default function StartSit({ leagueSettings }) {
 
       {result && (
         <div className="card">
-          <h3 style={{ color: '#3b82f6', marginBottom: 12 }}>AI Analysis</h3>
+          <h3 style={{ color: '#007a7a', marginBottom: 12 }}>AI Analysis</h3>
           <div className="ai-response">{result}</div>
         </div>
       )}

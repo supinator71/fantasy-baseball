@@ -49,7 +49,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Toaster position="top-right" toastOptions={{ style: { background: '#1a1f2e', color: '#e2e8f0', border: '1px solid #2d3748' } }} />
+      <Toaster position="top-right" toastOptions={{ style: { background: '#0c1d35', color: '#e2e8f0', border: '1px solid #1e3d5c' } }} />
       <div style={{ display: 'flex', minHeight: '100vh' }}>
         <Sidebar authenticated={authStatus.authenticated} />
         <main style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
@@ -87,21 +87,21 @@ function Sidebar({ authenticated }) {
 
   return (
     <nav style={{
-      width: 220, background: '#0d111c', borderRight: '1px solid #2d3748',
+      width: 220, background: '#060e1a', borderRight: '1px solid #1e3d5c',
       padding: '20px 0', display: 'flex', flexDirection: 'column', gap: 4,
       position: 'sticky', top: 0, height: '100vh', overflowY: 'auto'
     }}>
-      <div style={{ padding: '0 16px 20px', borderBottom: '1px solid #2d3748', marginBottom: 8 }}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: '#3b82f6' }}>⚾ Fantasy HQ</div>
-        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>MLB Draft & Season Manager</div>
+      <div style={{ padding: '0 16px 20px', borderBottom: '1px solid #1e3d5c', marginBottom: 8 }}>
+        <div style={{ fontSize: 22, fontWeight: 700, color: '#007a7a' }}>⚾ Fantasy HQ</div>
+        <div style={{ fontSize: 11, color: '#4a7a94', marginTop: 2 }}>MLB Draft & Season Manager</div>
       </div>
       {authenticated && navItems.map(item => (
         <NavLink key={item.to} to={item.to} end={item.to === '/'}
           style={({ isActive }) => ({
             display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px',
             textDecoration: 'none', borderRadius: 8, margin: '0 8px',
-            background: isActive ? '#1e3a5f' : 'transparent',
-            color: isActive ? '#7dd3fc' : '#94a3b8',
+            background: isActive ? '#0c2c56' : 'transparent',
+            color: isActive ? '#4aafdb' : '#7aafc4',
             fontSize: 14, fontWeight: isActive ? 600 : 400
           })}>
           <span>{item.icon}</span>
@@ -109,7 +109,7 @@ function Sidebar({ authenticated }) {
         </NavLink>
       ))}
       {!authenticated && (
-        <div style={{ padding: '0 16px', color: '#64748b', fontSize: 13 }}>
+        <div style={{ padding: '0 16px', color: '#4a7a94', fontSize: 13 }}>
           Login to access all features
         </div>
       )}
@@ -123,7 +123,7 @@ function LoginPage() {
       <div className="card" style={{ maxWidth: 420, width: '100%', textAlign: 'center' }}>
         <div style={{ fontSize: 64, marginBottom: 16 }}>⚾</div>
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Fantasy Baseball HQ</h1>
-        <p style={{ color: '#94a3b8', marginBottom: 32, lineHeight: 1.6 }}>
+        <p style={{ color: '#7aafc4', marginBottom: 32, lineHeight: 1.6 }}>
           Your AI-powered draft assistant and season manager. Connect your Yahoo Fantasy league to get started.
         </p>
         <a href="/auth/yahoo" style={{ display: 'block', textDecoration: 'none' }}>
@@ -131,7 +131,7 @@ function LoginPage() {
             Connect Yahoo Fantasy
           </button>
         </a>
-        <p style={{ marginTop: 16, fontSize: 12, color: '#64748b' }}>
+        <p style={{ marginTop: 16, fontSize: 12, color: '#4a7a94' }}>
           You'll be redirected to Yahoo to authorize this app securely.
         </p>
       </div>

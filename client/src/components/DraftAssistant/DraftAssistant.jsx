@@ -142,7 +142,7 @@ export default function DraftAssistant({ leagueSettings }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>Draft Assistant</h1>
-          <p style={{ color: '#94a3b8' }}>Track picks and get real-time AI recommendations</p>
+          <p style={{ color: '#7aafc4' }}>Track picks and get real-time AI recommendations</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-ghost" onClick={() => setShowMyTeam(!showMyTeam)}>
@@ -157,25 +157,25 @@ export default function DraftAssistant({ leagueSettings }) {
       {/* Draft status bar */}
       <div className="card" style={{ marginBottom: 16, display: 'flex', gap: 24, alignItems: 'center' }}>
         <div>
-          <div style={{ fontSize: 12, color: '#94a3b8' }}>Current Pick</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: myPick ? '#10b981' : '#e2e8f0' }}>
+          <div style={{ fontSize: 12, color: '#7aafc4' }}>Current Pick</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: myPick ? '#00a86b' : '#e2e8f0' }}>
             #{pickNumber} {myPick && '← YOUR PICK'}
           </div>
         </div>
         <div>
-          <div style={{ fontSize: 12, color: '#94a3b8' }}>Round</div>
+          <div style={{ fontSize: 12, color: '#7aafc4' }}>Round</div>
           <div style={{ fontSize: 20, fontWeight: 600 }}>{Math.ceil(pickNumber / numTeams)}</div>
         </div>
         <div>
-          <div style={{ fontSize: 12, color: '#94a3b8' }}>Drafted</div>
+          <div style={{ fontSize: 12, color: '#7aafc4' }}>Drafted</div>
           <div style={{ fontSize: 20, fontWeight: 600 }}>{players.filter(p => p.drafted).length}</div>
         </div>
         <div>
-          <div style={{ fontSize: 12, color: '#94a3b8' }}>Available</div>
+          <div style={{ fontSize: 12, color: '#7aafc4' }}>Available</div>
           <div style={{ fontSize: 20, fontWeight: 600 }}>{players.filter(p => !p.drafted).length}</div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <label style={{ fontSize: 13, color: '#94a3b8' }}>Teams:</label>
+          <label style={{ fontSize: 13, color: '#7aafc4' }}>Teams:</label>
           <input type="number" value={numTeams} onChange={e => setNumTeams(+e.target.value)}
             style={{ width: 60 }} min={8} max={20} />
         </div>
@@ -185,7 +185,7 @@ export default function DraftAssistant({ leagueSettings }) {
       {aiRec && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h3 style={{ color: '#3b82f6' }}>🤖 AI Recommendation</h3>
+            <h3 style={{ color: '#007a7a' }}>🤖 AI Recommendation</h3>
             <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setAiRec('')}>Dismiss</button>
           </div>
           <div className="ai-response">{aiRec}</div>
@@ -224,11 +224,11 @@ export default function DraftAssistant({ leagueSettings }) {
                 <tbody>
                   {available.map(player => (
                     <tr key={player.player_key}>
-                      <td style={{ color: '#94a3b8', fontSize: 12 }}>{player.adp}</td>
+                      <td style={{ color: '#7aafc4', fontSize: 12 }}>{player.adp}</td>
                       <td style={{ fontWeight: 500 }}>{player.player_name}</td>
                       <td><span className={`badge badge-${player.position.split('/')[0].toLowerCase()}`}>{player.position}</span></td>
-                      <td style={{ color: '#94a3b8' }}>{player.team}</td>
-                      <td><span style={{ color: '#10b981', fontSize: 12 }}>Available</span></td>
+                      <td style={{ color: '#7aafc4' }}>{player.team}</td>
+                      <td><span style={{ color: '#00a86b', fontSize: 12 }}>Available</span></td>
                       <td>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button className="btn btn-success" style={{ fontSize: 11, padding: '4px 10px' }}
@@ -241,14 +241,14 @@ export default function DraftAssistant({ leagueSettings }) {
                   ))}
                   {drafted.length > 0 && (
                     <>
-                      <tr><td colSpan={6} style={{ background: '#242938', color: '#64748b', fontSize: 12, textAlign: 'center' }}>— DRAFTED —</td></tr>
+                      <tr><td colSpan={6} style={{ background: '#122840', color: '#4a7a94', fontSize: 12, textAlign: 'center' }}>— DRAFTED —</td></tr>
                       {drafted.map(player => (
                         <tr key={player.player_key} style={{ opacity: 0.4 }}>
                           <td style={{ fontSize: 12 }}>{player.adp}</td>
                           <td style={{ textDecoration: 'line-through' }}>{player.player_name}</td>
                           <td><span className={`badge badge-${player.position.split('/')[0].toLowerCase()}`}>{player.position}</span></td>
-                          <td style={{ color: '#94a3b8' }}>{player.team}</td>
-                          <td><span style={{ color: player.drafted_by === 'me' ? '#3b82f6' : '#ef4444', fontSize: 12 }}>
+                          <td style={{ color: '#7aafc4' }}>{player.team}</td>
+                          <td><span style={{ color: player.drafted_by === 'me' ? '#007a7a' : '#ef4444', fontSize: 12 }}>
                             {player.drafted_by === 'me' ? `Mine (R${player.draft_round})` : `Taken #${player.draft_pick}`}
                           </span></td>
                           <td>
@@ -281,7 +281,7 @@ function MyTeam({ team, onUndo }) {
     <div className="card">
       <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>My Draft Picks ({team.length})</h2>
       {team.length === 0 ? (
-        <p style={{ color: '#94a3b8' }}>No picks yet. Use "Draft Me" to add players to your team.</p>
+        <p style={{ color: '#7aafc4' }}>No picks yet. Use "Draft Me" to add players to your team.</p>
       ) : (
         <table>
           <thead>
@@ -290,11 +290,11 @@ function MyTeam({ team, onUndo }) {
           <tbody>
             {team.sort((a, b) => (a.draft_pick || 0) - (b.draft_pick || 0)).map(player => (
               <tr key={player.player_key}>
-                <td style={{ color: '#94a3b8' }}>{player.draft_pick}</td>
-                <td style={{ color: '#94a3b8' }}>{player.draft_round}</td>
+                <td style={{ color: '#7aafc4' }}>{player.draft_pick}</td>
+                <td style={{ color: '#7aafc4' }}>{player.draft_round}</td>
                 <td style={{ fontWeight: 500 }}>{player.player_name}</td>
                 <td><span className={`badge badge-${player.position.split('/')[0].toLowerCase()}`}>{player.position}</span></td>
-                <td style={{ color: '#94a3b8' }}>{player.team}</td>
+                <td style={{ color: '#7aafc4' }}>{player.team}</td>
                 <td><button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 8px' }}
                   onClick={() => onUndo(player)}>Undo</button></td>
               </tr>

@@ -32,7 +32,7 @@ export default function TradeAnalyzer({ leagueSettings }) {
   return (
     <div>
       <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Trade Analyzer</h1>
-      <p style={{ color: '#94a3b8', marginBottom: 24 }}>Evaluate any trade with AI-powered fairness analysis</p>
+      <p style={{ color: '#7aafc4', marginBottom: 24 }}>Evaluate any trade with AI-powered fairness analysis</p>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <div className="card">
@@ -45,7 +45,7 @@ export default function TradeAnalyzer({ leagueSettings }) {
           />
         </div>
         <div className="card">
-          <h3 style={{ color: '#10b981', marginBottom: 12 }}>You Receive</h3>
+          <h3 style={{ color: '#00a86b', marginBottom: 12 }}>You Receive</h3>
           <textarea
             rows={4}
             placeholder="Player names separated by commas&#10;e.g. Mookie Betts, Spencer Strider"
@@ -75,7 +75,7 @@ export default function TradeAnalyzer({ leagueSettings }) {
 
       {result && (
         <div className="card">
-          <h3 style={{ color: '#3b82f6', marginBottom: 12 }}>Trade Analysis</h3>
+          <h3 style={{ color: '#007a7a', marginBottom: 12 }}>Trade Analysis</h3>
           <div className="ai-response">{result}</div>
         </div>
       )}

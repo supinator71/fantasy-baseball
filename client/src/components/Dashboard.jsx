@@ -23,18 +23,18 @@ export default function Dashboard({ leagueSettings }) {
   return (
     <div>
       <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Dashboard</h1>
-      <p style={{ color: '#94a3b8', marginBottom: 28 }}>Welcome back. Here's your fantasy baseball overview.</p>
+      <p style={{ color: '#7aafc4', marginBottom: 28 }}>Welcome back. Here's your fantasy baseball overview.</p>
 
       {!leagueSettings && (
         <div style={{
-          background: '#1e3a5f', border: '1px solid #3b82f6', borderRadius: 10,
+          background: '#0c2c56', border: '1px solid #007a7a', borderRadius: 10,
           padding: 16, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12
         }}>
           <span style={{ fontSize: 24 }}>⚙️</span>
           <div>
             <strong>Set up your league</strong>
-            <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 2 }}>
-              Go to <a href="/setup" style={{ color: '#3b82f6' }}>League Setup</a> to configure your league settings for personalized AI recommendations.
+            <p style={{ color: '#7aafc4', fontSize: 13, marginTop: 2 }}>
+              Go to <a href="/setup" style={{ color: '#007a7a' }}>League Setup</a> to configure your league settings for personalized AI recommendations.
             </p>
           </div>
         </div>
@@ -51,11 +51,11 @@ export default function Dashboard({ leagueSettings }) {
         ].map(item => (
           <a key={item.href} href={item.href} style={{ textDecoration: 'none' }}>
             <div className="card" style={{ cursor: 'pointer', transition: 'border-color 0.2s' }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = '#3b82f6'}
-              onMouseLeave={e => e.currentTarget.style.borderColor = '#2d3748'}>
+              onMouseEnter={e => e.currentTarget.style.borderColor = '#007a7a'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = '#1e3d5c'}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{item.icon}</div>
               <div style={{ fontWeight: 600, marginBottom: 4 }}>{item.label}</div>
-              <div style={{ color: '#94a3b8', fontSize: 13 }}>{item.desc}</div>
+              <div style={{ color: '#7aafc4', fontSize: 13 }}>{item.desc}</div>
             </div>
           </a>
         ))}
@@ -66,17 +66,17 @@ export default function Dashboard({ leagueSettings }) {
         {loading ? (
           <div className="loading">Loading leagues...</div>
         ) : leagues.length === 0 ? (
-          <p style={{ color: '#94a3b8' }}>No active MLB leagues found for the current season.</p>
+          <p style={{ color: '#7aafc4' }}>No active MLB leagues found for the current season.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {leagues.map((league, i) => (
               <div key={i} style={{
-                background: '#242938', borderRadius: 8, padding: 16,
+                background: '#122840', borderRadius: 8, padding: 16,
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center'
               }}>
                 <div>
                   <div style={{ fontWeight: 600 }}>{league.name || 'League'}</div>
-                  <div style={{ color: '#94a3b8', fontSize: 13 }}>
+                  <div style={{ color: '#7aafc4', fontSize: 13 }}>
                     {league.num_teams} teams • {league.scoring_type} • {league.draft_status}
                   </div>
                 </div>

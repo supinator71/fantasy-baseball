@@ -6,23 +6,23 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #0f1117;
+  background: #060e1a;
   color: #e2e8f0;
   min-height: 100vh;
 }
 
 :root {
-  --primary: #3b82f6;
-  --primary-dark: #2563eb;
-  --success: #10b981;
+  --primary: #007a7a;
+  --primary-dark: #005c5c;
+  --success: #00a86b;
   --warning: #f59e0b;
   --danger: #ef4444;
-  --bg: #0f1117;
-  --bg-card: #1a1f2e;
-  --bg-card2: #242938;
-  --border: #2d3748;
+  --bg: #060e1a;
+  --bg-card: #0c1d35;
+  --bg-card2: #122840;
+  --border: #1e3d5c;
   --text: #e2e8f0;
-  --text-muted: #94a3b8;
+  --text-muted: #7aafc4;
 }
 
 .btn {
@@ -58,15 +58,15 @@ body {
   text-transform: uppercase;
 }
 
-.badge-sp { background: #1e40af; color: #93c5fd; }
-.badge-rp { background: #5b21b6; color: #c4b5fd; }
-.badge-c  { background: #064e3b; color: #6ee7b7; }
+.badge-sp { background: #0c2c56; color: #4aafdb; }
+.badge-rp { background: #003d3d; color: #4de0b0; }
+.badge-c  { background: #005c5c; color: #a0f0d0; }
 .badge-1b { background: #78350f; color: #fcd34d; }
-.badge-2b { background: #7c2d12; color: #fdba74; }
+.badge-2b { background: #0a2540; color: #7dd3fc; }
 .badge-3b { background: #831843; color: #f9a8d4; }
-.badge-ss { background: #134e4a; color: #99f6e4; }
-.badge-of { background: #1e3a5f; color: #7dd3fc; }
-.badge-util { background: #374151; color: #d1d5db; }
+.badge-ss { background: #004d4d; color: #99f6e4; }
+.badge-of { background: #0c2c56; color: #93c5fd; }
+.badge-util { background: #1e3d5c; color: #c4ced4; }
 
 input, select, textarea {
   background: var(--bg-card2);
@@ -114,8 +114,8 @@ tr:hover td { background: var(--bg-card2); }
 }
 
 .ai-response {
-  background: #0d1b2a;
-  border: 1px solid #1e40af;
+  background: #071520;
+  border: 1px solid #005c5c;
   border-radius: 8px;
   padding: 16px;
   line-height: 1.6;

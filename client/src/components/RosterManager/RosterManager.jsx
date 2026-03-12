@@ -62,7 +62,7 @@ export default function RosterManager({ leagueSettings }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>My Roster</h1>
-          <p style={{ color: '#94a3b8' }}>Your current lineup pulled from Yahoo Fantasy</p>
+          <p style={{ color: '#7aafc4' }}>Your current lineup pulled from Yahoo Fantasy</p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>
@@ -80,14 +80,14 @@ export default function RosterManager({ leagueSettings }) {
         <div className="loading">Loading your roster from Yahoo...</div>
       ) : (
         <>
-          <RosterSection title="Active Lineup" players={active} color="#10b981" />
+          <RosterSection title="Active Lineup" players={active} color="#00a86b" />
           <RosterSection title="Bench" players={bench} color="#f59e0b" />
           {il.length > 0 && <RosterSection title="Injured List (IL)" players={il} color="#ef4444" />}
 
           {roster.length === 0 && (
             <div className="card" style={{ textAlign: 'center', padding: 40 }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
-              <p style={{ color: '#94a3b8' }}>No roster data available. Make sure your Yahoo league is active and try refreshing.</p>
+              <p style={{ color: '#7aafc4' }}>No roster data available. Make sure your Yahoo league is active and try refreshing.</p>
             </div>
           )}
         </>
@@ -108,19 +108,19 @@ function RosterSection({ title, players, color }) {
         <tbody>
           {players.map((p, i) => (
             <tr key={i}>
-              <td style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>{p.status}</td>
+              <td style={{ color: '#7aafc4', fontSize: 12, fontWeight: 600 }}>{p.status}</td>
               <td style={{ fontWeight: 500 }}>{p.name}</td>
               <td>
                 {(Array.isArray(p.positions) ? p.positions : [p.positions]).map((pos, j) => (
                   <span key={j} className={`badge badge-${String(pos).toLowerCase()}`} style={{ marginRight: 4 }}>{pos}</span>
                 ))}
               </td>
-              <td style={{ color: '#94a3b8' }}>{p.team}</td>
+              <td style={{ color: '#7aafc4' }}>{p.team}</td>
               <td>
                 {p.injury ? (
                   <span style={{ color: '#ef4444', fontSize: 12 }}>{p.injury}</span>
                 ) : (
-                  <span style={{ color: '#10b981', fontSize: 12 }}>Active</span>
+                  <span style={{ color: '#00a86b', fontSize: 12 }}>Active</span>
                 )}
               </td>
             </tr>

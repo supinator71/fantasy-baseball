@@ -79,14 +79,14 @@ export default function LeagueSetup({ onSave }) {
   return (
     <div>
       <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>League Setup</h1>
-      <p style={{ color: '#94a3b8', marginBottom: 24 }}>Configure your league settings to get personalized AI recommendations</p>
+      <p style={{ color: '#7aafc4', marginBottom: 24 }}>Configure your league settings to get personalized AI recommendations</p>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <div className="card">
           <h3 style={{ marginBottom: 16 }}>Basic Settings</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 13, color: '#94a3b8', display: 'block', marginBottom: 4 }}>Yahoo League</label>
+              <label style={{ fontSize: 13, color: '#7aafc4', display: 'block', marginBottom: 4 }}>Yahoo League</label>
               <select value={selectedLeague} onChange={e => {
                 setSelectedLeague(e.target.value)
                 const l = leagues.find(l => l.league_key === e.target.value)
@@ -97,22 +97,22 @@ export default function LeagueSetup({ onSave }) {
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 13, color: '#94a3b8', display: 'block', marginBottom: 4 }}>League Name</label>
+              <label style={{ fontSize: 13, color: '#7aafc4', display: 'block', marginBottom: 4 }}>League Name</label>
               <input value={settings.league_name} onChange={e => update('league_name', e.target.value)} placeholder="My Fantasy League" />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <div>
-                <label style={{ fontSize: 13, color: '#94a3b8', display: 'block', marginBottom: 4 }}>Teams</label>
+                <label style={{ fontSize: 13, color: '#7aafc4', display: 'block', marginBottom: 4 }}>Teams</label>
                 <input type="number" value={settings.num_teams} onChange={e => update('num_teams', +e.target.value)} min={4} max={20} />
               </div>
               <div>
-                <label style={{ fontSize: 13, color: '#94a3b8', display: 'block', marginBottom: 4 }}>Draft Position</label>
+                <label style={{ fontSize: 13, color: '#7aafc4', display: 'block', marginBottom: 4 }}>Draft Position</label>
                 <input type="number" value={settings.draft_position} onChange={e => update('draft_position', +e.target.value)} min={1} max={20} />
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <div>
-                <label style={{ fontSize: 13, color: '#94a3b8', display: 'block', marginBottom: 4 }}>Scoring Type</label>
+                <label style={{ fontSize: 13, color: '#7aafc4', display: 'block', marginBottom: 4 }}>Scoring Type</label>
                 <select value={settings.scoring_type} onChange={e => update('scoring_type', e.target.value)}>
                   <option>Roto</option>
                   <option>H2H Categories</option>
@@ -121,7 +121,7 @@ export default function LeagueSetup({ onSave }) {
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: 13, color: '#94a3b8', display: 'block', marginBottom: 4 }}>Draft Type</label>
+                <label style={{ fontSize: 13, color: '#7aafc4', display: 'block', marginBottom: 4 }}>Draft Type</label>
                 <select value={settings.draft_type} onChange={e => update('draft_type', e.target.value)}>
                   <option>Snake</option>
                   <option>Auction</option>
@@ -150,7 +150,7 @@ export default function LeagueSetup({ onSave }) {
         <h3 style={{ marginBottom: 16 }}>Scoring Categories</h3>
         {Object.entries(ALL_CATS).map(([group, cats]) => (
           <div key={group} style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 8 }}>{group}</div>
+            <div style={{ fontSize: 13, color: '#7aafc4', marginBottom: 8 }}>{group}</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {cats.map(cat => (
                 <button key={cat}
@@ -174,7 +174,7 @@ export default function LeagueSetup({ onSave }) {
 
       {aiStrategy && (
         <div className="card">
-          <h3 style={{ color: '#3b82f6', marginBottom: 12 }}>Your Personalized Draft Strategy</h3>
+          <h3 style={{ color: '#007a7a', marginBottom: 12 }}>Your Personalized Draft Strategy</h3>
           <div className="ai-response">{aiStrategy}</div>
         </div>
       )}

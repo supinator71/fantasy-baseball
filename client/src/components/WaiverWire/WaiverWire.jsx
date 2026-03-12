@@ -73,7 +73,7 @@ export default function WaiverWire({ leagueSettings }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>Waiver Wire</h1>
-          <p style={{ color: '#94a3b8' }}>Find available players and get AI-powered add/drop advice</p>
+          <p style={{ color: '#7aafc4' }}>Find available players and get AI-powered add/drop advice</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>
@@ -88,7 +88,7 @@ export default function WaiverWire({ leagueSettings }) {
       {aiRec && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h3 style={{ color: '#3b82f6' }}>🤖 Waiver Wire Recommendations</h3>
+            <h3 style={{ color: '#007a7a' }}>🤖 Waiver Wire Recommendations</h3>
             <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setAiRec('')}>Dismiss</button>
           </div>
           <div className="ai-response">{aiRec}</div>
@@ -116,15 +116,15 @@ export default function WaiverWire({ leagueSettings }) {
                 <tr key={i}>
                   <td style={{ fontWeight: 500 }}>{p.name}</td>
                   <td><span className={`badge badge-${p.position.split(',')[0].toLowerCase().trim()}`}>{p.position}</span></td>
-                  <td style={{ color: '#94a3b8' }}>{p.team}</td>
-                  <td><span style={{ color: '#10b981', fontSize: 12 }}>Free Agent</span></td>
+                  <td style={{ color: '#7aafc4' }}>{p.team}</td>
+                  <td><span style={{ color: '#00a86b', fontSize: 12 }}>Free Agent</span></td>
                   <td>
                     <button className="btn btn-success" style={{ fontSize: 11, padding: '4px 10px' }}>Add</button>
                   </td>
                 </tr>
               ))}
               {available.length === 0 && !loading && (
-                <tr><td colSpan={5} style={{ textAlign: 'center', color: '#94a3b8', padding: 32 }}>
+                <tr><td colSpan={5} style={{ textAlign: 'center', color: '#7aafc4', padding: 32 }}>
                   No available players found. Select a league above to load the waiver wire.
                 </td></tr>
               )}
