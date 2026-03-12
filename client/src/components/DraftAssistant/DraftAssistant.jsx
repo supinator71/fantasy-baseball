@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import DraftBoard from './DraftBoard'
 
 const POSITIONS = ['ALL', 'SP', 'RP', 'C', '1B', '2B', '3B', 'SS', 'OF']
 
@@ -32,6 +33,13 @@ const DEFAULT_PLAYERS = [
   { player_key: '25', player_name: 'Max Fried', position: 'SP', team: 'ATL', adp: 24.8 },
 ]
 
+function isMyPickFn(pick, pos, teams) {
+  const round = Math.ceil(pick / teams)
+  const spotInRound = pick - (round - 1) * teams
+  if (round % 2 === 1) return spotInRound === pos
+  return spotInRound === (teams - pos + 1)
+}
+
 export default function DraftAssistant({ leagueSettings }) {
   const [players, setPlayers] = useState([])
   const [myTeam, setMyTeam] = useState([])
@@ -40,16 +48,63 @@ export default function DraftAssistant({ leagueSettings }) {
   const [pickNumber, setPickNumber] = useState(1)
   const [aiRec, setAiRec] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
-  const [showMyTeam, setShowMyTeam] = useState(false)
+  const [activeTab, setActiveTab] = useState('board')
   const [numTeams, setNumTeams] = useState(leagueSettings?.num_teams || 12)
+  const [countdown, setCountdown] = useState(null)
+  const [timerActive, setTimerActive] = useState(false)
+  const autoTriggered = useRef(false)
+  const countdownRef = useRef(null)
+  const draftPosition = leagueSettings?.draft_position || 1
 
   useEffect(() => { loadBoard() }, [])
+
+  const myPick = useMemo(
+    () => isMyPickFn(pickNumber, draftPosition, numTeams),
+    [pickNumber, draftPosition, numTeams]
+  )
+
+  // Auto-trigger AI + countdown when it becomes user's turn
+  useEffect(() => {
+    if (myPick && !autoTriggered.current && players.length > 0) {
+      autoTriggered.current = true
+      setActiveTab('pool')
+      startCountdown(90)
+      getAiRecommendation()
+    }
+    if (!myPick) {
+      autoTriggered.current = false
+      stopCountdown()
+    }
+  }, [myPick, players.length])
+
+  function startCountdown(seconds) {
+    setCountdown(seconds)
+    setTimerActive(true)
+    clearInterval(countdownRef.current)
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current)
+          setTimerActive(false)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  function stopCountdown() {
+    clearInterval(countdownRef.current)
+    setTimerActive(false)
+    setCountdown(null)
+  }
+
+  useEffect(() => () => clearInterval(countdownRef.current), [])
 
   async function loadBoard() {
     try {
       const { data } = await axios.get('/api/draft/board')
       if (data.length === 0) {
-        // Load default players
         await axios.post('/api/draft/load', { players: DEFAULT_PLAYERS })
         setPlayers(DEFAULT_PLAYERS.map(p => ({ ...p, drafted: 0 })))
       } else {
@@ -58,7 +113,7 @@ export default function DraftAssistant({ leagueSettings }) {
         const drafted = data.filter(p => p.drafted).length
         setPickNumber(drafted + 1)
       }
-    } catch (err) {
+    } catch {
       setPlayers(DEFAULT_PLAYERS.map(p => ({ ...p, drafted: 0 })))
     }
   }
@@ -78,6 +133,7 @@ export default function DraftAssistant({ leagueSettings }) {
     ))
     if (by === 'me') setMyTeam(prev => [...prev, { ...player, drafted_by: 'me', draft_round: round, draft_pick: pickNumber }])
     setPickNumber(prev => prev + 1)
+    stopCountdown()
     toast.success(`${player.player_name} drafted${by === 'me' ? ' to YOUR team' : ''}`)
   }
 
@@ -94,7 +150,7 @@ export default function DraftAssistant({ leagueSettings }) {
     setAiLoading(true)
     setAiRec('')
     try {
-      const available = filteredPlayers.filter(p => !p.drafted).slice(0, 20)
+      const available = players.filter(p => !p.drafted).slice(0, 20)
       const needs = getPositionalNeeds()
       const { data } = await axios.post('/api/claude/draft/recommend', {
         available_players: available,
@@ -104,7 +160,7 @@ export default function DraftAssistant({ leagueSettings }) {
         needs
       })
       setAiRec(data.recommendation)
-    } catch (err) {
+    } catch {
       toast.error('AI recommendation failed')
     } finally {
       setAiLoading(false)
@@ -126,28 +182,24 @@ export default function DraftAssistant({ leagueSettings }) {
     return matchPos && matchSearch
   })
 
-  const available = filteredPlayers.filter(p => !p.drafted)
-  const drafted = filteredPlayers.filter(p => p.drafted)
-  const myPick = isMyPick(pickNumber, leagueSettings?.draft_position || 1, numTeams)
+  const available = filteredPlayers
+    .filter(p => !p.drafted)
+    .map(p => ({ ...p, value: +(pickNumber - p.adp).toFixed(1) }))
+    .sort((a, b) => b.value - a.value)
 
-  function isMyPick(pick, pos, teams) {
-    const round = Math.ceil(pick / teams)
-    const spotInRound = pick - (round - 1) * teams
-    if (round % 2 === 1) return spotInRound === pos
-    return spotInRound === (teams - pos + 1)
-  }
+  const drafted = filteredPlayers.filter(p => p.drafted)
+
+  const countdownPct = countdown != null ? (countdown / 90) * 100 : 0
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>Draft Assistant</h1>
-          <p style={{ color: '#7aafc4' }}>Track picks and get real-time AI recommendations</p>
+          <p style={{ color: '#7aafc4' }}>Visual board · ADP value · AI recommendations</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-ghost" onClick={() => setShowMyTeam(!showMyTeam)}>
-            {showMyTeam ? 'Show Board' : 'My Team'} ({myTeam.length})
-          </button>
           <button className="btn btn-primary" onClick={getAiRecommendation} disabled={aiLoading}>
             {aiLoading ? 'Thinking...' : '🤖 AI Pick'}
           </button>
@@ -181,20 +233,88 @@ export default function DraftAssistant({ leagueSettings }) {
         </div>
       </div>
 
-      {/* AI Recommendation */}
-      {aiRec && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h3 style={{ color: '#007a7a' }}>🤖 AI Recommendation</h3>
-            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setAiRec('')}>Dismiss</button>
+      {/* YOUR PICK banner with countdown */}
+      {myPick && (
+        <div style={{
+          marginBottom: 16, borderRadius: 10, overflow: 'hidden',
+          border: '2px solid #00a86b',
+          boxShadow: '0 0 24px rgba(0,168,107,0.35), inset 0 0 16px rgba(0,168,107,0.07)',
+          background: 'linear-gradient(135deg, #002a1a, #0c2c56)',
+        }}>
+          <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: '#00a86b', letterSpacing: 1 }}>
+              ⏱ YOUR PICK ON THE CLOCK
+            </div>
+            {countdown != null && (
+              <div style={{ fontSize: 28, fontWeight: 800, color: countdown <= 15 ? '#ef4444' : '#00a86b', minWidth: 50 }}>
+                {countdown}s
+              </div>
+            )}
+            <button className="btn btn-ghost" style={{ marginLeft: 'auto', fontSize: 12 }}
+              onClick={() => { stopCountdown(); startCountdown(90) }}>Reset Timer</button>
           </div>
-          <div className="ai-response">{aiRec}</div>
+          {/* Progress bar */}
+          {countdown != null && (
+            <div style={{ height: 4, background: '#0c1d35' }}>
+              <div style={{
+                height: '100%',
+                width: `${countdownPct}%`,
+                background: countdown <= 15 ? '#ef4444' : '#00a86b',
+                transition: 'width 1s linear, background 0.3s',
+              }} />
+            </div>
+          )}
         </div>
       )}
 
-      {showMyTeam ? (
-        <MyTeam team={myTeam} onUndo={undoPick} />
-      ) : (
+      {/* AI Recommendation */}
+      {(aiRec || aiLoading) && (
+        <div className="card" style={{
+          marginBottom: 16,
+          border: myPick ? '1px solid #00a86b' : '1px solid #1e3d5c',
+          background: myPick ? 'linear-gradient(135deg, #002a1a 0%, #0c2c56 100%)' : undefined,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+            <h3 style={{ color: '#007a7a' }}>🤖 AI Recommendation</h3>
+            {aiRec && <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setAiRec('')}>Dismiss</button>}
+          </div>
+          {aiLoading
+            ? <div style={{ color: '#7aafc4', fontSize: 14 }}>Analyzing available players and your roster needs...</div>
+            : <div className="ai-response">{aiRec}</div>
+          }
+        </div>
+      )}
+
+      {/* Tab navigation */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+        {[
+          { id: 'board', label: '📊 Board' },
+          { id: 'pool', label: '📋 Player Pool' },
+          { id: 'myteam', label: `⭐ My Team (${myTeam.length})` },
+        ].map(tab => (
+          <button key={tab.id}
+            className={`btn ${activeTab === tab.id ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ fontSize: 13, padding: '8px 16px' }}
+            onClick={() => setActiveTab(tab.id)}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* BOARD TAB */}
+      {activeTab === 'board' && (
+        <div className="card" style={{ padding: 16 }}>
+          <DraftBoard
+            players={players}
+            numTeams={numTeams}
+            draftPosition={draftPosition}
+            currentPick={pickNumber}
+          />
+        </div>
+      )}
+
+      {/* PLAYER POOL TAB */}
+      {activeTab === 'pool' && (
         <>
           {/* Filters */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -207,13 +327,13 @@ export default function DraftAssistant({ leagueSettings }) {
             ))}
           </div>
 
-          {/* Player Table */}
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ maxHeight: 'calc(100vh - 380px)', overflowY: 'auto' }}>
+            <div style={{ maxHeight: 'calc(100vh - 420px)', overflowY: 'auto' }}>
               <table>
                 <thead>
                   <tr>
                     <th>ADP</th>
+                    <th>Value</th>
                     <th>Player</th>
                     <th>Pos</th>
                     <th>Team</th>
@@ -222,29 +342,43 @@ export default function DraftAssistant({ leagueSettings }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {available.map(player => (
-                    <tr key={player.player_key}>
-                      <td style={{ color: '#7aafc4', fontSize: 12 }}>{player.adp}</td>
-                      <td style={{ fontWeight: 500 }}>{player.player_name}</td>
-                      <td><span className={`badge badge-${player.position.split('/')[0].toLowerCase()}`}>{player.position}</span></td>
-                      <td style={{ color: '#7aafc4' }}>{player.team}</td>
-                      <td><span style={{ color: '#00a86b', fontSize: 12 }}>Available</span></td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button className="btn btn-success" style={{ fontSize: 11, padding: '4px 10px' }}
-                            onClick={() => markDrafted(player, 'me')}>Draft Me</button>
-                          <button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }}
-                            onClick={() => markDrafted(player, 'other')}>Taken</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {available.map(player => {
+                    const val = player.value
+                    const valColor = val >= 5 ? '#00a86b' : val >= 0 ? '#f59e0b' : '#ef4444'
+                    return (
+                      <tr key={player.player_key}>
+                        <td style={{ color: '#7aafc4', fontSize: 12 }}>{player.adp}</td>
+                        <td>
+                          <span style={{
+                            fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                            background: val >= 5 ? 'rgba(0,168,107,0.15)' : val >= 0 ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)',
+                            color: valColor
+                          }}>
+                            {val > 0 ? `+${val}` : val}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: 500 }}>{player.player_name}</td>
+                        <td><span className={`badge badge-${player.position.split('/')[0].toLowerCase()}`}>{player.position}</span></td>
+                        <td style={{ color: '#7aafc4' }}>{player.team}</td>
+                        <td><span style={{ color: '#00a86b', fontSize: 12 }}>Available</span></td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button className="btn btn-success" style={{ fontSize: 11, padding: '4px 10px' }}
+                              onClick={() => markDrafted(player, 'me')}>Draft Me</button>
+                            <button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }}
+                              onClick={() => markDrafted(player, 'other')}>Taken</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                   {drafted.length > 0 && (
                     <>
-                      <tr><td colSpan={6} style={{ background: '#122840', color: '#4a7a94', fontSize: 12, textAlign: 'center' }}>— DRAFTED —</td></tr>
+                      <tr><td colSpan={7} style={{ background: '#122840', color: '#4a7a94', fontSize: 12, textAlign: 'center' }}>— DRAFTED —</td></tr>
                       {drafted.map(player => (
                         <tr key={player.player_key} style={{ opacity: 0.4 }}>
                           <td style={{ fontSize: 12 }}>{player.adp}</td>
+                          <td>—</td>
                           <td style={{ textDecoration: 'line-through' }}>{player.player_name}</td>
                           <td><span className={`badge badge-${player.position.split('/')[0].toLowerCase()}`}>{player.position}</span></td>
                           <td style={{ color: '#7aafc4' }}>{player.team}</td>
@@ -265,18 +399,16 @@ export default function DraftAssistant({ leagueSettings }) {
           </div>
         </>
       )}
+
+      {/* MY TEAM TAB */}
+      {activeTab === 'myteam' && (
+        <MyTeam team={myTeam} onUndo={undoPick} />
+      )}
     </div>
   )
 }
 
 function MyTeam({ team, onUndo }) {
-  const byPosition = team.reduce((acc, p) => {
-    const pos = p.position.split('/')[0]
-    if (!acc[pos]) acc[pos] = []
-    acc[pos].push(p)
-    return acc
-  }, {})
-
   return (
     <div className="card">
       <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>My Draft Picks ({team.length})</h2>
@@ -285,7 +417,7 @@ function MyTeam({ team, onUndo }) {
       ) : (
         <table>
           <thead>
-            <tr><th>#</th><th>Round</th><th>Player</th><th>Pos</th><th>Team</th><th></th></tr>
+            <tr><th>#</th><th>Round</th><th>Player</th><th>Pos</th><th>ADP</th><th>Team</th><th></th></tr>
           </thead>
           <tbody>
             {team.sort((a, b) => (a.draft_pick || 0) - (b.draft_pick || 0)).map(player => (
@@ -294,6 +426,7 @@ function MyTeam({ team, onUndo }) {
                 <td style={{ color: '#7aafc4' }}>{player.draft_round}</td>
                 <td style={{ fontWeight: 500 }}>{player.player_name}</td>
                 <td><span className={`badge badge-${player.position.split('/')[0].toLowerCase()}`}>{player.position}</span></td>
+                <td style={{ color: '#7aafc4', fontSize: 12 }}>{player.adp}</td>
                 <td style={{ color: '#7aafc4' }}>{player.team}</td>
                 <td><button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 8px' }}
                   onClick={() => onUndo(player)}>Undo</button></td>
