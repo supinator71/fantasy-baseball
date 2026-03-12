@@ -147,7 +147,6 @@ function Sidebar({ authenticated, isOpen, onClose }) {
           <button 
             onClick={async () => {
               try {
-                const axios = require('axios');
                 await axios.post('/auth/logout');
                 window.location.href = '/';
               } catch (e) {
