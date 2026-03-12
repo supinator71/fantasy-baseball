@@ -34,7 +34,7 @@ export default function TradeAnalyzer({ leagueSettings }) {
       <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Trade Analyzer</h1>
       <p style={{ color: '#7aafc4', marginBottom: 24 }}>Evaluate any trade with AI-powered fairness analysis</p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div className="grid-2" style={{ marginBottom: 16 }}>
         <div className="card">
           <h3 style={{ color: '#ef4444', marginBottom: 12 }}>You Give</h3>
           <textarea
@@ -55,7 +55,7 @@ export default function TradeAnalyzer({ leagueSettings }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div className="grid-2" style={{ marginBottom: 16 }}>
         <div className="card">
           <h3 style={{ marginBottom: 12, fontSize: 14 }}>My Full Roster (optional — improves analysis)</h3>
           <textarea rows={3} placeholder="All my players, comma separated"

@@ -70,7 +70,7 @@ export default function WaiverWire({ leagueSettings }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>Waiver Wire</h1>
           <p style={{ color: '#7aafc4' }}>Find available players and get AI-powered add/drop advice</p>

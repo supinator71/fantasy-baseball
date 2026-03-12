@@ -139,7 +139,7 @@ export default function DraftAssistant({ leagueSettings }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>Draft Assistant</h1>
           <p style={{ color: '#7aafc4' }}>Track picks and get real-time AI recommendations</p>
@@ -155,7 +155,7 @@ export default function DraftAssistant({ leagueSettings }) {
       </div>
 
       {/* Draft status bar */}
-      <div className="card" style={{ marginBottom: 16, display: 'flex', gap: 24, alignItems: 'center' }}>
+      <div className="card" style={{ marginBottom: 16, display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 12, color: '#7aafc4' }}>Current Pick</div>
           <div style={{ fontSize: 24, fontWeight: 700, color: myPick ? '#00a86b' : '#e2e8f0' }}>

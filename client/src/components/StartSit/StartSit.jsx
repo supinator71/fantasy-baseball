@@ -47,7 +47,7 @@ export default function StartSit({ leagueSettings }) {
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 style={{ marginBottom: 16 }}>Players to Compare</h3>
         {players.map((p, i) => (
-          <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: 8, marginBottom: 8 }}>
+          <div key={i} className="player-row">
             <input placeholder="Player name" value={p.name} onChange={e => updatePlayer(i, 'name', e.target.value)} />
             <input placeholder="Position" value={p.position} onChange={e => updatePlayer(i, 'position', e.target.value)} />
             <input placeholder="Opponent (e.g. @NYY)" value={p.opponent} onChange={e => updatePlayer(i, 'opponent', e.target.value)} />

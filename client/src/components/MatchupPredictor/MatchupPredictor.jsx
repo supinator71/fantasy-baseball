@@ -77,7 +77,7 @@ export default function MatchupPredictor({ leagueSettings }) {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>Matchup Predictor</h1>
           <p style={{ color: '#7aafc4' }}>

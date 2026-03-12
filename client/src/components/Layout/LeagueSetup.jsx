@@ -81,7 +81,7 @@ export default function LeagueSetup({ onSave }) {
       <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>League Setup</h1>
       <p style={{ color: '#7aafc4', marginBottom: 24 }}>Configure your league settings to get personalized AI recommendations</p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div className="grid-2" style={{ marginBottom: 16 }}>
         <div className="card">
           <h3 style={{ marginBottom: 16 }}>Basic Settings</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -100,7 +100,7 @@ export default function LeagueSetup({ onSave }) {
               <label style={{ fontSize: 13, color: '#7aafc4', display: 'block', marginBottom: 4 }}>League Name</label>
               <input value={settings.league_name} onChange={e => update('league_name', e.target.value)} placeholder="My Fantasy League" />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div className="grid-2-tight">
               <div>
                 <label style={{ fontSize: 13, color: '#7aafc4', display: 'block', marginBottom: 4 }}>Teams</label>
                 <input type="number" value={settings.num_teams} onChange={e => update('num_teams', +e.target.value)} min={4} max={20} />
@@ -110,7 +110,7 @@ export default function LeagueSetup({ onSave }) {
                 <input type="number" value={settings.draft_position} onChange={e => update('draft_position', +e.target.value)} min={1} max={20} />
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div className="grid-2-tight">
               <div>
                 <label style={{ fontSize: 13, color: '#7aafc4', display: 'block', marginBottom: 4 }}>Scoring Type</label>
                 <select value={settings.scoring_type} onChange={e => update('scoring_type', e.target.value)}>

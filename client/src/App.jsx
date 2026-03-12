@@ -16,11 +16,11 @@ import LeagueSetup from './components/Layout/LeagueSetup'
 export default function App() {
   const [authStatus, setAuthStatus] = useState({ authenticated: false, loading: true })
   const [leagueSettings, setLeagueSettings] = useState(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     checkAuth()
     loadLeagueSettings()
-
     const params = new URLSearchParams(window.location.search)
     if (params.get('auth') === 'success') {
       window.history.replaceState({}, '', '/')
@@ -51,66 +51,88 @@ export default function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-right" toastOptions={{ style: { background: '#0c1d35', color: '#e2e8f0', border: '1px solid #1e3d5c' } }} />
-      <div style={{ display: 'flex', minHeight: '100vh' }}>
-        <Sidebar authenticated={authStatus.authenticated} />
-        <main style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
-          {!authStatus.authenticated ? (
-            <LoginPage />
-          ) : (
-            <Routes>
-              <Route path="/" element={<Dashboard leagueSettings={leagueSettings} />} />
-              <Route path="/draft" element={<DraftAssistant leagueSettings={leagueSettings} />} />
-              <Route path="/roster" element={<RosterManager leagueSettings={leagueSettings} />} />
-              <Route path="/waiver" element={<WaiverWire leagueSettings={leagueSettings} />} />
-              <Route path="/startsit" element={<StartSit leagueSettings={leagueSettings} />} />
-              <Route path="/trade" element={<TradeAnalyzer leagueSettings={leagueSettings} />} />
-              <Route path="/standings" element={<Standings leagueSettings={leagueSettings} />} />
-              <Route path="/matchup" element={<MatchupPredictor leagueSettings={leagueSettings} />} />
-              <Route path="/setup" element={<LeagueSetup onSave={loadLeagueSettings} />} />
-            </Routes>
-          )}
-        </main>
+      <div className="app-layout">
+
+        {/* Sidebar overlay (mobile) */}
+        <div
+          className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`}
+          onClick={() => setSidebarOpen(false)}
+        />
+
+        <Sidebar
+          authenticated={authStatus.authenticated}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+
+        <div className="app-body">
+          {/* Mobile top bar */}
+          <div className="mobile-topbar">
+            <button className="hamburger-btn" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
+              ☰
+            </button>
+            <span style={{ fontSize: 18, fontWeight: 700, color: '#007a7a' }}>⚾ Fantasy HQ</span>
+          </div>
+
+          <main className="main-content">
+            {!authStatus.authenticated ? (
+              <LoginPage />
+            ) : (
+              <Routes>
+                <Route path="/"          element={<Dashboard leagueSettings={leagueSettings} />} />
+                <Route path="/draft"     element={<DraftAssistant leagueSettings={leagueSettings} />} />
+                <Route path="/roster"    element={<RosterManager leagueSettings={leagueSettings} />} />
+                <Route path="/waiver"    element={<WaiverWire leagueSettings={leagueSettings} />} />
+                <Route path="/startsit"  element={<StartSit leagueSettings={leagueSettings} />} />
+                <Route path="/trade"     element={<TradeAnalyzer leagueSettings={leagueSettings} />} />
+                <Route path="/standings" element={<Standings leagueSettings={leagueSettings} />} />
+                <Route path="/matchup"   element={<MatchupPredictor leagueSettings={leagueSettings} />} />
+                <Route path="/setup"     element={<LeagueSetup onSave={loadLeagueSettings} />} />
+              </Routes>
+            )}
+          </main>
+        </div>
       </div>
     </BrowserRouter>
   )
 }
 
-function Sidebar({ authenticated }) {
+function Sidebar({ authenticated, isOpen, onClose }) {
   const navItems = [
-    { to: '/', label: 'Dashboard', icon: '⚾' },
-    { to: '/draft', label: 'Draft Assistant', icon: '📋' },
-    { to: '/roster', label: 'My Roster', icon: '👥' },
-    { to: '/waiver', label: 'Waiver Wire', icon: '🔄' },
-    { to: '/startsit', label: 'Start / Sit', icon: '⚡' },
-    { to: '/trade', label: 'Trade Analyzer', icon: '🤝' },
-    { to: '/standings', label: 'Standings', icon: '🏆' },
-    { to: '/matchup', label: 'Matchup Predictor', icon: '⚔️' },
-    { to: '/setup', label: 'League Setup', icon: '⚙️' },
+    { to: '/',          label: 'Dashboard',         icon: '⚾' },
+    { to: '/draft',     label: 'Draft Assistant',    icon: '📋' },
+    { to: '/roster',    label: 'My Roster',          icon: '👥' },
+    { to: '/waiver',    label: 'Waiver Wire',        icon: '🔄' },
+    { to: '/startsit',  label: 'Start / Sit',        icon: '⚡' },
+    { to: '/trade',     label: 'Trade Analyzer',     icon: '🤝' },
+    { to: '/standings', label: 'Standings',          icon: '🏆' },
+    { to: '/matchup',   label: 'Matchup Predictor',  icon: '⚔️' },
+    { to: '/setup',     label: 'League Setup',       icon: '⚙️' },
   ]
 
   return (
-    <nav style={{
-      width: 220, background: '#060e1a', borderRight: '1px solid #1e3d5c',
-      padding: '20px 0', display: 'flex', flexDirection: 'column', gap: 4,
-      position: 'sticky', top: 0, height: '100vh', overflowY: 'auto'
-    }}>
+    <nav className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div style={{ padding: '0 16px 20px', borderBottom: '1px solid #1e3d5c', marginBottom: 8 }}>
         <div style={{ fontSize: 22, fontWeight: 700, color: '#007a7a' }}>⚾ Fantasy HQ</div>
         <div style={{ fontSize: 11, color: '#4a7a94', marginTop: 2 }}>MLB Draft & Season Manager</div>
       </div>
+
       {authenticated && navItems.map(item => (
         <NavLink key={item.to} to={item.to} end={item.to === '/'}
+          onClick={onClose}
           style={({ isActive }) => ({
             display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px',
             textDecoration: 'none', borderRadius: 8, margin: '0 8px',
             background: isActive ? '#0c2c56' : 'transparent',
             color: isActive ? '#4aafdb' : '#7aafc4',
-            fontSize: 14, fontWeight: isActive ? 600 : 400
+            fontSize: 14, fontWeight: isActive ? 600 : 400,
+            minHeight: 44,
           })}>
-          <span>{item.icon}</span>
+          <span style={{ fontSize: 16 }}>{item.icon}</span>
           <span>{item.label}</span>
         </NavLink>
       ))}
+
       {!authenticated && (
         <div style={{ padding: '0 16px', color: '#4a7a94', fontSize: 13 }}>
           Login to access all features
@@ -122,7 +144,7 @@ function Sidebar({ authenticated }) {
 
 function LoginPage() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80vh' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', padding: 16 }}>
       <div className="card" style={{ maxWidth: 420, width: '100%', textAlign: 'center' }}>
         <div style={{ fontSize: 64, marginBottom: 16 }}>⚾</div>
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Fantasy Baseball HQ</h1>

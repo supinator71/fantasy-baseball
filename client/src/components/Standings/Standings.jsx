@@ -50,7 +50,7 @@ export default function Standings({ leagueSettings }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>Standings</h1>
           <p style={{ color: '#7aafc4' }}>Current league standings from Yahoo Fantasy</p>
