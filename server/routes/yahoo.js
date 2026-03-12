@@ -69,7 +69,38 @@ router.get('/league/:leagueKey', requireAuth, async (req, res) => {
   try {
     const data = await withCache(res, `league:${leagueKey}`, TTL.LEAGUE, force,
       () => yahoo.getLeague(leagueKey))
-    res.json(data)
+      
+    // Parse the data for the LeagueSetup frontend component
+    const settingsArr = data?.[1]?.settings?.[0];
+    const rosterArr = settingsArr?.roster_positions?.[0]?.roster_position || Object.values(settingsArr?.roster_positions || {}).filter(v => v.position);
+    const statsArr = settingsArr?.stat_categories?.stats || settingsArr?.stat_categories?.[0]?.stats || Object.values(settingsArr?.stat_categories || {}).filter(v => v.stat);
+
+    const roster_slots = {};
+    if (Array.isArray(rosterArr)) {
+      rosterArr.forEach(r => {
+        const pos = r.position || r.roster_position?.position || r.roster_position?.[0]?.position;
+        const count = parseInt(r.count || r.roster_position?.count || r.roster_position?.[0]?.count || 1);
+        if (pos) roster_slots[pos] = (roster_slots[pos] || 0) + count;
+      });
+    }
+
+    const stat_categories = [];
+    if (Array.isArray(statsArr)) {
+      statsArr.forEach(s => {
+        const name = s.stat?.name || s.stat?.[0]?.name;
+        if (name) stat_categories.push(name);
+      });
+    }
+
+    res.json({
+      league_key: leagueKey,
+      league_name: data?.[0]?.name || '',
+      num_teams: parseInt(data?.[0]?.num_teams || 12),
+      scoring_type: data?.[0]?.scoring_type || 'Roto',
+      draft_type: data?.[0]?.draft_type || 'Snake',
+      roster_slots: Object.keys(roster_slots).length ? roster_slots : undefined,
+      stat_categories: stat_categories.length ? stat_categories : undefined
+    })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

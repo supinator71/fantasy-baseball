@@ -87,10 +87,30 @@ export default function LeagueSetup({ onSave }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
               <label style={{ fontSize: 13, color: '#7aafc4', display: 'block', marginBottom: 4 }}>Yahoo League</label>
-              <select value={selectedLeague} onChange={e => {
-                setSelectedLeague(e.target.value)
-                const l = leagues.find(l => l.league_key === e.target.value)
-                if (l) update('league_key', l.league_key) && update('league_name', l.name)
+              <select value={selectedLeague} onChange={async e => {
+                const key = e.target.value;
+                setSelectedLeague(key);
+                if (!key) return;
+                
+                // Set name immediately from the local list
+                const l = leagues.find(l => l.league_key === key);
+                if (l) update('league_key', l.league_key) && update('league_name', l.name);
+
+                // Fetch actual settings from Yahoo
+                try {
+                  const { data } = await axios.get(`/api/yahoo/league/${key}`);
+                  if (data) {
+                    setSettings(s => ({
+                      ...s,
+                      ...data, // Applies league_key, league_name, num_teams, scoring_type, draft_type
+                      roster_slots: data.roster_slots || s.roster_slots,
+                      stat_categories: data.stat_categories || s.stat_categories
+                    }));
+                    toast.success('Imported Yahoo settings!');
+                  }
+                } catch (err) {
+                  toast.error('Failed to import Yahoo settings.');
+                }
               }} style={{}}>
                 <option value="">Select a league...</option>
                 {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name}</option>)}
