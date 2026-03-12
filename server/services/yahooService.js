@@ -40,6 +40,7 @@ async function yahooGet(endpoint) {
 
 async function getLeagues() {
   const data = await yahooGet('/users;use_login=1/games;game_keys=mlb/leagues');
+  console.log('Yahoo /leagues raw response:', JSON.stringify(data, null, 2));
   const leagues = data.fantasy_content?.users?.[0]?.user?.[1]?.games?.[0]?.game?.[1]?.leagues;
   if (!leagues) return [];
 

@@ -142,6 +142,32 @@ function Sidebar({ authenticated, isOpen, onClose }) {
         </NavLink>
       ))}
 
+      {authenticated && (
+        <div style={{ marginTop: 'auto', paddingTop: 20, paddingBottom: 20 }}>
+          <button 
+            onClick={async () => {
+              try {
+                const axios = require('axios');
+                await axios.post('/auth/logout');
+                window.location.href = '/';
+              } catch (e) {
+                console.error('Logout failed:', e);
+              }
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px',
+              border: 'none', background: 'transparent', width: '100%',
+              color: '#f87171', fontSize: 14, cursor: 'pointer', textAlign: 'left',
+              margin: '0 8px', borderRadius: 8
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#2a1a24'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >
+            <span style={{ fontSize: 16 }}>🚪</span> Logout
+          </button>
+        </div>
+      )}
+
       {!authenticated && (
         <div style={{ padding: '0 16px', color: '#4a7a94', fontSize: 13 }}>
           Login to access all features

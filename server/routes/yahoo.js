@@ -58,6 +58,7 @@ router.get('/leagues', requireAuth, async (req, res) => {
     const data = await withCache(res, 'leagues', TTL.LEAGUES, force, () => yahoo.getLeagues())
     res.json(data)
   } catch (err) {
+    console.error('Error in /leagues endpoint:', err.message, err.response?.data || '');
     res.status(500).json({ error: err.message })
   }
 })

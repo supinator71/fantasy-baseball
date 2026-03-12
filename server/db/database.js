@@ -104,6 +104,11 @@ const db = {
       }
     };
   },
+  transaction(fn) {
+    return function(...args) {
+      return fn(...args);
+    };
+  },
   exec() {}
 };
 
