@@ -106,12 +106,15 @@ router.get('/league/:leagueKey', requireAuth, async (req, res) => {
   }
 })
 
-router.get('/league/:leagueKey/roster/:teamKey', requireAuth, async (req, res) => {
-  const { leagueKey, teamKey } = req.params
+router.get('/league/:leagueKey/roster', requireAuth, async (req, res) => {
+  const { leagueKey } = req.params
   const force = req.query.force === 'true'
   try {
-    const data = await withCache(res, `roster:${leagueKey}:${teamKey}`, TTL.ROSTER, force,
-      () => yahoo.getRoster(leagueKey, teamKey))
+    const data = await withCache(res, `roster:${leagueKey}:mine`, TTL.ROSTER, force, async () => {
+      const myTeamKey = await yahoo.getUserTeamKey(leagueKey);
+      if (!myTeamKey) throw new Error('Could not find your team in this league.');
+      return yahoo.getRoster(leagueKey, myTeamKey);
+    })
     res.json(data)
   } catch (err) {
     res.status(500).json({ error: err.message })

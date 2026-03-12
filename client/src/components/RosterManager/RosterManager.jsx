@@ -24,8 +24,7 @@ export default function RosterManager({ leagueSettings }) {
     if (!selectedLeague) return
     setLoading(true)
     try {
-      const teamKey = selectedLeague.replace('l.', 't.')
-      const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/roster/${teamKey}`)
+      const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/roster`)
       const playerList = []
       if (data) {
         const count = data['@attributes']?.count || 0
