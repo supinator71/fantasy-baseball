@@ -4,8 +4,11 @@ const Anthropic = require('@anthropic-ai/sdk');
 const db = require('../db/database');
 const brain = require('../services/fantasyBrain');
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
+let client = null;
+function getClient() {
+  if (!client) client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return client;
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // EXPERT SYSTEM PROMPT
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,7 +53,7 @@ function leagueContext(settings) {
 }
 
 async function callClaude(messages, maxTokens = 1500) {
-  const msg = await client.messages.create({
+  const msg = await getClient().messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: maxTokens,
     system: SYSTEM_PROMPT,
