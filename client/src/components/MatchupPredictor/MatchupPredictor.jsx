@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import LastUpdated from '../shared/LastUpdated'
 
 function ConfidenceBadge({ level }) {
   const styles = {
@@ -25,6 +26,8 @@ export default function MatchupPredictor({ leagueSettings }) {
   const [loading, setLoading] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [error, setError] = useState('')
+  const [cachedAt, setCachedAt] = useState(null)
+  const [fromCache, setFromCache] = useState(false)
 
   useEffect(() => {
     axios.get('/api/yahoo/leagues').then(({ data }) => {
@@ -37,15 +40,17 @@ export default function MatchupPredictor({ leagueSettings }) {
     if (selectedLeague) fetchMatchup()
   }, [selectedLeague])
 
-  async function fetchMatchup() {
+  async function fetchMatchup(force = false) {
     setLoading(true)
     setError('')
     setMatchup(null)
     setPrediction(null)
     try {
-      const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/matchup`)
-      if (data.error) { setError(data.error); return }
-      setMatchup(data)
+      const res = await axios.get(`/api/yahoo/league/${selectedLeague}/matchup${force ? '?force=true' : ''}`)
+      if (res.data.error) { setError(res.data.error); return }
+      setMatchup(res.data)
+      setCachedAt(res.headers['x-cache-updated'] || null)
+      setFromCache(res.headers['x-cache-hit'] === 'true')
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load matchup data')
     } finally {
@@ -88,9 +93,8 @@ export default function MatchupPredictor({ leagueSettings }) {
           <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>
             {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
           </select>
-          <button className="btn btn-primary" onClick={fetchMatchup} disabled={loading}>
-            {loading ? 'Loading...' : 'Refresh'}
-          </button>
+          <LastUpdated cachedAt={cachedAt} fromCache={fromCache} ttlLabel="5 min cache"
+            onRefresh={() => fetchMatchup(true)} loading={loading} />
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import LastUpdated from '../shared/LastUpdated'
 
 const TREND_META = {
   hot:     { icon: '🔥', label: 'Hot',     color: '#ff6b35', bg: 'rgba(255,107,53,0.15)',  border: 'rgba(255,107,53,0.35)' },
@@ -90,17 +91,21 @@ export default function PlayerTrends({ selectedLeague }) {
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('roster')
   const [error, setError] = useState('')
+  const [cachedAt, setCachedAt] = useState(null)
+  const [fromCache, setFromCache] = useState(false)
 
   useEffect(() => {
     if (selectedLeague) fetchTrends()
   }, [selectedLeague])
 
-  async function fetchTrends() {
+  async function fetchTrends(force = false) {
     setLoading(true)
     setError('')
     try {
-      const { data: res } = await axios.get(`/api/yahoo/league/${selectedLeague}/trends`)
-      setData(res)
+      const res = await axios.get(`/api/yahoo/league/${selectedLeague}/trends${force ? '?force=true' : ''}`)
+      setData(res.data)
+      setCachedAt(res.headers['x-cache-updated'] || null)
+      setFromCache(res.headers['x-cache-hit'] === 'true')
     } catch (err) {
       setError(err.response?.data?.error || 'Could not load player trends')
     } finally {
@@ -129,9 +134,8 @@ export default function PlayerTrends({ selectedLeague }) {
             )}
           </div>
         </div>
-        <button className="btn btn-ghost" onClick={fetchTrends} disabled={loading} style={{ fontSize: 12 }}>
-          {loading ? 'Loading...' : '↻ Refresh'}
-        </button>
+        <LastUpdated cachedAt={cachedAt} fromCache={fromCache} ttlLabel="15 min cache"
+          onRefresh={() => fetchTrends(true)} loading={loading} />
       </div>
 
       {/* Tabs */}

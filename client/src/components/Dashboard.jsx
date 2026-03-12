@@ -1,21 +1,27 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import PlayerTrends from './PlayerTrends/PlayerTrends'
+import LastUpdated from './shared/LastUpdated'
 
 export default function Dashboard({ leagueSettings }) {
   const [leagues, setLeagues] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedLeague, setSelectedLeague] = useState('')
+  const [cachedAt, setCachedAt] = useState(null)
+  const [fromCache, setFromCache] = useState(false)
 
   useEffect(() => {
     fetchLeagues()
   }, [])
 
-  async function fetchLeagues() {
+  async function fetchLeagues(force = false) {
+    setLoading(true)
     try {
-      const { data } = await axios.get('/api/yahoo/leagues')
-      setLeagues(data)
-      if (data[0]?.league_key) setSelectedLeague(data[0].league_key)
+      const res = await axios.get(`/api/yahoo/leagues${force ? '?force=true' : ''}`)
+      setLeagues(res.data)
+      if (res.data[0]?.league_key && !selectedLeague) setSelectedLeague(res.data[0].league_key)
+      setCachedAt(res.headers['x-cache-updated'] || null)
+      setFromCache(res.headers['x-cache-hit'] === 'true')
     } catch (err) {
       console.error(err)
     } finally {
@@ -66,13 +72,17 @@ export default function Dashboard({ leagueSettings }) {
       </div>
 
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600 }}>Your Yahoo Leagues</h2>
-          {leagues.length > 1 && (
-            <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>
-              {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
-            </select>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {leagues.length > 1 && (
+              <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>
+                {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
+              </select>
+            )}
+            <LastUpdated cachedAt={cachedAt} fromCache={fromCache} ttlLabel="5 min cache"
+              onRefresh={() => fetchLeagues(true)} loading={loading} />
+          </div>
         </div>
         {loading ? (
           <div className="loading">Loading leagues...</div>
