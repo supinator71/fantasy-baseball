@@ -38,6 +38,20 @@ async function yahooGet(endpoint) {
   return response.data;
 }
 
+// Helper to convert Yahoo's unpredictable list format to a standard array
+function toArray(obj) {
+  if (!obj) return [];
+  if (Array.isArray(obj)) return obj;
+  const count = obj['@attributes']?.count || obj.count || 0;
+  if (!count) return [];
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    const item = obj[i] || obj[String(i)];
+    if (item) result.push(item);
+  }
+  return result;
+}
+
 async function getLeagues() {
   const data = await yahooGet('/users;use_login=1/games;game_keys=mlb/leagues');
   console.log('Yahoo /leagues raw response:', JSON.stringify(data, null, 2));
@@ -46,16 +60,7 @@ async function getLeagues() {
   const leagues = data?.fantasy_content?.users?.['0']?.user?.[1]?.games?.['0']?.game?.[1]?.leagues;
   if (!leagues) return [];
 
-  const result = [];
-  const count = leagues['@attributes']?.count || leagues.count || 0;
-  
-  for (let i = 0; i < count; i++) {
-    // Sometimes it's an array of objects `{ league: [...] }`, sometimes an object with index keys
-    const leagueObj = leagues[i] || leagues[String(i)];
-    const league = leagueObj?.league?.[0];
-    if (league) result.push(league);
-  }
-  return result;
+  return toArray(leagues).map(l => l?.league?.[0]).filter(Boolean);
 }
 
 async function getLeague(leagueKey) {
@@ -65,12 +70,14 @@ async function getLeague(leagueKey) {
 
 async function getRoster(leagueKey, teamKey) {
   const data = await yahooGet(`/team/${teamKey}/roster/players`);
-  return data.fantasy_content?.team?.[1]?.roster?.[0]?.players;
+  const players = data.fantasy_content?.team?.[1]?.roster?.[0]?.players;
+  return toArray(players);
 }
 
 async function getStandings(leagueKey) {
   const data = await yahooGet(`/league/${leagueKey}/standings`);
-  return data.fantasy_content?.league?.[1]?.standings?.[0]?.teams;
+  const teams = data.fantasy_content?.league?.[1]?.standings?.[0]?.teams;
+  return toArray(teams);
 }
 
 async function getScoreboard(leagueKey) {
@@ -80,7 +87,8 @@ async function getScoreboard(leagueKey) {
 
 async function getPlayers(leagueKey, status = 'A', start = 0) {
   const data = await yahooGet(`/league/${leagueKey}/players;status=${status};start=${start};count=25`);
-  return data.fantasy_content?.league?.[1]?.players;
+  const players = data.fantasy_content?.league?.[1]?.players;
+  return toArray(players);
 }
 
 async function getDraftResults(leagueKey) {
@@ -90,7 +98,8 @@ async function getDraftResults(leagueKey) {
 
 async function getTransactions(leagueKey) {
   const data = await yahooGet(`/league/${leagueKey}/transactions;type=waiver`);
-  return data.fantasy_content?.league?.[1]?.transactions;
+  const txns = data.fantasy_content?.league?.[1]?.transactions;
+  return toArray(txns);
 }
 
 async function getPlayerStats(leagueKey, playerKey) {
@@ -103,7 +112,7 @@ function parsePlayersStats(raw) {
   const count = raw['@attributes']?.count || 0;
   const result = [];
   for (let i = 0; i < count; i++) {
-    const p = raw[i]?.player;
+    const p = raw[i] || raw[String(i)]?.player;
     if (!p) continue;
     const info = p[0] || {};
     const statsArr = p[1]?.player_stats?.stats || p[1]?.player_season_stats?.stats || [];
@@ -156,13 +165,15 @@ async function getUserTeamKey(leagueKey) {
       if (!leagues2) continue;
       const lcount = leagues2['@attributes']?.count || 0;
       for (let j = 0; j < lcount; j++) {
-        const league = leagues2[j]?.league;
+        const leagueObj = leagues2[j] || leagues2[String(j)];
+        const league = leagueObj?.league;
         if (!league) continue;
         const teams = league[1]?.teams;
         if (!teams) continue;
-        const tcount = teams['@attributes']?.count || 0;
+        const tcount = teams['@attributes']?.count || teams.count || 0;
         for (let k = 0; k < tcount; k++) {
-          const teamKey = teams[k]?.team?.[0]?.team_key;
+          const teamObj = teams[k] || teams[String(k)];
+          const teamKey = teamObj?.team?.[0]?.team_key;
           if (teamKey) return teamKey;
         }
       }
