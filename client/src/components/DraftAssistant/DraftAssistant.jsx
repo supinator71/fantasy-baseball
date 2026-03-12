@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import DraftBoard from './DraftBoard'
@@ -52,11 +52,25 @@ export default function DraftAssistant({ leagueSettings }) {
   const [numTeams, setNumTeams] = useState(leagueSettings?.num_teams || 12)
   const [countdown, setCountdown] = useState(null)
   const [timerActive, setTimerActive] = useState(false)
+  // Live sync state
+  const [leagues, setLeagues] = useState([])
+  const [selectedLeague, setSelectedLeague] = useState('')
+  const [liveMode, setLiveMode] = useState(false)
+  const [initLoading, setInitLoading] = useState(false)
+  const [lastSync, setLastSync] = useState(null)
+  const [syncError, setSyncError] = useState('')
   const autoTriggered = useRef(false)
   const countdownRef = useRef(null)
+  const syncRef = useRef(null)
   const draftPosition = leagueSettings?.draft_position || 1
 
-  useEffect(() => { loadBoard() }, [])
+  useEffect(() => {
+    loadBoard()
+    axios.get('/api/yahoo/leagues').then(({ data }) => {
+      setLeagues(data)
+      if (data[0]?.league_key) setSelectedLeague(data[0].league_key)
+    }).catch(() => {})
+  }, [])
 
   const myPick = useMemo(
     () => isMyPickFn(pickNumber, draftPosition, numTeams),
@@ -100,6 +114,50 @@ export default function DraftAssistant({ leagueSettings }) {
   }
 
   useEffect(() => () => clearInterval(countdownRef.current), [])
+
+  // Live sync polling
+  const syncNow = useCallback(async () => {
+    if (!selectedLeague) return
+    try {
+      const { data } = await axios.get(`/api/draft/sync/${selectedLeague}`)
+      if (data.board) {
+        setPlayers(data.board)
+        setMyTeam(data.board.filter(p => p.drafted_by === 'me'))
+        const drafted = data.board.filter(p => p.drafted).length
+        setPickNumber(drafted + 1)
+      }
+      setLastSync(new Date())
+      setSyncError('')
+    } catch (err) {
+      setSyncError(err.response?.data?.error || 'Sync failed')
+    }
+  }, [selectedLeague])
+
+  useEffect(() => {
+    if (liveMode) {
+      syncNow()
+      syncRef.current = setInterval(syncNow, 10000)
+    } else {
+      clearInterval(syncRef.current)
+    }
+    return () => clearInterval(syncRef.current)
+  }, [liveMode, syncNow])
+
+  useEffect(() => () => clearInterval(syncRef.current), [])
+
+  async function initFromYahoo() {
+    if (!selectedLeague) return toast.error('Select a league first')
+    setInitLoading(true)
+    try {
+      const { data } = await axios.post(`/api/draft/init-yahoo/${selectedLeague}`)
+      toast.success(`Loaded ${data.count} players from Yahoo!`)
+      await loadBoard()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to load Yahoo players')
+    } finally {
+      setInitLoading(false)
+    }
+  }
 
   async function loadBoard() {
     try {
@@ -203,6 +261,47 @@ export default function DraftAssistant({ leagueSettings }) {
           <button className="btn btn-primary" onClick={getAiRecommendation} disabled={aiLoading}>
             {aiLoading ? 'Thinking...' : '🤖 AI Pick'}
           </button>
+        </div>
+      </div>
+
+      {/* Live sync control panel */}
+      <div className="card" style={{
+        marginBottom: 16, padding: '12px 16px',
+        border: liveMode ? '1px solid #00a86b' : '1px solid #1e3d5c',
+        background: liveMode ? 'rgba(0,168,107,0.06)' : undefined,
+      }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#7aafc4', whiteSpace: 'nowrap' }}>Yahoo League:</span>
+          <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ minWidth: 160 }}>
+            <option value="">Select league...</option>
+            {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
+          </select>
+          <button className="btn btn-ghost" style={{ fontSize: 12, padding: '6px 14px' }}
+            onClick={initFromYahoo} disabled={initLoading || !selectedLeague}>
+            {initLoading ? 'Loading...' : '📥 Load Yahoo Players'}
+          </button>
+          <button
+            className={`btn ${liveMode ? 'btn-danger' : 'btn-success'}`}
+            style={{ fontSize: 12, padding: '6px 14px', fontWeight: 700 }}
+            onClick={() => setLiveMode(v => !v)} disabled={!selectedLeague}>
+            {liveMode ? '⏹ Stop Live Sync' : '🔴 Go Live'}
+          </button>
+          {liveMode && (
+            <button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={syncNow}>
+              ↻ Sync Now
+            </button>
+          )}
+          {liveMode && lastSync && (
+            <span style={{ fontSize: 11, color: '#00a86b' }}>
+              ✓ Last sync: {lastSync.toLocaleTimeString()}
+            </span>
+          )}
+          {syncError && <span style={{ fontSize: 11, color: '#ef4444' }}>{syncError}</span>}
+          {liveMode && (
+            <span style={{ fontSize: 11, color: '#7aafc4', marginLeft: 'auto' }}>
+              Auto-syncing every 10s
+            </span>
+          )}
         </div>
       </div>
 
