@@ -16,25 +16,157 @@ function getLeagueContext() {
   return `League context: ${settings.num_teams} teams, ${settings.scoring_type} scoring, ${settings.draft_type} draft.`;
 }
 
+// Positional scarcity multipliers (expert consensus for snake drafts)
+const SCARCITY = {
+  C:   2.0,  // catastrophic dropoff after top 5-6
+  SS:  1.8,  // scarce — 8-10 good options only
+  '2B': 1.4,
+  '3B': 1.3,
+  SP:  1.2,  // injury risk but need 5+ starters
+  OF:  0.85, // deep — 40+ viable options
+  '1B': 0.8, // deep
+  RP:  0.6,  // mostly streamable, take late
+}
+
+// Which positions can fill a UTIL slot (non-pitchers)
+const UTIL_ELIGIBLE = new Set(['C','1B','2B','3B','SS','OF'])
+
+// Expert advice by round range
+function roundStrategy(round, totalRounds) {
+  if (round <= 3)  return 'BEST PLAYER AVAILABLE — do NOT reach for positional need this early. Elite talent > position.'
+  if (round <= 6)  return 'BPA with need awareness. Address C or SS if top options remain — their dropoffs are steep after round 8.'
+  if (round <= 10) return 'Fill remaining starting slots. Prioritize positions where the talent pool is about to dry up.'
+  if (round <= 15) return 'Roster construction phase. Target streamable SPs, closing opportunities, and multi-position eligibility.'
+  return 'Late round fliers — upside plays, injured returnees, prospects with call-up potential, streaming SPs.'
+}
+
+function buildScarcityAnalysis(availablePlayers, rosterSlots, myRoster) {
+  // Count how many good options remain per position (within top 150 ADP)
+  const posPool = {}
+  availablePlayers.forEach(p => {
+    const pos = String(p.position || '').split('/')[0].split(',')[0].trim().toUpperCase()
+    if (!posPool[pos]) posPool[pos] = []
+    if ((p.adp || 999) <= 150) posPool[pos].push(p)
+  })
+
+  // Count current fills per position
+  const filled = {}
+  ;(myRoster || []).forEach(p => {
+    const pos = String(p.position || '').split('/')[0].split(',')[0].trim().toUpperCase()
+    filled[pos] = (filled[pos] || 0) + 1
+  })
+
+  const analysis = []
+  const slots = rosterSlots || {}
+  for (const [pos, required] of Object.entries(slots)) {
+    if (pos === 'BN' || pos === 'IL') continue
+    const have = filled[pos] || 0
+    const need = Math.max(0, required - have)
+    const remaining = (posPool[pos] || []).length
+    if (need > 0 && pos !== 'UTIL') {
+      const scarcity = SCARCITY[pos] || 1.0
+      let urgency = scarcity >= 1.8 ? '🚨 CRITICAL' : scarcity >= 1.3 ? '⚠️ URGENT' : '📋 NEEDED'
+      analysis.push(`${urgency} ${pos}: need ${need} more, only ${remaining} quality options left in pool (scarcity: ${scarcity}x)`)
+    }
+  }
+  return analysis
+}
+
 // Draft pick recommendation
 router.post('/draft/recommend', async (req, res) => {
-  const { available_players, my_roster, pick_number, total_picks, needs } = req.body;
-  const leagueContext = getLeagueContext();
+  const { available_players, my_roster, pick_number, total_picks, needs, roster_slots, num_teams } = req.body;
+  const leagueCtx = getLeagueContext();
+  const settings = db.prepare('SELECT * FROM league_settings WHERE id = 1').get();
+  const slots = roster_slots || (settings?.roster_slots ? JSON.parse(settings.roster_slots) : { SP:2, RP:2, C:1, '1B':1, '2B':1, '3B':1, SS:1, OF:3, UTIL:1, BN:4 });
+  const teams = num_teams || settings?.num_teams || 12;
+
+  const totalRounds = Math.ceil(total_picks / teams);
+  const currentRound = Math.ceil(pick_number / teams);
+  const roundsLeft = totalRounds - currentRound;
+
+  // Build positional fill status
+  const filled = {};
+  (my_roster || []).forEach(p => {
+    const pos = String(p.position || '').split('/')[0].split(',')[0].trim().toUpperCase();
+    filled[pos] = (filled[pos] || 0) + 1;
+  });
+
+  // Roster status summary
+  const rosterStatus = Object.entries(slots)
+    .filter(([pos]) => pos !== 'BN' && pos !== 'IL')
+    .map(([pos, req]) => {
+      const have = filled[pos] || 0;
+      const need = Math.max(0, req - have);
+      return `${pos}: ${have}/${req} filled${need > 0 ? ` (need ${need})` : ' ✓'}`
+    }).join(' | ');
+
+  // Scarcity analysis
+  const scarcityAlerts = buildScarcityAnalysis(available_players, slots, my_roster);
+
+  // Find tier breaks (ADP gaps > 12 between consecutive players)
+  const sorted = [...available_players].sort((a, b) => (a.adp || 999) - (b.adp || 999));
+  const tierBreaks = [];
+  for (let i = 0; i < Math.min(sorted.length - 1, 25); i++) {
+    const gap = (sorted[i+1]?.adp || 999) - (sorted[i]?.adp || 0);
+    if (gap > 12) tierBreaks.push(`After ${sorted[i].player_name} (ADP ${sorted[i].adp}), tier drop of ${gap.toFixed(0)} ADP spots before ${sorted[i+1].player_name}`);
+  }
+
+  // Multi-position players (fill 2 needs)
+  const multiPos = available_players
+    .filter(p => String(p.position || '').includes('/'))
+    .slice(0, 8)
+    .map(p => `${p.player_name} (${p.position}) — fills multiple roster spots`);
+
+  // Format top available with value context
+  const topAvailable = available_players.slice(0, 20).map(p => {
+    const pos = String(p.position || '').split('/')[0].split(',')[0].trim().toUpperCase();
+    const have = filled[pos] || 0;
+    const req = slots[pos] || 0;
+    const posStatus = req > 0 && have >= req ? '[POSITION FULL]' : req > 0 && have < req ? '[NEED]' : '';
+    const value = pick_number - (p.adp || pick_number);
+    const valueStr = value > 5 ? `(+${value.toFixed(0)} value)` : value < -5 ? `(${value.toFixed(0)} reach)` : '(fair value)';
+    return `${p.player_name} | ${p.position} | ${p.team} | ADP ${p.adp} ${valueStr} ${posStatus}`;
+  }).join('\n');
 
   try {
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+      max_tokens: 1500,
       system: SYSTEM_PROMPT,
       messages: [{
         role: 'user',
-        content: `${leagueContext}
-Draft pick #${pick_number} of ${total_picks}.
-My current roster: ${JSON.stringify(my_roster)}
-My positional needs: ${JSON.stringify(needs)}
-Top available players: ${JSON.stringify(available_players)}
+        content: `${leagueCtx}
 
-Who should I draft and why? Give me your top 3 recommendations with brief reasoning.`
+=== DRAFT SITUATION ===
+Pick #${pick_number} | Round ${currentRound} of ${totalRounds} | ${roundsLeft} rounds remaining
+Round strategy: ${roundStrategy(currentRound, totalRounds)}
+
+=== MY ROSTER (${(my_roster||[]).length} players) ===
+${my_roster?.length ? my_roster.map(p => `${p.player_name} (${p.position})`).join(', ') : 'Empty — first pick'}
+
+=== ROSTER SLOT STATUS ===
+${rosterStatus}
+
+=== POSITIONAL URGENCY ===
+${scarcityAlerts.length ? scarcityAlerts.join('\n') : 'No critical positional needs yet.'}
+
+=== TIER BREAKS (act before these drop) ===
+${tierBreaks.length ? tierBreaks.slice(0, 4).join('\n') : 'No major tier breaks in top available.'}
+
+=== MULTI-POSITION VALUE ===
+${multiPos.length ? multiPos.join('\n') : 'None in top available.'}
+
+=== TOP AVAILABLE PLAYERS ===
+${topAvailable}
+
+=== YOUR EXPERT RECOMMENDATION ===
+Give me your TOP 3 picks ranked. For each:
+1. Player name + position
+2. Why NOW (tier timing, scarcity, value)
+3. What positional slot it fills and how many rounds until that position dries up
+4. Any risk to be aware of
+
+Then a 1-line summary of overall draft strategy for my next 3 rounds.`
       }]
     });
     res.json({ recommendation: message.content[0].text });
