@@ -113,10 +113,10 @@ function Sidebar({ authenticated, isOpen, onClose }) {
     { to: '/trade',     label: 'Trade Analyzer',     icon: '🤝' },
     { to: '/standings', label: 'Standings',          icon: '🏆' },
     { to: '/matchup',   label: 'Matchup Predictor',  icon: '⚔️' },
-    { to: '/audit',       label: 'Team Audit',         icon: '📊' },
-    { to: '/tradefinder', label: 'Trade Finder',       icon: '💡' },
-    { to: '/gameplan',    label: 'Weekly Game Plan',   icon: '📅' },
-    { to: '/setup',       label: 'League Setup',       icon: '⚙️' },
+    { to: '/audit',       label: 'Team Audit',     icon: '🏅' },
+    { to: '/tradefinder', label: 'Trade Finder',   icon: '🔀' },
+    { to: '/gameplan',    label: 'Game Plan',      icon: '🗓️' },
+    { to: '/setup',       label: 'League Setup',   icon: '⚙️' },
   ]
 
   return (
@@ -137,8 +137,8 @@ function Sidebar({ authenticated, isOpen, onClose }) {
             fontSize: 14, fontWeight: isActive ? 600 : 400,
             minHeight: 44,
           })}>
-          <span style={{ fontSize: 16 }}>{item.icon}</span>
-          <span>{item.label}</span>
+          <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
         </NavLink>
       ))}
 
