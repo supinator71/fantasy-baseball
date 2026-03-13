@@ -89,6 +89,7 @@ async function getScoreboard(leagueKey) {
 
 async function getPlayers(leagueKey, status = 'A', start = 0) {
   const data = await yahooGet(`/league/${leagueKey}/players;status=${status};start=${start};count=25`);
+  console.log(`Yahoo /players FA raw response for ${leagueKey}:`, JSON.stringify(data, null, 2));
   const players = data.fantasy_content?.league?.[1]?.players;
   return toArray(players);
 }
