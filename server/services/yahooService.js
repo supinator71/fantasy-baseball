@@ -112,7 +112,7 @@ async function getPlayerStats(leagueKey, playerKey) {
 
 function parsePlayersStats(raw) {
   if (!raw) return [];
-  const count = raw['@attributes']?.count || raw?.length || 0;
+  const count = raw['@attributes']?.count || raw.count || raw?.length || 0;
   const result = [];
   for (let i = 0; i < count; i++) {
     const p = raw[i] || raw[String(i)]?.player;
