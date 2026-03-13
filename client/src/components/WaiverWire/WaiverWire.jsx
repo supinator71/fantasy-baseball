@@ -20,8 +20,20 @@ export default function WaiverWire({ leagueSettings }) {
   }, [])
 
   useEffect(() => {
-    if (selectedLeague) fetchAvailable()
+    if (selectedLeague) {
+       fetchAvailable()
+       fetchMyRoster()
+    }
   }, [selectedLeague, posFilter])
+
+  async function fetchMyRoster() {
+    try {
+      const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/myroster`);
+      setMyRoster(data?.players || []);
+    } catch {
+      setMyRoster([]);
+    }
+  }
 
   async function fetchAvailable() {
     setLoading(true)
