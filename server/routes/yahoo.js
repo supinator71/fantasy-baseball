@@ -181,6 +181,10 @@ router.get('/league/:leagueKey/players', requireAuth, async (req, res) => {
   try {
     const data = await withCache(res, `players:${leagueKey}:${status}:${start}`, TTL.PLAYERS, force,
       () => yahoo.getPlayers(leagueKey, status, start))
+      
+    // BACKEND DIAGNOSTIC LOG
+    console.log('API /PLAYERS PAYLOAD[0]:', JSON.stringify(data[0] || 'EMPTY', null, 2));
+      
     res.json(data)
   } catch (err) {
     res.status(500).json({ error: err.message })
