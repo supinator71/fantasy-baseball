@@ -54,7 +54,6 @@ function toArray(obj) {
 
 async function getLeagues() {
   const data = await yahooGet('/users;use_login=1/games;game_keys=mlb/leagues');
-  console.log('Yahoo /leagues raw response:', JSON.stringify(data, null, 2));
   
   // The JSON structure can vary slightly depending on whether you have 1 or multiple leagues
   const leagues = data?.fantasy_content?.users?.['0']?.user?.[1]?.games?.['0']?.game?.[1]?.leagues;
@@ -70,7 +69,6 @@ async function getLeague(leagueKey) {
 
 async function getRoster(leagueKey, teamKey) {
   const data = await yahooGet(`/team/${teamKey}/roster/players`);
-  console.log('Yahoo /roster raw response:', JSON.stringify(data, null, 2));
   const players = data.fantasy_content?.team?.[1]?.roster?.[1]?.players || data.fantasy_content?.team?.[1]?.roster?.[0]?.players;
   return toArray(players);
 }
