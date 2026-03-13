@@ -89,10 +89,25 @@ async function getScoreboard(leagueKey) {
 }
 
 async function getPlayers(leagueKey, status = 'A', start = 0) {
-  const data = await yahooGet(`/league/${leagueKey}/players;status=${status};sort=AR;start=${start};count=25/stats`);
+  // First, get the raw base list of 25 players without appending stats
+  const data = await yahooGet(`/league/${leagueKey}/players;status=${status};sort=AR;start=${start};count=25`);
   const leagueObj = data.fantasy_content?.league;
-  const players = leagueObj?.[1]?.players || leagueObj?.[0]?.players;
-  return parsePlayersStats(players);
+  const rawPlayers = leagueObj?.[1]?.players || leagueObj?.[0]?.players || {};
+  
+  const playersArr = toArray(rawPlayers);
+  if (!playersArr.length) return [];
+
+  // Extract keys and do a targeted batch fetch for Projected Stats
+  const playerKeys = playersArr.map(p => {
+     const info = p.player?.[0] || p.player;
+     const pi = Array.isArray(info) ? Object.assign({}, ...info) : info;
+     return pi.player_key || pi.editorial_player_key;
+  }).filter(Boolean);
+
+  if (!playerKeys.length) return [];
+  
+  // getBatchPlayerStats uses parsePlayersStats automatically!
+  return await getBatchPlayerStats(leagueKey, playerKeys, 'projected');
 }
 
 async function getDraftResults(leagueKey) {
