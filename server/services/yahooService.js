@@ -208,5 +208,6 @@ module.exports = {
   getBatchPlayerStats,
   getFreeAgentsTrending,
   getUserTeamKey,
-  getAccessToken
+  getAccessToken,
+  yahooGet
 };

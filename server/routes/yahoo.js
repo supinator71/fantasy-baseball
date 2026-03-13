@@ -187,6 +187,16 @@ router.get('/league/:leagueKey/players', requireAuth, async (req, res) => {
   }
 })
 
+// TEMPORARY DEBUG ENDPOINT FOR LOGS
+router.get('/debug/fa/:leagueKey', requireAuth, async (req, res) => {
+  try {
+    const data = await yahoo.yahooGet(`/league/${req.params.leagueKey}/players;status=FA;start=0;count=3`);
+    res.json(data);
+  } catch (err) {
+    res.json({ error: err.message });
+  }
+});
+
 router.get('/league/:leagueKey/draft', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
   const force = req.query.force === 'true'
