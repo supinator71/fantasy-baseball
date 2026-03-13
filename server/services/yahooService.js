@@ -87,7 +87,12 @@ async function getScoreboard(leagueKey) {
 
 async function getPlayers(leagueKey, status = 'A', start = 0) {
   const data = await yahooGet(`/league/${leagueKey}/players;status=${status};start=${start};count=25`);
-  const players = data.fantasy_content?.league?.[1]?.players || data.fantasy_content?.league?.[0]?.players;
+  const l0 = data.fantasy_content?.league?.[0];
+  const l1 = data.fantasy_content?.league?.[1];
+  console.log('FA DIAGNOSTIC => L0 Keys:', l0 ? Object.keys(l0) : 'none');
+  console.log('FA DIAGNOSTIC => L1 Keys:', l1 ? Object.keys(l1) : 'none');
+  const players = l1?.players || l0?.players;
+  console.log('FA DIAGNOSTIC => Players found?', !!players, Array.isArray(players) ? 'array' : typeof players);
   return toArray(players);
 }
 
