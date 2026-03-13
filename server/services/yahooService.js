@@ -116,14 +116,19 @@ function parsePlayersStats(raw) {
   const count = raw['@attributes']?.count || raw.count || raw?.length || 0;
   const result = [];
   for (let i = 0; i < count; i++) {
-    const p = raw[i] || raw[String(i)]?.player;
+    const rawItem = raw[i] || raw[String(i)];
+    const p = rawItem?.player || rawItem;
     if (!p) continue;
 
-    // Flatten Yahoo's weird array of property objects
-    const infoArray = Array.isArray(p[0]) ? p[0] : [];
+    const infoArray = Array.isArray(p) ? (Array.isArray(p[0]) ? p[0] : p) : [];
     const info = Object.assign({}, ...infoArray);
 
-    const statsArr = p[1]?.player_stats?.stats || p[1]?.player_season_stats?.stats || [];
+    let statsObj = null;
+    if (Array.isArray(p)) {
+      statsObj = p.find(item => item && (item.player_stats || item.player_season_stats || item.player_points));
+    }
+    
+    const statsArr = statsObj?.player_stats?.stats || statsObj?.player_season_stats?.stats || [];
     const stats = {};
     for (const s of statsArr) {
       const stat = s.stat || {};
