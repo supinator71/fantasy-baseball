@@ -131,10 +131,14 @@ router.get('/league/:leagueKey/myroster', requireAuth, async (req, res) => {
       if (!myTeamKey) return { players: [], teamKey: null }
       const rosterData = await yahoo.getRoster(leagueKey, myTeamKey)
       const playerKeys = []
-      const rosterCount = rosterData?.['@attributes']?.count || 0
+      const rosterCount = rosterData?.length || rosterData?.['@attributes']?.count || 0
       for (let i = 0; i < rosterCount; i++) {
-        const key = rosterData[i]?.player?.[0]?.player_key
-        if (key) playerKeys.push(key)
+        const p = rosterData[i]?.player
+        if (p && Array.isArray(p)) {
+          const infoArray = Array.isArray(p[0]) ? p[0] : []
+          const info = Object.assign({}, ...infoArray)
+          if (info.player_key) playerKeys.push(info.player_key)
+        }
       }
       if (!playerKeys.length) return { players: [], teamKey: myTeamKey }
       const players = await yahoo.getBatchPlayerStats(leagueKey, playerKeys, null)

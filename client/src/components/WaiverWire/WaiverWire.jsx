@@ -30,18 +30,23 @@ export default function WaiverWire({ leagueSettings }) {
         params: { status: 'FA' }
       })
       const players = []
-      if (data) {
-        const count = data['@attributes']?.count || 0
-        for (let i = 0; i < count; i++) {
-          const p = data[i]?.player
-          if (p) players.push({
-            key: p[0]?.player_key,
-            name: p[0]?.full?.name || p[0]?.name?.full || 'Unknown',
-            position: p[0]?.display_position || '',
-            team: p[0]?.editorial_team_abbr || '',
-            ownership: p[1]?.ownership?.ownership_type || 'free_agent'
-          })
-        }
+      if (Array.isArray(data)) {
+        data.forEach(item => {
+          const p = item?.player
+          if (p && Array.isArray(p)) {
+            const infoArray = Array.isArray(p[0]) ? p[0] : [];
+            const ownershipObj = p[1] || {};
+            const info = Object.assign({}, ...infoArray);
+            
+            players.push({
+               key: info.player_key,
+               name: info.name?.full || info.full_name || 'Unknown',
+               position: info.display_position || '',
+               team: info.editorial_team_abbr || '',
+               ownership: ownershipObj.ownership?.ownership_type || 'free_agent'
+            })
+          }
+        })
       }
       setAvailable(players)
     } catch {

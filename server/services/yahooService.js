@@ -111,12 +111,16 @@ async function getPlayerStats(leagueKey, playerKey) {
 
 function parsePlayersStats(raw) {
   if (!raw) return [];
-  const count = raw['@attributes']?.count || 0;
+  const count = raw['@attributes']?.count || raw?.length || 0;
   const result = [];
   for (let i = 0; i < count; i++) {
     const p = raw[i] || raw[String(i)]?.player;
     if (!p) continue;
-    const info = p[0] || {};
+
+    // Flatten Yahoo's weird array of property objects
+    const infoArray = Array.isArray(p[0]) ? p[0] : [];
+    const info = Object.assign({}, ...infoArray);
+
     const statsArr = p[1]?.player_stats?.stats || p[1]?.player_season_stats?.stats || [];
     const stats = {};
     for (const s of statsArr) {
