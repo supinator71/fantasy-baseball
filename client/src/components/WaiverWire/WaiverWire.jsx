@@ -35,40 +35,49 @@ export default function WaiverWire({ leagueSettings }) {
     }
   }
 
+  const [debugInfo, setDebugInfo] = useState(null)
+
   async function fetchAvailable() {
     setLoading(true)
+    setDebugInfo(null)
     try {
       const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/players`, {
-        params: { status: 'FA' }
+        params: { status: 'FA', force: 'true' }
       })
       const players = []
+      
+      let debug = { isArray: Array.isArray(data), length: data?.length, type: typeof data }
+      
       if (Array.isArray(data)) {
-        data.forEach(item => {
-          const p = item?.player
-          if (p && Array.isArray(p)) {
-            // Depending on the API format, p[0] might be an array of props, or p itself might be an array of objects
-            const infoArray = Array.isArray(p[0]) ? p[0] : p;
-            
-            // Extract ownership from either p[1] (if p is array of arrays) or by finding the object containing ownership
-            let ownershipObj = p[1] || {};
-            if (!Array.isArray(p[0])) {
-               ownershipObj = p.find(obj => obj.ownership) || {};
+        try {
+          data.forEach((item, i) => {
+            const p = item?.player
+            if (i === 0) debug.p_isArray = Array.isArray(p);
+            if (p && Array.isArray(p)) {
+              const infoArray = Array.isArray(p[0]) ? p[0] : p;
+              let ownershipObj = p[1] || {};
+              if (!Array.isArray(p[0])) {
+                 ownershipObj = p.find(obj => obj.ownership) || {};
+              }
+              const info = Object.assign({}, ...infoArray);
+              
+              players.push({
+                 key: info.player_key,
+                 name: info.name?.full || info.full_name || 'Unknown',
+                 position: info.display_position || '',
+                 team: info.editorial_team_abbr || '',
+                 ownership: ownershipObj.ownership?.ownership_type || 'free_agent'
+              })
             }
-            
-            const info = Object.assign({}, ...infoArray);
-            
-            players.push({
-               key: info.player_key,
-               name: info.name?.full || info.full_name || 'Unknown',
-               position: info.display_position || '',
-               team: info.editorial_team_abbr || '',
-               ownership: ownershipObj.ownership?.ownership_type || 'free_agent'
-            })
-          }
-        })
+          })
+        } catch (err) {
+          debug.loopError = err.message
+        }
       }
+      setDebugInfo(debug)
       setAvailable(players)
-    } catch {
+    } catch (err) {
+      setDebugInfo({ error: err.message })
       setAvailable([])
     } finally {
       setLoading(false)
@@ -150,6 +159,11 @@ export default function WaiverWire({ leagueSettings }) {
               {available.length === 0 && !loading && (
                 <tr><td colSpan={5} style={{ textAlign: 'center', color: '#7aafc4', padding: 32 }}>
                   No available players found. Select a league above to load the waiver wire.
+                  {debugInfo && (
+                    <pre style={{textAlign: 'left', marginTop: 16, background: '#0a1929', padding: 12, borderRadius: 8}}>
+                      {JSON.stringify(debugInfo, null, 2)}
+                    </pre>
+                  )}
                 </td></tr>
               )}
             </tbody>
