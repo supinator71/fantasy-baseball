@@ -42,8 +42,11 @@ async function yahooGet(endpoint) {
 function toArray(obj) {
   if (!obj) return [];
   if (Array.isArray(obj)) return obj;
-  const count = obj['@attributes']?.count || obj.count || 0;
+  
+  // Yahoo's object structure usually looks like: { "0": {...}, "1": {...}, count: 2 } or has a nested "@attributes" count.
+  const count = obj['@attributes']?.count || obj.count || Object.keys(obj).filter(k => !isNaN(parseInt(k))).length || 0;
   if (!count) return [];
+  
   const result = [];
   for (let i = 0; i < count; i++) {
     const item = obj[i] || obj[String(i)];
@@ -87,12 +90,7 @@ async function getScoreboard(leagueKey) {
 
 async function getPlayers(leagueKey, status = 'A', start = 0) {
   const data = await yahooGet(`/league/${leagueKey}/players;status=${status};start=${start};count=25`);
-  const l0 = data.fantasy_content?.league?.[0];
-  const l1 = data.fantasy_content?.league?.[1];
-  console.log('FA DIAGNOSTIC => L0 Keys:', l0 ? Object.keys(l0) : 'none');
-  console.log('FA DIAGNOSTIC => L1 Keys:', l1 ? Object.keys(l1) : 'none');
-  const players = l1?.players || l0?.players;
-  console.log('FA DIAGNOSTIC => Players found?', !!players, Array.isArray(players) ? 'array' : typeof players);
+  const players = data.fantasy_content?.league?.[1]?.players || data.fantasy_content?.league?.[0]?.players;
   return toArray(players);
 }
 
