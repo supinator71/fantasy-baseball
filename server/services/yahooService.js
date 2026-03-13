@@ -89,24 +89,10 @@ async function getScoreboard(leagueKey) {
 }
 
 async function getPlayers(leagueKey, status = 'A', start = 0) {
-  const data = await yahooGet(`/league/${leagueKey}/players;status=${status};start=${start};count=25`);
+  const data = await yahooGet(`/league/${leagueKey}/players;status=${status};sort=AR;start=${start};count=25/stats`);
   const leagueObj = data.fantasy_content?.league;
-  
-  if (Array.isArray(leagueObj)) {
-    console.log(`GETPLAYERS [${leagueKey}] L0 KEYS:`, Object.keys(leagueObj[0] || {}).join(', '));
-    console.log(`GETPLAYERS [${leagueKey}] L1 KEYS:`, Object.keys(leagueObj[1] || {}).join(', '));
-    if (leagueObj[1]?.players) {
-       console.log(`GETPLAYERS [${leagueKey}] L1 PLAYERS SUBKEYS:`, Object.keys(leagueObj[1].players).join(', '));
-       console.log(`GETPLAYERS [${leagueKey}] L1 PLAYERS TYPE:`, typeof leagueObj[1].players, Array.isArray(leagueObj[1].players) ? 'array' : 'object');
-    }
-  } else {
-    console.log(`GETPLAYERS [${leagueKey}] LEAGUE IS NOT ARRAY:`, typeof leagueObj);
-  }
-
   const players = leagueObj?.[1]?.players || leagueObj?.[0]?.players;
-  const result = toArray(players);
-  console.log(`GETPLAYERS [${leagueKey}] FINAL ARRAY LENGTH:`, result.length);
-  return result;
+  return parsePlayersStats(players);
 }
 
 async function getDraftResults(leagueKey) {

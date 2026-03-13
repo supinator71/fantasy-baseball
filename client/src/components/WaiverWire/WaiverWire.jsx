@@ -44,38 +44,11 @@ export default function WaiverWire({ leagueSettings }) {
       const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/players`, {
         params: { status: 'A', force: 'true' }
       })
-      const players = []
-      
-      let debug = { isArray: Array.isArray(data), length: data?.length, type: typeof data }
-      
       if (Array.isArray(data)) {
-        try {
-          data.forEach((item, i) => {
-            const p = item?.player
-            if (i === 0) debug.p_isArray = Array.isArray(p);
-            if (p && Array.isArray(p)) {
-              const infoArray = Array.isArray(p[0]) ? p[0] : p;
-              let ownershipObj = p[1] || {};
-              if (!Array.isArray(p[0])) {
-                 ownershipObj = p.find(obj => obj.ownership) || {};
-              }
-              const info = Object.assign({}, ...infoArray);
-              
-              players.push({
-                 key: info.player_key,
-                 name: info.name?.full || info.full_name || 'Unknown',
-                 position: info.display_position || '',
-                 team: info.editorial_team_abbr || '',
-                 ownership: ownershipObj.ownership?.ownership_type || 'free_agent'
-              })
-            }
-          })
-        } catch (err) {
-          debug.loopError = err.message
-        }
+        setAvailable(data)
+      } else {
+        setAvailable([])
       }
-      setDebugInfo(debug)
-      setAvailable(players)
     } catch (err) {
       setDebugInfo({ error: err.message })
       setAvailable([])
@@ -94,11 +67,27 @@ export default function WaiverWire({ leagueSettings }) {
         drop_candidates: myRoster.slice(-5)
       })
       setAiRec(data.recommendations)
-    } catch {
-      toast.error('AI recommendation failed')
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'AI recommendation failed')
     } finally {
       setAiLoading(false)
     }
+  }
+
+  const renderStats = (p) => {
+    const isPitcher = p.position.includes('P')
+    if (isPitcher) {
+      return (
+        <span style={{ fontSize: 13, color: '#a0aab2' }}>
+          W: {p.stats?.['28'] || 0} | SV: {p.stats?.['32'] || 0} | K: {p.stats?.['42'] || 0} | ERA: {p.stats?.['26'] || '0.00'} | WHIP: {p.stats?.['27'] || '0.00'}
+        </span>
+      )
+    }
+    return (
+      <span style={{ fontSize: 13, color: '#a0aab2' }}>
+        R: {p.stats?.['7'] || 0} | HR: {p.stats?.['12'] || 0} | RBI: {p.stats?.['13'] || 0} | SB: {p.stats?.['16'] || 0} | AVG: {p.stats?.['3'] || '.000'}
+      </span>
+    )
   }
 
   return (
@@ -112,7 +101,7 @@ export default function WaiverWire({ leagueSettings }) {
           <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>
             {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
           </select>
-          <button className="btn btn-primary" onClick={getAiRecommendations} disabled={aiLoading}>
+          <button className="btn btn-primary" onClick={getAiRecommendations} disabled={aiLoading || available.length === 0}>
             {aiLoading ? 'Analyzing...' : '🤖 AI Advice'}
           </button>
         </div>
@@ -142,7 +131,7 @@ export default function WaiverWire({ leagueSettings }) {
         ) : (
           <table>
             <thead>
-              <tr><th>Player</th><th>Position</th><th>Team</th><th>Ownership</th><th>Action</th></tr>
+              <tr><th>Player</th><th>Position</th><th>Team</th><th>Projected Stats</th><th>Action</th></tr>
             </thead>
             <tbody>
               {available.filter(p => posFilter === 'ALL' || p.position.includes(posFilter)).map((p, i) => (
@@ -150,7 +139,7 @@ export default function WaiverWire({ leagueSettings }) {
                   <td style={{ fontWeight: 500 }}>{p.name}</td>
                   <td><span className={`badge badge-${p.position.split(',')[0].toLowerCase().trim()}`}>{p.position}</span></td>
                   <td style={{ color: '#7aafc4' }}>{p.team}</td>
-                  <td><span style={{ color: '#00a86b', fontSize: 12 }}>Free Agent</span></td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{renderStats(p)}</td>
                   <td>
                     <button className="btn btn-success" style={{ fontSize: 11, padding: '4px 10px' }}>Add</button>
                   </td>
