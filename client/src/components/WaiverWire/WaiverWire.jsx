@@ -46,8 +46,15 @@ export default function WaiverWire({ leagueSettings }) {
         data.forEach(item => {
           const p = item?.player
           if (p && Array.isArray(p)) {
-            const infoArray = Array.isArray(p[0]) ? p[0] : [];
-            const ownershipObj = p[1] || {};
+            // Depending on the API format, p[0] might be an array of props, or p itself might be an array of objects
+            const infoArray = Array.isArray(p[0]) ? p[0] : p;
+            
+            // Extract ownership from either p[1] (if p is array of arrays) or by finding the object containing ownership
+            let ownershipObj = p[1] || {};
+            if (!Array.isArray(p[0])) {
+               ownershipObj = p.find(obj => obj.ownership) || {};
+            }
+            
             const info = Object.assign({}, ...infoArray);
             
             players.push({
