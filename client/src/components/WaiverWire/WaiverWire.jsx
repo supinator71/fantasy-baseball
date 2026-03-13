@@ -68,7 +68,8 @@ export default function WaiverWire({ leagueSettings }) {
       })
       setAiRec(data.recommendations)
     } catch (err) {
-      toast.error(err.response?.data?.error || 'AI recommendation failed')
+      const msg = err.response?.data?.error || JSON.stringify(err.response?.data) || err.message || 'AI recommendation failed'
+      toast.error(typeof msg === 'object' ? JSON.stringify(msg) : msg)
     } finally {
       setAiLoading(false)
     }
