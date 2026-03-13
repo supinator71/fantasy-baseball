@@ -30,13 +30,21 @@ export default function RosterManager({ leagueSettings }) {
         data.forEach(item => {
           const p = item?.player
           if (p && Array.isArray(p)) {
-            const info = p[0] || {}
-            const stats = p[1] || {}
+            // Yahoo returns an array of arrays of objects.
+            // p[0] is the player info array: [{player_key: "..."}, {name: {...}}, ...]
+            // p[1] is the roster status array: { selected_position: [ { position: "BN" } ] }
+            
+            const infoArray = Array.isArray(p[0]) ? p[0] : [];
+            const statsObj = p[1] || {};
+            
+            // Flatten the weird [{key: val}, {key2: val2}] array into a single object
+            const info = Object.assign({}, ...infoArray);
+            
             playerList.push({
-              name: info.full_name || info.name?.full || 'Unknown',
-              positions: info.eligible_positions?.position || [],
+              name: info.name?.full || info.full_name || 'Unknown',
+              positions: info.eligible_positions?.map(ep => ep.position) || info.eligible_positions || [],
               team: info.editorial_team_abbr || '',
-              status: stats.selected_position?.[0]?.position || 'BN',
+              status: statsObj.selected_position?.[1]?.position || statsObj.selected_position?.[0]?.position || 'BN',
               injury: info.status || ''
             })
           }
