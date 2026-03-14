@@ -265,7 +265,10 @@ router.get('/league/:leagueKey/matchup', requireAuth, async (req, res) => {
         if (!teams) continue
         const teamCount = teams['@attributes']?.count || 2
         for (let j = 0; j < teamCount; j++) {
-          const teamKey = teams[j]?.team?.[0]?.team_key
+          const teamInfo = teams[j]?.team?.[0];
+          const teamKey = Array.isArray(teamInfo) 
+            ? Object.assign({}, ...teamInfo)?.team_key 
+            : teamInfo?.team_key;
           if (myTeamKey && teamKey === myTeamKey) { foundMatchup = matchup; break }
         }
         if (foundMatchup) break
@@ -280,17 +283,44 @@ router.get('/league/:leagueKey/matchup', requireAuth, async (req, res) => {
       for (let j = 0; j < teamCount; j++) {
         const teamArr = teams?.[j]?.team
         if (!teamArr) continue
-        const info = teamArr[0] || {}
-        const statsObj = teamArr[1]?.team_stats || teamArr[2]?.team_stats || {}
+        
+        // teamArr[0] can be a flat object or an array of info objects (like player data)
+        let info = {};
+        if (Array.isArray(teamArr[0])) {
+          // Array of info objects: [{team_key: "..."}, {name: "..."}, ...]
+          info = Object.assign({}, ...teamArr[0]);
+        } else {
+          info = teamArr[0] || {};
+        }
+        
+        // Search for team_stats in teamArr (can be at index 1, 2, or deeper)
+        let statsObj = {};
+        for (let k = 1; k < teamArr.length; k++) {
+          if (teamArr[k]?.team_stats) { statsObj = teamArr[k].team_stats; break; }
+          if (teamArr[k]?.team_points) { statsObj = teamArr[k].team_points; break; }
+        }
+        
         const statsArr = statsObj.stats || []
         const stats = statsArr
           .map(s => s.stat || s)
           .filter(s => s.stat_id !== undefined && s.value !== undefined)
           .map(s => ({ stat_id: String(s.stat_id), name: STAT_NAMES[String(s.stat_id)] || String(s.stat_id), value: s.value }))
+        
+        // Extract manager name (can be nested in various ways)
+        let manager = '';
+        const managers = info.managers;
+        if (managers) {
+          if (Array.isArray(managers)) {
+            manager = managers[0]?.manager?.nickname || managers[0]?.nickname || '';
+          } else if (managers.manager) {
+            manager = managers.manager?.nickname || '';
+          }
+        }
+        
         parsedTeams.push({
           key: info.team_key,
           name: info.name || `Team ${j + 1}`,
-          manager: info.managers?.[0]?.manager?.nickname || '',
+          manager,
           stats
         })
       }

@@ -44,7 +44,12 @@ function toArray(obj) {
   if (Array.isArray(obj)) return obj;
   
   // Yahoo's object structure usually looks like: { "0": {...}, "1": {...}, count: 2 } or has a nested "@attributes" count.
-  const count = obj['@attributes']?.count || obj.count || Object.keys(obj).filter(k => !isNaN(parseInt(k))).length || 0;
+  let count = parseInt(obj['@attributes']?.count) || parseInt(obj.count) || 0;
+  
+  // Fallback: count numeric keys
+  if (!count) {
+    count = Object.keys(obj).filter(k => /^\d+$/.test(k)).length;
+  }
   if (!count) return [];
   
   const result = [];
@@ -72,7 +77,50 @@ async function getLeague(leagueKey) {
 
 async function getRoster(leagueKey, teamKey) {
   const data = await yahooGet(`/team/${teamKey}/roster/players`);
-  const players = data.fantasy_content?.team?.[1]?.roster?.[1]?.players || data.fantasy_content?.team?.[1]?.roster?.[0]?.players;
+  const team = data.fantasy_content?.team;
+  
+  // Yahoo puts roster data in different spots depending on response format
+  let players = null;
+  
+  // Try team[1].roster paths (most common)
+  const roster = team?.[1]?.roster;
+  if (roster) {
+    // roster can be: {0: {coverage_type: ...}, "0": {players: ...}} or an array
+    if (Array.isArray(roster)) {
+      for (const r of roster) {
+        if (r?.players) { players = r.players; break; }
+      }
+    } else {
+      // Try indexed access
+      for (let i = 0; i <= 2; i++) {
+        if (roster[i]?.players) { players = roster[i].players; break; }
+        if (roster[String(i)]?.players) { players = roster[String(i)].players; break; }
+      }
+      // Direct players property
+      if (!players && roster.players) players = roster.players;
+    }
+  }
+  
+  // Fallback: search team array for roster
+  if (!players && Array.isArray(team)) {
+    for (const item of team) {
+      if (item?.roster) {
+        const r = item.roster;
+        if (Array.isArray(r)) {
+          for (const ri of r) { if (ri?.players) { players = ri.players; break; } }
+        } else {
+          for (let i = 0; i <= 2; i++) {
+            if (r[i]?.players) { players = r[i].players; break; }
+            if (r[String(i)]?.players) { players = r[String(i)].players; break; }
+          }
+          if (!players && r.players) players = r.players;
+        }
+        if (players) break;
+      }
+    }
+  }
+  
+  console.log('[getRoster] Found players:', !!players, 'type:', typeof players, 'isArray:', Array.isArray(players));
   return toArray(players);
 }
 

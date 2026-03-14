@@ -30,21 +30,50 @@ export default function RosterManager({ leagueSettings }) {
         data.forEach(item => {
           const p = item?.player
           if (p && Array.isArray(p)) {
-            // Yahoo returns an array of arrays of objects.
-            // p[0] is the player info array: [{player_key: "..."}, {name: {...}}, ...]
-            // p[1] is the roster status array: { selected_position: [ { position: "BN" } ] }
-            
+            // Yahoo returns an array: p[0] = info array, p[1] = roster position info
             const infoArray = Array.isArray(p[0]) ? p[0] : [];
-            const statsObj = p[1] || {};
+            const rosterInfo = p[1] || {};
             
-            // Flatten the weird [{key: val}, {key2: val2}] array into a single object
+            // Flatten the array of objects [{player_key: "..."}, {name: {full: "..."}}, ...] into one object
             const info = Object.assign({}, ...infoArray);
             
+            // Extract name (Yahoo returns as {name: {full: "John Doe"}} or sometimes nested)
+            const name = info.name?.full || info.name?.first && `${info.name.first} ${info.name.last}` || info.full_name || 'Unknown';
+            
+            // Extract eligible positions (variable Yahoo formats)
+            let positions = [];
+            const ep = info.eligible_positions;
+            if (ep) {
+              // Could be: [{position: "SS"}, {position: "OF"}] or {position: "SS"} or ["SS", "OF"]
+              if (Array.isArray(ep)) {
+                positions = ep.map(p => p?.position || p).filter(Boolean);
+              } else if (ep.position) {
+                positions = Array.isArray(ep.position) ? ep.position.map(p => p?.position || p) : [ep.position];
+              }
+            }
+            if (!positions.length && info.display_position) {
+              positions = info.display_position.split(',').map(s => s.trim());
+            }
+            
+            // Extract selected position (lineup slot)
+            const selectedPos = rosterInfo?.selected_position;
+            let slot = 'BN';
+            if (selectedPos) {
+              if (Array.isArray(selectedPos)) {
+                // Could be [{coverage_type: "week"}, {position: "SS"}] or [{position: "BN"}]
+                for (const sp of selectedPos) {
+                  if (sp?.position) { slot = sp.position; break; }
+                }
+              } else if (selectedPos.position) {
+                slot = selectedPos.position;
+              }
+            }
+            
             playerList.push({
-              name: info.name?.full || info.full_name || 'Unknown',
-              positions: info.eligible_positions?.map(ep => ep.position) || info.eligible_positions || [],
+              name,
+              positions,
               team: info.editorial_team_abbr || '',
-              status: statsObj.selected_position?.[1]?.position || statsObj.selected_position?.[0]?.position || 'BN',
+              status: slot,
               injury: info.status || ''
             })
           }

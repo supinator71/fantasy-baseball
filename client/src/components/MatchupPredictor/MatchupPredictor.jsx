@@ -78,6 +78,13 @@ export default function MatchupPredictor({ leagueSettings }) {
 
   const myWins = matchup?.stats?.filter(s => s.my_winning).length || 0
   const oppWins = matchup?.stats?.filter(s => s.opp_winning).length || 0
+  
+  // Detect preseason: all stat values are 0 or empty
+  const isPreseason = matchup?.stats?.length > 0 && matchup.stats.every(s => {
+    const myVal = parseFloat(s.my_value) || 0;
+    const oppVal = parseFloat(s.opp_value) || 0;
+    return myVal === 0 && oppVal === 0;
+  });
 
   return (
     <div>
@@ -108,6 +115,22 @@ export default function MatchupPredictor({ leagueSettings }) {
 
       {matchup && !loading && (
         <>
+          {/* Preseason banner */}
+          {isPreseason && (
+            <div style={{ 
+              background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', 
+              borderRadius: 8, padding: 16, marginBottom: 16, color: '#f59e0b',
+              display: 'flex', alignItems: 'center', gap: 12
+            }}>
+              <span style={{ fontSize: 24 }}>📋</span>
+              <div>
+                <div style={{ fontWeight: 600, marginBottom: 2 }}>Preseason — No Live Stats Yet</div>
+                <div style={{ fontSize: 13, color: '#d4a34a' }}>
+                  Your Week {matchup.week} matchup is set, but stats will populate once the MLB season begins. Check back after Opening Day!
+                </div>
+              </div>
+            </div>
+          )}
           {/* VS banner */}
           <div className="card" style={{
             marginBottom: 16, padding: '20px 28px',
