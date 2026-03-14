@@ -93,6 +93,8 @@ export default function PlayerTrends({ selectedLeague }) {
   const [error, setError] = useState('')
   const [cachedAt, setCachedAt] = useState(null)
   const [fromCache, setFromCache] = useState(false)
+  const [adpData, setAdpData] = useState(null)
+  const [adpLoading, setAdpLoading] = useState(false)
 
   useEffect(() => {
     if (selectedLeague) fetchTrends()
@@ -110,6 +112,20 @@ export default function PlayerTrends({ selectedLeague }) {
       setError(err.response?.data?.error || 'Could not load player trends')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function fetchADPValue() {
+    if (!data?.myPlayers?.length) return
+    setAdpLoading(true)
+    try {
+      const players = data.myPlayers.map(p => ({ name: p.name, adp: p.adp || 200 }))
+      const res = await axios.post('/api/mlb/roster-value', { players, leagueSize: 12 })
+      setAdpData(res.data)
+    } catch (err) {
+      console.log('ADP value fetch error:', err.message)
+    } finally {
+      setAdpLoading(false)
     }
   }
 
@@ -142,9 +158,13 @@ export default function PlayerTrends({ selectedLeague }) {
       <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid #1e3d5c', paddingBottom: 0 }}>
         {[
           { key: 'roster', label: 'My Roster' },
+          { key: 'adpvalue', label: '📊 ADP Value' },
           { key: 'fa',     label: `🔥 FA Pickups${faCount ? ` (${faCount})` : ''}` }
         ].map(tab => (
-          <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+          <button key={tab.key} onClick={() => {
+            setActiveTab(tab.key)
+            if (tab.key === 'adpvalue' && !adpData && !adpLoading) fetchADPValue()
+          }}
             style={{
               padding: '8px 16px', fontSize: 13, fontWeight: activeTab === tab.key ? 700 : 400,
               background: 'transparent', border: 'none', cursor: 'pointer',
@@ -196,6 +216,84 @@ export default function PlayerTrends({ selectedLeague }) {
                 </div>
               )}
             </>
+          )}
+        </>
+      )}
+
+      {/* ADP Value Tab */}
+      {!loading && data && activeTab === 'adpvalue' && (
+        <>
+          {adpLoading && <div className="loading" style={{ padding: 24 }}>Fetching 2025 stats and ADP analysis...</div>}
+          {!adpLoading && !adpData && (
+            <div style={{ textAlign: 'center', padding: 32 }}>
+              <button className="btn btn-primary" onClick={fetchADPValue}
+                style={{ padding: '10px 24px', fontSize: 14 }}>
+                📊 Load ADP Value Analysis
+              </button>
+              <p style={{ color: '#7aafc4', fontSize: 12, marginTop: 8 }}>Compares 2025 real stats to 2026 ADP to find over/undervalued players</p>
+            </div>
+          )}
+          {!adpLoading && adpData?.players?.length > 0 && (
+            <>
+              <div style={{ fontSize: 13, color: '#7aafc4', marginBottom: 14, padding: '8px 12px',
+                background: 'rgba(0,122,122,0.08)', borderRadius: 8, border: '1px solid rgba(0,122,122,0.2)' }}>
+                📊 2025 real stats vs 2026 ADP — find players the market is mispricing
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {adpData.players.map((p, i) => {
+                  const vt = p.valueTrend || {}
+                  const isUnder = vt.classification?.includes('UNDERVALUED')
+                  const isOver = vt.classification?.includes('OVERVALUED')
+                  const barColor = isUnder ? '#00a86b' : isOver ? '#ef4444' : '#4aafdb'
+                  const barWidth = Math.min(100, Math.abs(vt.valueGap || 0) / 2)
+                  return (
+                    <div key={i} style={{
+                      background: '#0c1d35', border: `1px solid ${isUnder ? 'rgba(0,168,107,0.3)' : isOver ? 'rgba(239,68,68,0.3)' : '#1e3d5c'}`,
+                      borderRadius: 10, padding: '12px 14px',
+                      borderLeft: `3px solid ${barColor}`
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                        <div>
+                          <span style={{ fontWeight: 600, fontSize: 14 }}>{p.name}</span>
+                          <span style={{ fontSize: 11, color: '#4a7a94', marginLeft: 8 }}>
+                            {p.position} · {p.team} · Age {p.age}
+                          </span>
+                        </div>
+                        <span style={{
+                          display: 'inline-block', padding: '3px 8px', borderRadius: 5, fontSize: 10,
+                          fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5,
+                          background: isUnder ? 'rgba(0,168,107,0.15)' : isOver ? 'rgba(239,68,68,0.15)' : 'rgba(74,175,219,0.1)',
+                          color: barColor, border: `1px solid ${barColor}33`
+                        }}>
+                          {vt.classification || 'UNKNOWN'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: '#e2e8f0', marginBottom: 6 }}>
+                        2025: <strong>{vt.statLine}</strong>
+                      </div>
+                      <div style={{ display: 'flex', gap: 16, fontSize: 11, color: '#7aafc4', marginBottom: 6 }}>
+                        <span>ADP: <strong style={{ color: '#e2e8f0' }}>{p.adp2026}</strong></span>
+                        <span>Implied: <strong style={{ color: '#e2e8f0' }}>{vt.impliedADP}</strong></span>
+                        <span>Gap: <strong style={{ color: barColor }}>{vt.valueGap > 0 ? '+' : ''}{vt.valueGap} picks</strong></span>
+                        <span>Score: <strong style={{ color: '#e2e8f0' }}>{vt.productionScore}/100</strong></span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 16, fontSize: 11, color: '#4a7a94' }}>
+                        <span>📈 {vt.trajectory}</span>
+                        <span>⬇️ Floor: {vt.floorCeiling?.floor}</span>
+                        <span>⬆️ Ceiling: {vt.floorCeiling?.ceiling}</span>
+                      </div>
+                      {/* Value gap bar */}
+                      <div style={{ marginTop: 6, height: 4, background: '#122840', borderRadius: 2 }}>
+                        <div style={{ width: `${barWidth}%`, height: '100%', borderRadius: 2, background: barColor, transition: 'width 0.3s' }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+          {!adpLoading && adpData && adpData.players?.length === 0 && (
+            <p style={{ color: '#7aafc4', fontSize: 13, textAlign: 'center', padding: 24 }}>No 2025 stats found for your roster players.</p>
           )}
         </>
       )}

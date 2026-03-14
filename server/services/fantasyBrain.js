@@ -1084,5 +1084,109 @@ module.exports = {
 
   // M) Combined intelligence report
   generatePlayerIntelligence,
+
+  // N) ADP vs actual stats trend analysis
+  analyzeADPvsTrend,
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// N) ADP vs ACTUAL STATS TREND ANALYSIS
+// Compares 2025 real production to 2026 ADP to find value gaps
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Calculates a production-based rank from last season's stats,
+ * then compares to this year's ADP to find over/undervalued players.
+ *
+ * @param {object} lastSeasonStats - from mlbStatsService.getPlayerSeasonStats()
+ * @param {number} adp2026 - this year's ADP
+ * @param {number} leagueSize - number of teams (default 12)
+ * @returns {object} trend analysis with value gap, classification, floor/ceiling
+ */
+function analyzeADPvsTrend(lastSeasonStats, adp2026, leagueSize = 12) {
+  if (!lastSeasonStats || !lastSeasonStats.stats) {
+    return { valueGap: 0, classification: 'UNKNOWN', summary: 'No 2025 stats available.' };
+  }
+
+  const s = lastSeasonStats.stats;
+  const isP = lastSeasonStats.type === 'pitcher';
+  const adp = parseFloat(adp2026) || 300;
+  const totalDrafted = leagueSize * 23; // approximate total drafted players
+
+  let productionScore = 0; // 0-100 scale
+  let statLine = '';
+  let floorCeiling = {};
+
+  if (isP) {
+    // Pitcher production score — lower ERA/WHIP = better
+    const eraScore = Math.max(0, 100 - ((s.ERA - 2.5) / 3.5) * 100);
+    const whipScore = Math.max(0, 100 - ((s.WHIP - 0.9) / 0.7) * 100);
+    const kScore = Math.min(100, (s.K / 250) * 100);
+    const wScore = Math.min(100, (s.W / 18) * 100);
+    const svScore = Math.min(100, (s.SV / 40) * 100);
+    const ipBonus = s.IP >= 160 ? 15 : s.IP >= 100 ? 8 : 0;
+
+    productionScore = (eraScore * 0.25 + whipScore * 0.2 + kScore * 0.25 + wScore * 0.15 + svScore * 0.15) + ipBonus;
+    productionScore = Math.min(100, Math.max(0, productionScore));
+
+    statLine = `${s.W}W ${s.ERA} ERA ${s.WHIP} WHIP ${s.K}K ${s.SV}SV in ${s.IP}IP`;
+    floorCeiling = {
+      floor: `${Math.max(0, s.W - 4)}W, ${(s.ERA + 0.6).toFixed(2)} ERA, ${s.K - 30}K`,
+      ceiling: `${s.W + 3}W, ${Math.max(1.5, s.ERA - 0.5).toFixed(2)} ERA, ${s.K + 25}K`,
+    };
+  } else {
+    // Hitter production score
+    const hrScore = Math.min(100, (s.HR / 45) * 100);
+    const rbiScore = Math.min(100, (s.RBI / 120) * 100);
+    const rScore = Math.min(100, (s.R / 110) * 100);
+    const sbScore = Math.min(100, (s.SB / 40) * 100);
+    const avgScore = Math.min(100, ((s.AVG - 0.200) / 0.120) * 100);
+    const paBonus = s.PA >= 600 ? 10 : s.PA >= 500 ? 5 : s.PA < 300 ? -15 : 0;
+
+    productionScore = (hrScore * 0.25 + rbiScore * 0.2 + rScore * 0.15 + sbScore * 0.2 + avgScore * 0.2) + paBonus;
+    productionScore = Math.min(100, Math.max(0, productionScore));
+
+    statLine = `${s.AVG}/${s.HR}HR/${s.RBI}RBI/${s.R}R/${s.SB}SB in ${s.PA}PA`;
+    floorCeiling = {
+      floor: `${Math.max(0.200, s.AVG - 0.025).toFixed(3)}/${Math.max(0, s.HR - 6)}HR/${Math.max(0, s.SB - 5)}SB`,
+      ceiling: `${Math.min(0.340, s.AVG + 0.020).toFixed(3)}/${s.HR + 5}HR/${s.SB + 8}SB`,
+    };
+  }
+
+  // Convert production score to an implied ADP rank
+  // Score 90+ → should be top 20, Score 70+ → top 60, etc.
+  const impliedADP = Math.max(1, Math.round(totalDrafted * (1 - productionScore / 100)));
+
+  // Value gap: positive = undervalued (ADP is later than production warrants)
+  const valueGap = adp - impliedADP;
+  const gapPct = totalDrafted > 0 ? ((valueGap / totalDrafted) * 100).toFixed(0) : 0;
+
+  let classification = 'FAIRLY PRICED';
+  if (valueGap > 30) classification = 'SIGNIFICANTLY UNDERVALUED';
+  else if (valueGap > 15) classification = 'UNDERVALUED';
+  else if (valueGap < -30) classification = 'SIGNIFICANTLY OVERVALUED';
+  else if (valueGap < -15) classification = 'OVERVALUED';
+
+  // Trend direction based on age + production
+  const age = lastSeasonStats.age || 28;
+  let trajectory = 'STABLE';
+  if (age <= 26 && productionScore > 50) trajectory = 'ASCENDING';
+  else if (age >= 33 && productionScore < 70) trajectory = 'DECLINING';
+  else if (age >= 31) trajectory = 'PLATEAU — WATCH FOR DECLINE';
+
+  const summary = `2025: ${statLine}. ADP ${adp} (implied: ${impliedADP}). ${classification} by ${Math.abs(valueGap)} picks. Age ${age}, trajectory: ${trajectory}. Floor: ${floorCeiling.floor}. Ceiling: ${floorCeiling.ceiling}.`;
+
+  return {
+    productionScore: Math.round(productionScore),
+    impliedADP,
+    actualADP: adp,
+    valueGap,
+    gapPercent: +gapPct,
+    classification,
+    trajectory,
+    statLine,
+    floorCeiling,
+    summary,
+  };
+}
