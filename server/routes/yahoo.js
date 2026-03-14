@@ -254,51 +254,149 @@ router.get('/league/:leagueKey/matchup', requireAuth, async (req, res) => {
 
       if (!matchups) throw new Error('No matchup data available')
 
-      const totalMatchups = parseInt(matchups['@attributes']?.count) || 0
+      // Log the raw matchups structure  
+      const matchupsKeys = Object.keys(matchups).slice(0, 10);
+      console.log('[MATCHUP] matchups keys:', matchupsKeys);
+      
+      // Count matchups: try @attributes, then count numeric keys
+      let totalMatchups = parseInt(matchups['@attributes']?.count) || 0
+      if (!totalMatchups) {
+        totalMatchups = Object.keys(matchups).filter(k => /^\d+$/.test(k)).length;
+      }
       const week = matchups['@attributes']?.week || null
       console.log('[MATCHUP] totalMatchups:', totalMatchups, 'week:', week, 'myTeamKey:', myTeamKey);
 
+      // Helper: extract teams from a matchup object (which can be nested in various ways)
+      function extractTeamsFromMatchup(m) {
+        if (!m) return null;
+        // Direct teams property
+        if (m.teams) return m.teams;
+        // If matchup is an array, search items for teams
+        if (Array.isArray(m)) {
+          for (const item of m) {
+            if (item?.teams) return item.teams;
+          }
+        }
+        // If matchup is an object with numeric keys, search them
+        for (const key of Object.keys(m)) {
+          if (m[key]?.teams) return m[key].teams;
+        }
+        return null;
+      }
+
+      // Helper: get the raw matchup entry from matchups collection
+      function getMatchupEntry(idx) {
+        const raw = matchups[idx] || matchups[String(idx)];
+        if (!raw) return null;
+        // Could be {matchup: ...} or directly the matchup data
+        return raw.matchup || raw;
+      }
+
+      // Helper: extract team_key from a team info structure
+      function extractTeamKey(teamData) {
+        if (!teamData) return null;
+        // teamData could be: [array of team sub-entries] or {team: [...]}
+        const teamArr = teamData.team || teamData;
+        if (!Array.isArray(teamArr)) return teamData.team_key;
+        const first = teamArr[0];
+        if (Array.isArray(first)) {
+          return Object.assign({}, ...first)?.team_key;
+        }
+        return first?.team_key;
+      }
+
+      // Helper: get team entries from teams obj (can be indexed, array, or have direct team property)
+      function getTeamEntries(teamsObj) {
+        if (!teamsObj) return [];
+        const entries = [];
+        
+        // Try numeric keys: teams["0"], teams["1"]
+        const count = parseInt(teamsObj['@attributes']?.count) || 0;
+        const numericKeys = Object.keys(teamsObj).filter(k => /^\d+$/.test(k)).sort((a,b) => a-b);
+        
+        if (numericKeys.length > 0) {
+          for (const k of numericKeys) {
+            if (teamsObj[k]) entries.push(teamsObj[k]);
+          }
+        }
+        
+        // Fallback: if teams is an array
+        if (!entries.length && Array.isArray(teamsObj)) {
+          entries.push(...teamsObj);
+        }
+        
+        // Fallback: if teams has a direct "team" property that's an array of teams
+        if (!entries.length && teamsObj.team) {
+          if (Array.isArray(teamsObj.team)) {
+            // Could be [{team_key:...}, {name:...}] (single team) or [[{team_key:...},...], [{team_key:...},...]] (multiple)
+            if (teamsObj.team[0] && !Array.isArray(teamsObj.team[0]) && teamsObj.team[0].team_key) {
+              // Single team flattened
+              entries.push({ team: teamsObj.team });
+            } else {
+              for (const t of teamsObj.team) {
+                entries.push({ team: Array.isArray(t) ? t : [t] });
+              }
+            }
+          }
+        }
+        
+        return entries;
+      }
+
       let foundMatchup = null
       for (let i = 0; i < totalMatchups; i++) {
-        const matchup = matchups[i]?.matchup || matchups[String(i)]?.matchup
-        if (!matchup) { console.log('[MATCHUP] matchup', i, 'is null'); continue; }
-        const teams = matchup.teams || matchup['0']?.teams
-        if (!teams) { console.log('[MATCHUP] matchup', i, 'has no teams'); continue; }
-        const teamCount = parseInt(teams['@attributes']?.count) || 2
-        for (let j = 0; j < teamCount; j++) {
-          const teamInfo = teams[j]?.team?.[0] || teams[String(j)]?.team?.[0];
-          const teamKey = Array.isArray(teamInfo) 
-            ? Object.assign({}, ...teamInfo)?.team_key 
-            : teamInfo?.team_key;
-          if (myTeamKey && teamKey === myTeamKey) { foundMatchup = matchup; break }
+        const matchupData = getMatchupEntry(i);
+        if (!matchupData) { console.log('[MATCHUP] entry', i, 'is null'); continue; }
+        const teamsObj = extractTeamsFromMatchup(matchupData);
+        if (!teamsObj) { console.log('[MATCHUP] entry', i, 'has no teams'); continue; }
+        
+        const teamEntries = getTeamEntries(teamsObj);
+        for (const entry of teamEntries) {
+          const key = extractTeamKey(entry);
+          if (myTeamKey && key === myTeamKey) { foundMatchup = matchupData; break; }
         }
-        if (foundMatchup) break
+        if (foundMatchup) break;
       }
+      
       if (!foundMatchup) {
-        console.log('[MATCHUP] Did not find user matchup, using matchup[0]');
-        foundMatchup = matchups[0]?.matchup || matchups['0']?.matchup;
+        console.log('[MATCHUP] Did not find user matchup, falling back to first matchup');
+        foundMatchup = getMatchupEntry(0);
       }
       if (!foundMatchup) throw new Error('No matchup found')
 
-      const teams = foundMatchup.teams
-      const teamCount = parseInt(teams?.['@attributes']?.count) || 2
-      const parsedTeams = []
+      // Log the found matchup structure
+      console.log('[MATCHUP] foundMatchup keys:', Object.keys(foundMatchup).slice(0, 10));
+      console.log('[MATCHUP] foundMatchup isArray:', Array.isArray(foundMatchup));
+      if (Array.isArray(foundMatchup)) {
+        console.log('[MATCHUP] foundMatchup[0]:', JSON.stringify(foundMatchup[0])?.slice(0, 300));
+        console.log('[MATCHUP] foundMatchup[1] keys:', foundMatchup[1] ? Object.keys(foundMatchup[1]) : 'N/A');
+      }
 
-      for (let j = 0; j < teamCount; j++) {
-        const teamEntry = teams?.[j] || teams?.[String(j)]
-        const teamArr = teamEntry?.team
-        if (!teamArr) { console.log('[MATCHUP] team', j, 'has no team array, entry:', JSON.stringify(teamEntry)?.slice(0, 200)); continue; }
+      const teamsObj = extractTeamsFromMatchup(foundMatchup);
+      console.log('[MATCHUP] teamsObj keys:', teamsObj ? Object.keys(teamsObj).slice(0, 10) : 'NULL');
+      console.log('[MATCHUP] teamsObj type:', typeof teamsObj, 'isArray:', Array.isArray(teamsObj));
+      
+      const teamEntries = getTeamEntries(teamsObj);
+      console.log('[MATCHUP] teamEntries count:', teamEntries.length);
+      
+      const parsedTeams = []
+      for (let j = 0; j < teamEntries.length; j++) {
+        const entry = teamEntries[j];
+        const teamArr = entry?.team;
+        if (!teamArr || !Array.isArray(teamArr)) {
+          console.log('[MATCHUP] team', j, 'no array, entry keys:', entry ? Object.keys(entry) : 'null');
+          continue;
+        }
         
-        // teamArr[0] can be a flat object or an array of info objects (like player data)
+        // teamArr[0] can be a flat object or an array of info objects
         let info = {};
         if (Array.isArray(teamArr[0])) {
-          // Array of info objects: [{team_key: "..."}, {name: "..."}, ...]
           info = Object.assign({}, ...teamArr[0]);
         } else {
           info = teamArr[0] || {};
         }
         
-        // Search for team_stats in teamArr (can be at index 1, 2, or deeper)
+        // Search for team_stats in teamArr
         let statsObj = {};
         for (let k = 1; k < teamArr.length; k++) {
           if (teamArr[k]?.team_stats) { statsObj = teamArr[k].team_stats; break; }
@@ -311,7 +409,7 @@ router.get('/league/:leagueKey/matchup', requireAuth, async (req, res) => {
           .filter(s => s.stat_id !== undefined && s.value !== undefined)
           .map(s => ({ stat_id: String(s.stat_id), name: STAT_NAMES[String(s.stat_id)] || String(s.stat_id), value: s.value }))
         
-        // Extract manager name (can be nested in various ways)
+        // Extract manager name
         let manager = '';
         const managers = info.managers;
         if (managers) {
