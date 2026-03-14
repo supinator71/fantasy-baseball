@@ -3,6 +3,7 @@ const router = express.Router();
 const Anthropic = require('@anthropic-ai/sdk');
 const db = require('../db/database');
 const brain = require('../services/fantasyBrain');
+const mlbStats = require('../services/mlbStatsService');
 
 let client = null;
 function getClient() {
@@ -219,7 +220,7 @@ Give me TOP 3 picks ranked with: player name, why NOW (tier/scarcity/VOR reasoni
   }
 });
 
-// Start/Sit analysis
+// Start/Sit analysis — enriched with 2025 stats
 router.post('/startsit', async (req, res) => {
   const { players, matchup_context, scoring_type } = req.body;
   const settings = getLeagueSettings();
@@ -233,6 +234,25 @@ router.post('/startsit', async (req, res) => {
     return { ...p, platoon, streaming, weekGames: games };
   });
 
+  // Fetch 2025 stats for decision context (non-blocking)
+  let historicalIntel = '';
+  try {
+    const playerNames = (players || []).map(p => p.name || p.player_name).filter(Boolean);
+    if (playerNames.length > 0) {
+      const bulkData = await mlbStats.getBulkPlayerStats(playerNames, 2025);
+      const intelLines = [];
+      for (const [name, data] of Object.entries(bulkData)) {
+        const intel = brain.generatePlayerIntelligence(data);
+        if (intel) intelLines.push(`${name}: ${intel.summary}`);
+      }
+      if (intelLines.length > 0) {
+        historicalIntel = `\n\n=== 2025 STATS INTELLIGENCE ===\n${intelLines.join('\n')}`;
+      }
+    }
+  } catch (e) {
+    console.log('[Claude/startsit] MLB stats lookup skipped:', e.message);
+  }
+
   try {
     const text = await callClaude([{
       role: 'user',
@@ -243,9 +263,9 @@ Context: ${matchup_context || 'Standard week'}
 Players to evaluate (with pre-computed matchup intelligence):
 ${enriched.map(p =>
   `${p.name} (${p.position}, ${p.team}) | Games this week: ${p.weekGames} | Streaming score: ${p.streaming?.score}/100 (${p.streaming?.grade}) | Platoon: ${p.platoon?.advantage} (${p.platoon?.multiplier}x) | Opponent: ${p.opponent || 'unknown'}`
-).join('\n')}
+).join('\n')}${historicalIntel}
 
-Give START or SIT for each player. Use the streaming score, platoon edge, and game count to drive your recommendation. Flag regression risks if applicable.`
+Use the 2025 stats intelligence to assess each player's true talent level. Give START or SIT for each player backed by real performance data — flag breakout candidates and regression risks.`
     }]);
     res.json({ analysis: text });
   } catch (err) {
@@ -292,7 +312,7 @@ Validate and expand on this trade analysis. Identify any sell-high/buy-low dynam
   }
 });
 
-// Waiver wire
+// Waiver wire — enriched with 2025 MLB stats + intelligence
 router.post('/waiver', async (req, res) => {
   const { available_players, my_roster, drop_candidates } = req.body;
   const settings = getLeagueSettings();
@@ -304,6 +324,27 @@ router.post('/waiver', async (req, res) => {
     waiverScore: brain.scoreWaiverTarget(p, my_roster || [], settings || {}),
   })).sort((a, b) => b.waiverScore.score - a.waiverScore.score);
 
+  // Fetch real 2025 stats for top waiver targets (non-blocking)
+  let historicalIntel = '';
+  try {
+    const topNames = scored.slice(0, 8).map(p => p.player_name || p.name).filter(Boolean);
+    if (topNames.length > 0) {
+      const bulkData = await mlbStats.getBulkPlayerStats(topNames, 2025);
+      const intelLines = [];
+      for (const [name, data] of Object.entries(bulkData)) {
+        const intel = brain.generatePlayerIntelligence(data);
+        if (intel) {
+          intelLines.push(`${name}: ${intel.summary}`);
+        }
+      }
+      if (intelLines.length > 0) {
+        historicalIntel = `\n\n=== 2025 MLB STATS INTELLIGENCE ===\n${intelLines.join('\n')}`;
+      }
+    }
+  } catch (e) {
+    console.log('[Claude/waiver] MLB stats lookup skipped:', e.message);
+  }
+
   try {
     const text = await callClaude([{
       role: 'user',
@@ -314,9 +355,9 @@ Drop candidates: ${(drop_candidates||[]).map(p => `${p.player_name||p.name}`).jo
 Waiver targets (pre-scored by priority engine):
 ${scored.slice(0, 12).map(p =>
   `${p.player_name||p.name} (${p.position}, ${p.team}) — Priority: ${p.waiverScore.score}/100 [${p.waiverScore.priority}] — ${p.waiverScore.reasoning}`
-).join('\n')}
+).join('\n')}${historicalIntel}
 
-Give top 3 add/drop recommendations. Flag any regression risks or BABIP-driven luck. Identify which drops free up the most roster value.`
+Use the 2025 stats intelligence above to identify breakout candidates, regression risks, age-curve plays. Give top 3 add/drop recommendations with specific reasoning backed by last year's real stats.`
     }]);
     res.json({ recommendations: text, scored: scored.slice(0, 10) });
   } catch (err) {
@@ -445,6 +486,31 @@ router.post('/audit', async (req, res) => {
     scarcity: brain.getPositionalScarcity(p.position, leagueSize).tier,
   })).sort((a, b) => b.vor - a.vor);
 
+  // Fetch real 2025 stats for roster players (non-blocking)
+  let historicalIntel = '';
+  try {
+    const playerNames = roster.map(p => p.player_name || p.name).filter(Boolean);
+    if (playerNames.length > 0) {
+      const bulkData = await mlbStats.getBulkPlayerStats(playerNames, 2025);
+      const intelLines = [];
+      for (const [name, data] of Object.entries(bulkData)) {
+        const intel = brain.generatePlayerIntelligence(data);
+        if (intel) {
+          const s = data.stats;
+          const statLine = data.type === 'hitter'
+            ? `${s.AVG}/${s.HR}HR/${s.RBI}RBI/${s.SB}SB`
+            : `${s.ERA}ERA/${s.WHIP}WHIP/${s.K}K/${s.SV}SV`;
+          intelLines.push(`${name} (2025: ${statLine}): ${intel.summary}`);
+        }
+      }
+      if (intelLines.length > 0) {
+        historicalIntel = `\n\n=== 2025 REAL MLB STATS + INTELLIGENCE ===\n${intelLines.join('\n')}`;
+      }
+    }
+  } catch (e) {
+    console.log('[Claude/audit] MLB stats lookup skipped:', e.message);
+  }
+
   try {
     const text = await callClaude([{
       role: 'user',
@@ -465,10 +531,12 @@ Sell high candidates: ${analysis.sellHigh.map(p => `${p.name} (VOR ${p.vor})`).j
 Buy low candidates: ${analysis.buyLow.map(p => `${p.name} (VOR ${p.vor})`).join(', ') || 'None'}
 
 CATEGORY ANALYSIS:
-${JSON.stringify(catAnalysis)}
+${JSON.stringify(catAnalysis)}${historicalIntel}
 
 LEAGUE STANDINGS CONTEXT:
 ${league_standings?.length ? JSON.stringify(league_standings.slice(0, 5)) : 'Not provided'}
+
+Use the 2025 real stats and intelligence data above to ground your analysis in actual performance. Flag breakout candidates, regression risks, age-curve concerns, and which players are contributing vs dragging each fantasy category.
 
 Return ONLY valid JSON:
 {
@@ -479,7 +547,7 @@ Return ONLY valid JSON:
     { "action": "Trade X for Y", "reasoning": "...", "priority": "immediate" }
   ],
   "championshipPath": "To win it all, you need to...",
-  "fullAnalysis": "Comprehensive 300-word analysis covering roster construction, category profile, and trajectory."
+  "fullAnalysis": "Comprehensive 300-word analysis covering roster construction, category profile, and trajectory using the 2025 stats intelligence."
 }`,
     }], 2048);
 

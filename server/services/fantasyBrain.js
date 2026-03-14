@@ -680,6 +680,360 @@ function analyzeRosterStrengths(roster = [], leagueSize = 12) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// I) BREAKOUT / REGRESSION DETECTOR
+// Analyzes peripheral stats to flag unsustainable performance
+// ─────────────────────────────────────────────────────────────────────────────
+
+// League-average baselines for regression anchors (2023-2025 MLB averages)
+const LEAGUE_AVG = {
+  BABIP: 0.296, HR_FB: 0.128, LOB_PCT: 0.720,
+  K_PCT: 0.224, BB_PCT: 0.086, AVG: 0.248,
+  ERA: 4.08, WHIP: 1.27, K9: 8.6, BB9: 3.3,
+}
+
+function detectBreakoutRegression(playerStats = {}, type = 'hitter') {
+  const flags = []
+  let breakoutScore = 0  // positive = breakout candidate, negative = regression risk
+
+  if (type === 'hitter') {
+    const babip = parseFloat(playerStats.BABIP || playerStats.babip || 0)
+    const avg = parseFloat(playerStats.AVG || playerStats.avg || 0)
+    const kPct = playerStats.K && playerStats.PA ? playerStats.K / playerStats.PA : 0
+    const bbPct = playerStats.BB && playerStats.PA ? playerStats.BB / playerStats.PA : 0
+    const hrRate = playerStats.HR && playerStats.AB ? playerStats.HR / playerStats.AB : 0
+    const isoP = parseFloat(playerStats.SLG || 0) - parseFloat(playerStats.AVG || 0)
+
+    // BABIP regression (most powerful indicator)
+    if (babip > 0) {
+      if (babip > 0.360) {
+        flags.push({ stat: 'BABIP', value: babip, verdict: 'REGRESSION RISK', note: `BABIP ${babip.toFixed(3)} is far above league avg (.296). AVG likely to drop.` })
+        breakoutScore -= 20
+      } else if (babip < 0.250) {
+        flags.push({ stat: 'BABIP', value: babip, verdict: 'BREAKOUT CANDIDATE', note: `BABIP ${babip.toFixed(3)} is well below normal. Due for AVG boost.` })
+        breakoutScore += 20
+      }
+    }
+
+    // K-rate quality
+    if (kPct > 0) {
+      if (kPct < 0.15) {
+        flags.push({ stat: 'K%', value: kPct, verdict: 'ELITE CONTACT', note: `${(kPct * 100).toFixed(1)}% K-rate. Elite contact profile — sustains AVG.` })
+        breakoutScore += 10
+      } else if (kPct > 0.30) {
+        flags.push({ stat: 'K%', value: kPct, verdict: 'HIGH K-RATE', note: `${(kPct * 100).toFixed(1)}% K-rate. Volatile AVG, needs power to compensate.` })
+        breakoutScore -= 10
+      }
+    }
+
+    // Walk rate (plate discipline)
+    if (bbPct > 0) {
+      if (bbPct > 0.12) {
+        flags.push({ stat: 'BB%', value: bbPct, verdict: 'ELITE DISCIPLINE', note: `${(bbPct * 100).toFixed(1)}% walk rate. High OBP floor.` })
+        breakoutScore += 8
+      }
+    }
+
+    // Power sustainability (ISO Power)
+    if (isoP > 0.250) {
+      flags.push({ stat: 'ISO', value: isoP, verdict: 'ELITE POWER', note: `ISO ${isoP.toFixed(3)} indicates legit 35+ HR power.` })
+      breakoutScore += 12
+    } else if (isoP > 0 && isoP < 0.100) {
+      flags.push({ stat: 'ISO', value: isoP, verdict: 'NO POWER', note: `ISO ${isoP.toFixed(3)}. Batter provides no power upside.` })
+      breakoutScore -= 5
+    }
+
+    // Speed profile
+    const sbRate = playerStats.SB && playerStats.G ? playerStats.SB / playerStats.G : 0
+    if (sbRate > 0.20) {
+      flags.push({ stat: 'Speed', value: sbRate, verdict: 'ELITE SPEED', note: `${playerStats.SB} SB in ${playerStats.G} games. Premium stolen base contributor.` })
+      breakoutScore += 10
+    }
+
+  } else {
+    // Pitcher analysis
+    const era = parseFloat(playerStats.ERA || playerStats.era || 0)
+    const whip = parseFloat(playerStats.WHIP || playerStats.whip || 0)
+    const k9 = parseFloat(playerStats.K9 || playerStats.k9 || 0)
+    const bb9 = parseFloat(playerStats.BB9 || playerStats.bb9 || 0)
+    const kbb = k9 && bb9 ? k9 / bb9 : 0
+
+    // ERA sustainability
+    if (era > 0 && era < 2.50) {
+      flags.push({ stat: 'ERA', value: era, verdict: 'REGRESSION RISK', note: `Sub-2.50 ERA (${era.toFixed(2)}) is extremely hard to sustain. Expect regression toward 3.00+.` })
+      breakoutScore -= 10
+    } else if (era > 5.00) {
+      flags.push({ stat: 'ERA', value: era, verdict: 'BREAKOUT CANDIDATE', note: `ERA ${era.toFixed(2)} may be inflated by bad luck. Check K/BB ratio.` })
+      breakoutScore += 5
+    }
+
+    // Strikeout dominance
+    if (k9 > 10.5) {
+      flags.push({ stat: 'K/9', value: k9, verdict: 'ELITE STRIKEOUTS', note: `K/9 of ${k9.toFixed(1)} is elite. High K-rate pitchers are most stable.` })
+      breakoutScore += 15
+    }
+
+    // K/BB ratio (best single pitching predictor)
+    if (kbb > 4.0) {
+      flags.push({ stat: 'K/BB', value: kbb, verdict: 'ELITE COMMAND', note: `K/BB ratio ${kbb.toFixed(1)} is elite tier. High floor pitcher.` })
+      breakoutScore += 15
+    } else if (kbb > 0 && kbb < 1.5) {
+      flags.push({ stat: 'K/BB', value: kbb, verdict: 'POOR COMMAND', note: `K/BB ratio ${kbb.toFixed(1)} is dangerously low. Blowup risk.` })
+      breakoutScore -= 20
+    }
+  }
+
+  const verdict = breakoutScore >= 20 ? 'STRONG BREAKOUT CANDIDATE' :
+    breakoutScore >= 10 ? 'MILD BREAKOUT CANDIDATE' :
+    breakoutScore <= -20 ? 'HIGH REGRESSION RISK' :
+    breakoutScore <= -10 ? 'MODERATE REGRESSION RISK' :
+    'SUSTAINABLE PROFILE'
+
+  return { flags, breakoutScore, verdict }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// J) YEAR-OVER-YEAR TREND ANALYSIS
+// Compares 2-3 seasons of stats to classify player trajectory
+// ─────────────────────────────────────────────────────────────────────────────
+
+function analyzeYoYTrend(multiSeasonData = {}) {
+  const seasons = Object.keys(multiSeasonData).sort()
+  if (seasons.length < 2) return { trend: 'INSUFFICIENT DATA', details: [] }
+
+  const details = []
+  const trends = {}
+
+  // Compare key stats across seasons
+  const hittingKeys = [
+    { key: 'runs', label: 'R' }, { key: 'homeRuns', label: 'HR' },
+    { key: 'rbi', label: 'RBI' }, { key: 'stolenBases', label: 'SB' },
+    { key: 'avg', label: 'AVG', isRate: true },
+  ]
+  const pitchingKeys = [
+    { key: 'wins', label: 'W' }, { key: 'strikeOuts', label: 'K' },
+    { key: 'era', label: 'ERA', isRate: true, lowerBetter: true },
+    { key: 'whip', label: 'WHIP', isRate: true, lowerBetter: true },
+    { key: 'saves', label: 'SV' },
+  ]
+
+  // Detect if pitcher or hitter by checking first season
+  const firstSeason = multiSeasonData[seasons[0]]
+  const isPitcher = firstSeason.era !== undefined || firstSeason.wins !== undefined
+  const statKeys = isPitcher ? pitchingKeys : hittingKeys
+
+  statKeys.forEach(({ key, label, isRate, lowerBetter }) => {
+    const values = seasons.map(s => parseFloat(multiSeasonData[s]?.[key] || 0)).filter(v => v > 0)
+    if (values.length < 2) return
+
+    // Per-game normalization for counting stats
+    const normalized = values.map((v, i) => {
+      if (isRate) return v
+      const games = parseFloat(multiSeasonData[seasons[i]]?.gamesPlayed || multiSeasonData[seasons[i]]?.gamesPitched || 150)
+      return games > 0 ? (v / games) * 150 : v  // normalize to 150-game pace
+    })
+
+    const first = normalized[0]
+    const last = normalized[normalized.length - 1]
+    const pctChange = first > 0 ? ((last - first) / first) * 100 : 0
+    const direction = lowerBetter ? (pctChange < 0 ? 'improving' : 'declining') : (pctChange > 0 ? 'improving' : 'declining')
+
+    trends[label] = {
+      values: seasons.map((s, i) => ({ season: s, raw: values[i], normalized: normalized[i] })),
+      pctChange: Math.round(pctChange),
+      direction,
+    }
+
+    if (Math.abs(pctChange) > 15) {
+      details.push(`${label}: ${direction === 'improving' ? '📈' : '📉'} ${direction} ${Math.abs(Math.round(pctChange))}% over ${seasons.length} seasons`)
+    }
+  })
+
+  // Overall trajectory
+  const improvingCount = Object.values(trends).filter(t => t.direction === 'improving').length
+  const decliningCount = Object.values(trends).filter(t => t.direction === 'declining').length
+
+  const trend = improvingCount >= 3 ? 'ASCENDING' :
+    decliningCount >= 3 ? 'DECLINING' :
+    improvingCount >= 2 && decliningCount <= 1 ? 'RISING' :
+    decliningCount >= 2 && improvingCount <= 1 ? 'FADING' :
+    'STABLE'
+
+  return { trend, details, trends }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// K) AGE CURVE MODELING
+// Maps player age to expected production trajectory
+// ─────────────────────────────────────────────────────────────────────────────
+
+const AGE_CURVES = {
+  power:  { peakStart: 26, peakEnd: 30, declineAge: 32, falloffRate: 0.04 },
+  speed:  { peakStart: 24, peakEnd: 28, declineAge: 30, falloffRate: 0.08 },
+  contact:{ peakStart: 26, peakEnd: 32, declineAge: 34, falloffRate: 0.03 },
+  SP:     { peakStart: 26, peakEnd: 31, declineAge: 33, falloffRate: 0.05 },
+  RP:     { peakStart: 27, peakEnd: 33, declineAge: 35, falloffRate: 0.03 },
+}
+
+function ageCurveAnalysis(age, position, playerProfile = {}) {
+  const pos = String(position || '').toUpperCase()
+  const isPitcher = pos === 'SP' || pos === 'RP' || pos === 'P'
+
+  // Determine which curve to use
+  const curves = isPitcher
+    ? [AGE_CURVES[pos === 'RP' ? 'RP' : 'SP']]
+    : [
+        { ...AGE_CURVES.power, label: 'Power', weight: playerProfile.powerHeavy ? 0.6 : 0.3 },
+        { ...AGE_CURVES.speed, label: 'Speed', weight: playerProfile.speedHeavy ? 0.6 : 0.2 },
+        { ...AGE_CURVES.contact, label: 'Contact', weight: 0.3 },
+      ]
+
+  const analysis = {
+    age,
+    phase: 'unknown',
+    projectionMultiplier: 1.0,
+    notes: [],
+  }
+
+  // Weighted phase calculation for hitters
+  if (!isPitcher) {
+    let weightedMult = 0
+    let totalWeight = 0
+    curves.forEach(c => {
+      const w = c.weight || 0.33
+      let mult = 1.0
+      if (age < c.peakStart) {
+        mult = 0.85 + (age - 21) * 0.03  // ascending
+      } else if (age >= c.peakStart && age <= c.peakEnd) {
+        mult = 1.0  // peak
+      } else if (age > c.peakEnd && age <= c.declineAge) {
+        mult = 1.0 - (age - c.peakEnd) * (c.falloffRate / 2)  // early decline
+      } else {
+        mult = 1.0 - (c.peakEnd - c.peakStart) * (c.falloffRate / 2) - (age - c.declineAge) * c.falloffRate
+      }
+      weightedMult += mult * w
+      totalWeight += w
+    })
+    analysis.projectionMultiplier = Math.max(0.5, Math.min(1.15, weightedMult / totalWeight))
+  } else {
+    const curve = curves[0]
+    if (age < curve.peakStart) {
+      analysis.projectionMultiplier = 0.90 + (age - 22) * 0.025
+    } else if (age >= curve.peakStart && age <= curve.peakEnd) {
+      analysis.projectionMultiplier = 1.0
+    } else if (age > curve.declineAge) {
+      analysis.projectionMultiplier = Math.max(0.6, 1.0 - (age - curve.declineAge) * curve.falloffRate)
+    } else {
+      analysis.projectionMultiplier = Math.max(0.8, 1.0 - (age - curve.peakEnd) * (curve.falloffRate / 2))
+    }
+  }
+
+  // Determine phase label
+  if (age < 25) analysis.phase = 'PRE-PEAK (upside play)'
+  else if (analysis.projectionMultiplier >= 0.98) analysis.phase = 'PEAK YEARS'
+  else if (analysis.projectionMultiplier >= 0.88) analysis.phase = 'EARLY DECLINE'
+  else if (analysis.projectionMultiplier >= 0.75) analysis.phase = 'DECLINING'
+  else analysis.phase = 'LATE CAREER'
+
+  // Draft/trade implications
+  if (age <= 25) {
+    analysis.notes.push('Young player with upside — project improvement over current stats.')
+    analysis.notes.push('Higher trade value than current production suggests.')
+  } else if (age >= 33 && !isPitcher) {
+    analysis.notes.push('Speed will decline fastest. Discount SB projections 20-40%.')
+    analysis.notes.push('Injury risk increases significantly. Consider a backup plan.')
+  } else if (age >= 34 && isPitcher) {
+    analysis.notes.push('Velocity decline expected. K-rate may drop.')
+    analysis.notes.push('Workload management — fewer innings likely.')
+  }
+
+  return analysis
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// L) CATEGORY CONTRIBUTION PROFILER
+// Tells you exactly what % of your stat budget each player fills
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Target season totals for a competitive 12-team H2H fantasy team
+const TEAM_TARGETS = {
+  R: 850, HR: 220, RBI: 820, SB: 110, AVG: 0.262,
+  W: 75, SV: 65, K: 1200, ERA: 3.60, WHIP: 1.20,
+}
+
+function profileCategoryContribution(playerStats = {}, type = 'hitter') {
+  const profile = {}
+
+  if (type === 'hitter') {
+    const cats = ['R', 'HR', 'RBI', 'SB']
+    cats.forEach(cat => {
+      const val = parseFloat(playerStats[cat] || 0)
+      const target = TEAM_TARGETS[cat]
+      profile[cat] = {
+        value: val,
+        pctOfTarget: target > 0 ? Math.round((val / target) * 100) : 0,
+        grade: val / target > 0.12 ? 'A' : val / target > 0.08 ? 'B' : val / target > 0.05 ? 'C' : 'D',
+      }
+    })
+
+    // AVG impact (weighted by ABs)
+    const avg = parseFloat(playerStats.AVG || 0)
+    const ab = parseInt(playerStats.AB || 0)
+    profile.AVG = {
+      value: avg,
+      ab,
+      impact: avg > 0.300 ? 'BOOSTS team AVG' : avg > 0.270 ? 'HELPS team AVG' : avg > 0.245 ? 'NEUTRAL' : 'DRAGS team AVG',
+      grade: avg > 0.300 ? 'A' : avg > 0.270 ? 'B' : avg > 0.245 ? 'C' : 'D',
+    }
+  } else {
+    profile.W = { value: playerStats.W || 0, pctOfTarget: Math.round(((playerStats.W || 0) / TEAM_TARGETS.W) * 100), grade: (playerStats.W || 0) > 12 ? 'A' : (playerStats.W || 0) > 8 ? 'B' : 'C' }
+    profile.SV = { value: playerStats.SV || 0, pctOfTarget: Math.round(((playerStats.SV || 0) / TEAM_TARGETS.SV) * 100), grade: (playerStats.SV || 0) > 25 ? 'A' : (playerStats.SV || 0) > 10 ? 'B' : 'C' }
+    profile.K = { value: playerStats.K || 0, pctOfTarget: Math.round(((playerStats.K || 0) / TEAM_TARGETS.K) * 100), grade: (playerStats.K || 0) > 180 ? 'A' : (playerStats.K || 0) > 130 ? 'B' : 'C' }
+
+    const era = parseFloat(playerStats.ERA || 0)
+    profile.ERA = { value: era, impact: era < 3.00 ? 'ANCHOR' : era < 3.60 ? 'HELPS' : era < 4.20 ? 'NEUTRAL' : 'HURTS', grade: era < 3.00 ? 'A' : era < 3.60 ? 'B' : era < 4.20 ? 'C' : 'D' }
+
+    const whip = parseFloat(playerStats.WHIP || 0)
+    profile.WHIP = { value: whip, impact: whip < 1.05 ? 'ANCHOR' : whip < 1.20 ? 'HELPS' : whip < 1.35 ? 'NEUTRAL' : 'HURTS', grade: whip < 1.05 ? 'A' : whip < 1.20 ? 'B' : whip < 1.35 ? 'C' : 'D' }
+  }
+
+  // Overall contributor grade
+  const grades = Object.values(profile).map(p => p.grade)
+  const gradeScore = grades.reduce((sum, g) => sum + ({ A: 4, B: 3, C: 2, D: 1 }[g] || 0), 0)
+  const overallGrade = gradeScore / grades.length >= 3.5 ? 'A' : gradeScore / grades.length >= 2.5 ? 'B' : gradeScore / grades.length >= 1.5 ? 'C' : 'D'
+
+  return { categories: profile, overallGrade, type }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M) COMPREHENSIVE PLAYER INTELLIGENCE REPORT
+// Combines all analysis into one structured report for Claude
+// ─────────────────────────────────────────────────────────────────────────────
+
+function generatePlayerIntelligence(playerData = {}) {
+  const { stats, age, position, type } = playerData
+  if (!stats) return null
+
+  const isHitter = type === 'hitter' || !['SP', 'RP', 'P'].includes(String(position).toUpperCase())
+
+  const breakout = detectBreakoutRegression(stats, isHitter ? 'hitter' : 'pitcher')
+  const ageCurve = ageCurveAnalysis(age || 28, position)
+  const contribution = profileCategoryContribution(stats, isHitter ? 'hitter' : 'pitcher')
+
+  return {
+    breakout,
+    ageCurve,
+    contribution,
+    summary: [
+      `${breakout.verdict} (score: ${breakout.breakoutScore})`,
+      `Age ${age}: ${ageCurve.phase} (projection multiplier: ${ageCurve.projectionMultiplier.toFixed(2)}x)`,
+      `Category grade: ${contribution.overallGrade}`,
+      ...breakout.flags.map(f => `${f.stat}: ${f.verdict}`),
+      ...ageCurve.notes,
+    ].join(' | '),
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 module.exports = {
   // A) Positional scarcity
   getPositionalScarcity,
@@ -712,4 +1066,23 @@ module.exports = {
 
   // Roster analysis
   analyzeRosterStrengths,
+
+  // I) Breakout/Regression detection
+  detectBreakoutRegression,
+  LEAGUE_AVG,
+
+  // J) Year-over-year trends
+  analyzeYoYTrend,
+
+  // K) Age curve modeling
+  ageCurveAnalysis,
+  AGE_CURVES,
+
+  // L) Category contribution profiling
+  profileCategoryContribution,
+  TEAM_TARGETS,
+
+  // M) Combined intelligence report
+  generatePlayerIntelligence,
 }
+

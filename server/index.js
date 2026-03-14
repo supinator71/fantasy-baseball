@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const yahooRoutes = require('./routes/yahoo');
 const claudeRoutes = require('./routes/claude');
 const draftRoutes = require('./routes/draft');
+const mlbStatsRoutes = require('./routes/mlbStats');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,6 +32,7 @@ app.use('/auth', authRoutes);
 app.use('/api/yahoo', yahooRoutes);
 app.use('/api/claude', claudeRoutes);
 app.use('/api/draft', draftRoutes);
+app.use('/api/mlb', mlbStatsRoutes);
 
 // Serve React frontend in production
 if (process.env.NODE_ENV === 'production') {
