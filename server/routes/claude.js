@@ -538,18 +538,25 @@ ${league_standings?.length ? JSON.stringify(league_standings.slice(0, 5)) : 'Not
 
 Use the 2025 real stats and intelligence data above to ground your analysis in actual performance. Flag breakout candidates, regression risks, age-curve concerns, and which players are contributing vs dragging each fantasy category.
 
+IMPORTANT FORMATTING RULES:
+- Write all text in clean, conversational prose. No code syntax, no brackets, no curly braces in your text.
+- Write strengths/weaknesses as readable sentences a fantasy manager would enjoy reading.
+- For moves, write "action" as a clear headline (e.g. "Trade Contreras and Jansen for a young starter") and "reasoning" as a persuasive paragraph.
+- The championshipPath should read like a coach's motivational game plan, not a numbered list.
+- The fullAnalysis should be a compelling 300-word narrative essay.
+
 Return ONLY valid JSON:
 {
   "grade": "B+",
-  "strengths": ["strength 1", "strength 2"],
-  "weaknesses": ["weakness 1", "weakness 2"],
+  "strengths": ["Write each strength as a clear, readable sentence or short paragraph"],
+  "weaknesses": ["Write each weakness as a clear, readable sentence or short paragraph"],
   "moves": [
-    { "action": "Trade X for Y", "reasoning": "...", "priority": "immediate" }
+    { "action": "Clear headline describing the move", "reasoning": "Persuasive paragraph explaining why", "priority": "immediate" }
   ],
-  "championshipPath": "To win it all, you need to...",
-  "fullAnalysis": "Comprehensive 300-word analysis covering roster construction, category profile, and trajectory using the 2025 stats intelligence."
+  "championshipPath": "A compelling narrative paragraph describing the path to winning it all",
+  "fullAnalysis": "A comprehensive 300-word narrative analysis written as readable prose"
 }`,
-    }], 2048);
+    }], 3500);
 
     const parsed = tryParseJSON(text);
     console.log('[Claude] /audit parsed:', parsed ? 'JSON OK' : 'FALLBACK to raw text');
