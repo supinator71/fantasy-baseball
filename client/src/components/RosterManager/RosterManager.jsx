@@ -7,6 +7,7 @@ export default function RosterManager({ leagueSettings }) {
   const [leagues, setLeagues] = useState([])
   const [selectedLeague, setSelectedLeague] = useState('')
   const [loading, setLoading] = useState(false)
+  const [trendMap, setTrendMap] = useState({})
 
   useEffect(() => {
     fetchLeagues()
@@ -20,6 +21,21 @@ export default function RosterManager({ leagueSettings }) {
     } catch {}
   }
 
+  // Fetch value trends for roster players (non-blocking)
+  async function fetchTrends(playerList) {
+    try {
+      const players = playerList.map(p => ({ name: p.name, adp: 200 }))
+      const { data } = await axios.post('/api/mlb/roster-value', { players, leagueSize: 12 })
+      const map = {}
+      ;(data.players || []).forEach(p => {
+        map[p.name] = p.valueTrend
+      })
+      setTrendMap(map)
+    } catch (e) {
+      console.log('Trend fetch skipped:', e.message)
+    }
+  }
+
   async function fetchRoster() {
     if (!selectedLeague) return
     setLoading(true)
@@ -30,21 +46,13 @@ export default function RosterManager({ leagueSettings }) {
         data.forEach(item => {
           const p = item?.player
           if (p && Array.isArray(p)) {
-            // Yahoo returns an array: p[0] = info array, p[1] = roster position info
             const infoArray = Array.isArray(p[0]) ? p[0] : [];
             const rosterInfo = p[1] || {};
-            
-            // Flatten the array of objects [{player_key: "..."}, {name: {full: "..."}}, ...] into one object
             const info = Object.assign({}, ...infoArray);
-            
-            // Extract name (Yahoo returns as {name: {full: "John Doe"}} or sometimes nested)
             const name = info.name?.full || info.name?.first && `${info.name.first} ${info.name.last}` || info.full_name || 'Unknown';
-            
-            // Extract eligible positions (variable Yahoo formats)
             let positions = [];
             const ep = info.eligible_positions;
             if (ep) {
-              // Could be: [{position: "SS"}, {position: "OF"}] or {position: "SS"} or ["SS", "OF"]
               if (Array.isArray(ep)) {
                 positions = ep.map(p => p?.position || p).filter(Boolean);
               } else if (ep.position) {
@@ -54,13 +62,10 @@ export default function RosterManager({ leagueSettings }) {
             if (!positions.length && info.display_position) {
               positions = info.display_position.split(',').map(s => s.trim());
             }
-            
-            // Extract selected position (lineup slot)
             const selectedPos = rosterInfo?.selected_position;
             let slot = 'BN';
             if (selectedPos) {
               if (Array.isArray(selectedPos)) {
-                // Could be [{coverage_type: "week"}, {position: "SS"}] or [{position: "BN"}]
                 for (const sp of selectedPos) {
                   if (sp?.position) { slot = sp.position; break; }
                 }
@@ -68,7 +73,6 @@ export default function RosterManager({ leagueSettings }) {
                 slot = selectedPos.position;
               }
             }
-            
             playerList.push({
               name,
               positions,
@@ -80,6 +84,8 @@ export default function RosterManager({ leagueSettings }) {
         })
       }
       setRoster(playerList)
+      // Fetch trends in background
+      if (playerList.length > 0) fetchTrends(playerList)
     } catch (err) {
       toast.error('Could not load roster from Yahoo. Showing empty roster.')
       setRoster([])
@@ -119,9 +125,9 @@ export default function RosterManager({ leagueSettings }) {
         <div className="loading">Loading your roster from Yahoo...</div>
       ) : (
         <>
-          <RosterSection title="Active Lineup" players={active} color="#00a86b" />
-          <RosterSection title="Bench" players={bench} color="#f59e0b" />
-          {il.length > 0 && <RosterSection title="Injured List (IL)" players={il} color="#ef4444" />}
+          <RosterSection title="Active Lineup" players={active} color="#00a86b" trendMap={trendMap} />
+          <RosterSection title="Bench" players={bench} color="#f59e0b" trendMap={trendMap} />
+          {il.length > 0 && <RosterSection title="Injured List (IL)" players={il} color="#ef4444" trendMap={trendMap} />}
 
           {roster.length === 0 && (
             <div className="card" style={{ textAlign: 'center', padding: 40 }}>
@@ -135,14 +141,23 @@ export default function RosterManager({ leagueSettings }) {
   )
 }
 
-function RosterSection({ title, players, color }) {
+function TrendArrow({ trend }) {
+  if (!trend) return <span style={{ color: '#4a7a94', fontSize: 12 }}>—</span>
+  const isUnder = trend.classification?.includes('UNDERVALUED')
+  const isOver = trend.classification?.includes('OVERVALUED')
+  if (isUnder) return <span title={trend.summary} style={{ color: '#00a86b', fontSize: 14, cursor: 'help' }}>▲</span>
+  if (isOver) return <span title={trend.summary} style={{ color: '#ef4444', fontSize: 14, cursor: 'help' }}>▼</span>
+  return <span title={trend.summary} style={{ color: '#4aafdb', fontSize: 12, cursor: 'help' }}>—</span>
+}
+
+function RosterSection({ title, players, color, trendMap = {} }) {
   if (players.length === 0) return null
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color }}>{title} ({players.length})</h2>
       <table>
         <thead>
-          <tr><th>Slot</th><th>Player</th><th>Position</th><th>Team</th><th>Status</th></tr>
+          <tr><th>Slot</th><th>Player</th><th>Position</th><th>Team</th><th>Trend</th><th>Status</th></tr>
         </thead>
         <tbody>
           {players.map((p, i) => (
@@ -155,6 +170,9 @@ function RosterSection({ title, players, color }) {
                 ))}
               </td>
               <td style={{ color: '#7aafc4' }}>{p.team}</td>
+              <td style={{ textAlign: 'center' }}>
+                <TrendArrow trend={trendMap[p.name]} />
+              </td>
               <td>
                 {p.injury ? (
                   <span style={{ color: '#ef4444', fontSize: 12 }}>{p.injury}</span>
