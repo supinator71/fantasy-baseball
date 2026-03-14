@@ -112,11 +112,18 @@ router.get('/league/:leagueKey/roster', requireAuth, async (req, res) => {
   try {
     const data = await withCache(res, `roster:${leagueKey}:mine`, TTL.ROSTER, force, async () => {
       const myTeamKey = await yahoo.getUserTeamKey(leagueKey);
+      console.log('[ROSTER DEBUG] myTeamKey:', myTeamKey);
       if (!myTeamKey) throw new Error('Could not find your team in this league.');
-      return yahoo.getRoster(leagueKey, myTeamKey);
+      const rosterResult = await yahoo.getRoster(leagueKey, myTeamKey);
+      console.log('[ROSTER DEBUG] result type:', typeof rosterResult, 'isArray:', Array.isArray(rosterResult), 'length:', rosterResult?.length);
+      if (rosterResult?.[0]) {
+        console.log('[ROSTER DEBUG] first item:', JSON.stringify(rosterResult[0]).slice(0, 500));
+      }
+      return rosterResult;
     })
     res.json(data)
   } catch (err) {
+    console.error('[ROSTER ERROR]', err.message);
     res.status(500).json({ error: err.message })
   }
 })
@@ -445,5 +452,72 @@ router.get('/league/settings/local', (req, res) => {
   settings.stat_categories = JSON.parse(settings.stat_categories || '[]')
   res.json(settings)
 })
+
+// ── Debug endpoints (temporary) ────────────────────────────────────────────────
+router.get('/debug/roster/:leagueKey', requireAuth, async (req, res) => {
+  const { leagueKey } = req.params
+  try {
+    const myTeamKey = await yahoo.getUserTeamKey(leagueKey);
+    if (!myTeamKey) return res.json({ error: 'No team key found', myTeamKey });
+    
+    // Get raw roster data without toArray processing
+    const rawData = await yahoo.yahooGet(`/team/${myTeamKey}/roster/players`);
+    const players = rawData.fantasy_content?.team?.[1]?.roster?.[1]?.players 
+                 || rawData.fantasy_content?.team?.[1]?.roster?.[0]?.players;
+    
+    // Show raw structure info
+    const debugInfo = {
+      myTeamKey,
+      playersType: typeof players,
+      playersIsArray: Array.isArray(players),
+      playersKeys: players ? Object.keys(players).slice(0, 10) : null,
+      playersAttrCount: players?.['@attributes']?.count,
+      firstPlayer: players ? JSON.parse(JSON.stringify(players['0'] || players[0] || 'NONE')) : null,
+    };
+    
+    res.json(debugInfo);
+  } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack?.split('\n').slice(0, 5) });
+  }
+});
+
+router.get('/debug/matchup/:leagueKey', requireAuth, async (req, res) => {
+  const { leagueKey } = req.params
+  try {
+    const [matchups, myTeamKey] = await Promise.all([
+      yahoo.getScoreboard(leagueKey),
+      yahoo.getUserTeamKey(leagueKey)
+    ]);
+    
+    const totalMatchups = matchups?.['@attributes']?.count || 0;
+    const week = matchups?.['@attributes']?.week || null;
+    
+    // Get first matchup raw shape
+    const firstMatchup = matchups?.[0]?.matchup || matchups?.[0];
+    const teams = firstMatchup?.teams;
+    const firstTeam = teams?.[0]?.team;
+    
+    const debugInfo = {
+      myTeamKey,
+      totalMatchups,
+      week,
+      matchupsType: typeof matchups,
+      matchupsKeys: matchups ? Object.keys(matchups).slice(0, 5) : null,
+      firstMatchupKeys: firstMatchup ? Object.keys(firstMatchup) : null,
+      teamsKeys: teams ? Object.keys(teams).slice(0, 5) : null,
+      firstTeamIsArray: Array.isArray(firstTeam),
+      firstTeamLength: firstTeam?.length,
+      firstTeamItem0Type: typeof firstTeam?.[0],
+      firstTeamItem0IsArray: Array.isArray(firstTeam?.[0]),
+      firstTeamItem0Keys: firstTeam?.[0] ? (Array.isArray(firstTeam[0]) ? 'IS_ARRAY' : Object.keys(firstTeam[0])) : null,
+      firstTeamItem0: firstTeam?.[0] ? JSON.parse(JSON.stringify(firstTeam[0])) : null,
+      firstTeamItem1Keys: firstTeam?.[1] ? Object.keys(firstTeam[1]) : null,
+    };
+    
+    res.json(debugInfo);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 module.exports = router;
