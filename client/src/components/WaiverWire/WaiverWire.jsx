@@ -80,13 +80,13 @@ export default function WaiverWire({ leagueSettings }) {
     if (isPitcher) {
       return (
         <span style={{ fontSize: 13, color: '#a0aab2' }}>
-          W: {p.stats?.['28'] || 0} | SV: {p.stats?.['32'] || 0} | K: {p.stats?.['42'] || 0} | ERA: {p.stats?.['26'] || '0.00'} | WHIP: {p.stats?.['27'] || '0.00'}
+          W: {p.stats?.['28'] || 0} | SV: {p.stats?.['32'] || 0} | K: {p.stats?.['42'] || 0} | ERA: {parseFloat(p.stats?.['26'] || 0).toFixed(2)} | WHIP: {parseFloat(p.stats?.['27'] || 0).toFixed(2)}
         </span>
       )
     }
     return (
       <span style={{ fontSize: 13, color: '#a0aab2' }}>
-        R: {p.stats?.['7'] || 0} | HR: {p.stats?.['12'] || 0} | RBI: {p.stats?.['13'] || 0} | SB: {p.stats?.['16'] || 0} | AVG: {p.stats?.['3'] || '.000'}
+        R: {p.stats?.['60'] || 0} | HR: {p.stats?.['7'] || 0} | RBI: {p.stats?.['12'] || 0} | SB: {p.stats?.['16'] || 0} | AVG: {parseFloat(p.stats?.['3'] || 0).toFixed(3).replace(/^0/, '')}
       </span>
     )
   }

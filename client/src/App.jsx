@@ -15,6 +15,7 @@ import LeagueSetup from './components/Layout/LeagueSetup'
 import TeamAudit from './components/TeamAudit/TeamAudit'
 import TradeFinder from './components/TradeFinder/TradeFinder'
 import GamePlan from './components/GamePlan/GamePlan'
+import PlayerTrends from './components/PlayerTrends/PlayerTrends'
 
 export default function App() {
   const [authStatus, setAuthStatus] = useState({ authenticated: false, loading: true })
@@ -90,6 +91,7 @@ export default function App() {
                 <Route path="/trade"     element={<TradeAnalyzer leagueSettings={leagueSettings} />} />
                 <Route path="/standings" element={<Standings leagueSettings={leagueSettings} />} />
                 <Route path="/matchup"   element={<MatchupPredictor leagueSettings={leagueSettings} />} />
+                <Route path="/trends"    element={<PlayerTrendsPage />} />
                 <Route path="/setup"       element={<LeagueSetup onSave={loadLeagueSettings} />} />
                 <Route path="/audit"      element={<TeamAudit leagueSettings={leagueSettings} />} />
                 <Route path="/tradefinder" element={<TradeFinder leagueSettings={leagueSettings} />} />
@@ -197,3 +199,35 @@ function LoginPage() {
     </div>
   )
 }
+
+function PlayerTrendsPage() {
+  const [leagues, setLeagues] = useState([])
+  const [selectedLeague, setSelectedLeague] = useState('')
+
+  useEffect(() => {
+    axios.get('/api/yahoo/leagues').then(({ data }) => {
+      setLeagues(data)
+      if (data[0]?.league_key) setSelectedLeague(data[0].league_key)
+    }).catch(() => {})
+  }, [])
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <div>
+          <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Player Trends</h1>
+          <p style={{ color: '#7aafc4', fontSize: 14 }}>Hot streaks, rising stars, and cold spells on your roster</p>
+        </div>
+        {leagues.length > 0 && (
+          <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>
+            {leagues.map((l, i) => (
+              <option key={i} value={l.league_key}>{l.name || l.league_key}</option>
+            ))}
+          </select>
+        )}
+      </div>
+      <PlayerTrends selectedLeague={selectedLeague} />
+    </div>
+  )
+}
+

@@ -131,9 +131,8 @@ router.get('/league/:leagueKey/myroster', requireAuth, async (req, res) => {
       if (!myTeamKey) return { players: [], teamKey: null }
       const rosterData = await yahoo.getRoster(leagueKey, myTeamKey)
       const playerKeys = []
-      const rosterCount = rosterData?.length || rosterData?.['@attributes']?.count || 0
-      for (let i = 0; i < rosterCount; i++) {
-        const p = rosterData[i]?.player
+      for (const rosterItem of (rosterData || [])) {
+        const p = rosterItem?.player
         if (p && Array.isArray(p)) {
           const infoArray = Array.isArray(p[0]) ? p[0] : []
           const info = Object.assign({}, ...infoArray)
@@ -379,10 +378,13 @@ router.get('/league/:leagueKey/trends', requireAuth, async (req, res) => {
 
       const rosterData = await yahoo.getRoster(leagueKey, myTeamKey)
       const playerKeys = []
-      const rosterCount = rosterData?.['@attributes']?.count || 0
-      for (let i = 0; i < rosterCount; i++) {
-        const key = rosterData[i]?.player?.[0]?.player_key
-        if (key) playerKeys.push(key)
+      for (const rosterItem of (rosterData || [])) {
+        const p = rosterItem?.player
+        if (Array.isArray(p)) {
+          const infoArray = Array.isArray(p[0]) ? p[0] : []
+          const info = Object.assign({}, ...infoArray)
+          if (info.player_key) playerKeys.push(info.player_key)
+        }
       }
 
       const [recentMine, seasonMine, faData] = await Promise.all([
