@@ -9,9 +9,10 @@ description: How to rollback or switch between versions of the fantasy baseball 
 | Tag / Branch | Description | Status |
 |---|---|---|
 | `v1.0-stable` | Original working app — basic AI, no historical stats | Safe fallback |
-| `v2.0-pro-analytics` | **Pro analytics + MLB Stats API + clean prose + data trust** | ✅ **CURRENT BASELINE** |
-| `master` branch | What Railway deploys (currently = v2.0) | Production |
-| `feature/stats-and-graphics` | Synced with master, for future experiments | Development |
+| `v2.0-pro-analytics` | Pro analytics + MLB Stats API + clean prose + data trust | Previous baseline |
+| `v3.0-elite-analytics` | **Elite heuristics + ADP trends + grading rubric + trend arrows** | ✅ **CURRENT BASELINE** |
+| `master` branch | What Railway deploys (currently = v3.0) | Production |
+| `feature/stats-and-graphics` | For future experiments | Development |
 
 ## Quick Commands
 
