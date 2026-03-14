@@ -254,18 +254,19 @@ router.get('/league/:leagueKey/matchup', requireAuth, async (req, res) => {
 
       if (!matchups) throw new Error('No matchup data available')
 
-      const totalMatchups = matchups['@attributes']?.count || 0
+      const totalMatchups = parseInt(matchups['@attributes']?.count) || 0
       const week = matchups['@attributes']?.week || null
+      console.log('[MATCHUP] totalMatchups:', totalMatchups, 'week:', week, 'myTeamKey:', myTeamKey);
 
       let foundMatchup = null
       for (let i = 0; i < totalMatchups; i++) {
-        const matchup = matchups[i]?.matchup
-        if (!matchup) continue
-        const teams = matchup.teams
-        if (!teams) continue
-        const teamCount = teams['@attributes']?.count || 2
+        const matchup = matchups[i]?.matchup || matchups[String(i)]?.matchup
+        if (!matchup) { console.log('[MATCHUP] matchup', i, 'is null'); continue; }
+        const teams = matchup.teams || matchup['0']?.teams
+        if (!teams) { console.log('[MATCHUP] matchup', i, 'has no teams'); continue; }
+        const teamCount = parseInt(teams['@attributes']?.count) || 2
         for (let j = 0; j < teamCount; j++) {
-          const teamInfo = teams[j]?.team?.[0];
+          const teamInfo = teams[j]?.team?.[0] || teams[String(j)]?.team?.[0];
           const teamKey = Array.isArray(teamInfo) 
             ? Object.assign({}, ...teamInfo)?.team_key 
             : teamInfo?.team_key;
@@ -273,16 +274,20 @@ router.get('/league/:leagueKey/matchup', requireAuth, async (req, res) => {
         }
         if (foundMatchup) break
       }
-      if (!foundMatchup) foundMatchup = matchups[0]?.matchup
+      if (!foundMatchup) {
+        console.log('[MATCHUP] Did not find user matchup, using matchup[0]');
+        foundMatchup = matchups[0]?.matchup || matchups['0']?.matchup;
+      }
       if (!foundMatchup) throw new Error('No matchup found')
 
       const teams = foundMatchup.teams
-      const teamCount = teams?.['@attributes']?.count || 2
+      const teamCount = parseInt(teams?.['@attributes']?.count) || 2
       const parsedTeams = []
 
       for (let j = 0; j < teamCount; j++) {
-        const teamArr = teams?.[j]?.team
-        if (!teamArr) continue
+        const teamEntry = teams?.[j] || teams?.[String(j)]
+        const teamArr = teamEntry?.team
+        if (!teamArr) { console.log('[MATCHUP] team', j, 'has no team array, entry:', JSON.stringify(teamEntry)?.slice(0, 200)); continue; }
         
         // teamArr[0] can be a flat object or an array of info objects (like player data)
         let info = {};
@@ -324,6 +329,8 @@ router.get('/league/:leagueKey/matchup', requireAuth, async (req, res) => {
           stats
         })
       }
+      
+      console.log('[MATCHUP] parsedTeams count:', parsedTeams.length, 'teams:', parsedTeams.map(t => ({ key: t.key, name: t.name, statsCount: t.stats.length })));
 
       const myIdx = myTeamKey ? parsedTeams.findIndex(t => t.key === myTeamKey) : 0
       const myTeam = parsedTeams[myIdx >= 0 ? myIdx : 0]

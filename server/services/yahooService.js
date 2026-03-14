@@ -132,7 +132,33 @@ async function getStandings(leagueKey) {
 
 async function getScoreboard(leagueKey) {
   const data = await yahooGet(`/league/${leagueKey}/scoreboard`);
-  const matchups = data.fantasy_content?.league?.[1]?.scoreboard?.[1]?.matchups || data.fantasy_content?.league?.[1]?.scoreboard?.[0]?.matchups;
+  const league = data.fantasy_content?.league;
+  
+  let matchups = null;
+  
+  // Search for scoreboard/matchups in league array
+  if (Array.isArray(league)) {
+    for (const item of league) {
+      if (item?.scoreboard) {
+        const sb = item.scoreboard;
+        // scoreboard can be array or object with indexed entries
+        if (Array.isArray(sb)) {
+          for (const s of sb) {
+            if (s?.matchups) { matchups = s.matchups; break; }
+          }
+        } else {
+          for (let i = 0; i <= 2; i++) {
+            if (sb[i]?.matchups) { matchups = sb[i].matchups; break; }
+            if (sb[String(i)]?.matchups) { matchups = sb[String(i)].matchups; break; }
+          }
+          if (!matchups && sb.matchups) matchups = sb.matchups;
+        }
+        if (matchups) break;
+      }
+    }
+  }
+  
+  console.log('[getScoreboard] Found matchups:', !!matchups, 'type:', typeof matchups, 'count:', matchups?.['@attributes']?.count);
   return matchups;
 }
 

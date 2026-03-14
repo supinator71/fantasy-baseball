@@ -75,18 +75,36 @@ export default function WaiverWire({ leagueSettings }) {
     }
   }
 
+  // Helper: safely display a stat value (Yahoo returns "-" in preseason)
+  const safeStat = (val) => {
+    if (val === undefined || val === null || val === '-' || val === '-/-') return '—'
+    return val
+  }
+  const safeRate = (val, decimals = 3) => {
+    if (val === undefined || val === null || val === '-' || val === '-/-') return '—'
+    const n = parseFloat(val)
+    if (isNaN(n)) return '—'
+    return n.toFixed(decimals).replace(/^0/, '')
+  }
+
   const renderStats = (p) => {
     const isPitcher = p.position.includes('P')
+    const hasStats = p.stats && Object.values(p.stats).some(v => v !== '-' && v !== '-/-' && v !== undefined)
+    
+    if (!hasStats) {
+      return <span style={{ fontSize: 13, color: '#5a6a72', fontStyle: 'italic' }}>Preseason — no stats yet</span>
+    }
+    
     if (isPitcher) {
       return (
         <span style={{ fontSize: 13, color: '#a0aab2' }}>
-          W: {p.stats?.['28'] || 0} | SV: {p.stats?.['32'] || 0} | K: {p.stats?.['42'] || 0} | ERA: {parseFloat(p.stats?.['26'] || 0).toFixed(2)} | WHIP: {parseFloat(p.stats?.['27'] || 0).toFixed(2)}
+          W: {safeStat(p.stats?.['28'])} | SV: {safeStat(p.stats?.['32'])} | K: {safeStat(p.stats?.['42'])} | ERA: {safeRate(p.stats?.['26'], 2)} | WHIP: {safeRate(p.stats?.['27'], 2)}
         </span>
       )
     }
     return (
       <span style={{ fontSize: 13, color: '#a0aab2' }}>
-        R: {p.stats?.['60'] || 0} | HR: {p.stats?.['7'] || 0} | RBI: {p.stats?.['12'] || 0} | SB: {p.stats?.['16'] || 0} | AVG: {parseFloat(p.stats?.['3'] || 0).toFixed(3).replace(/^0/, '')}
+        R: {safeStat(p.stats?.['60'])} | HR: {safeStat(p.stats?.['7'])} | RBI: {safeStat(p.stats?.['12'])} | SB: {safeStat(p.stats?.['16'])} | AVG: {safeRate(p.stats?.['3'])}
       </span>
     )
   }
