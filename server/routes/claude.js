@@ -212,7 +212,9 @@ ${enrichedPlayers.map(p =>
   `${p.player_name} | ${p.position} | ADP ${p.adp} | VOR ${p.vor}/100 | Scarcity: ${p.scarcity} | ADP value: ${p.adpValue > 0 ? '+' : ''}${p.adpValue}`
 ).join('\n')}
 
-Give me TOP 3 picks ranked with: player name, why NOW (tier/scarcity/VOR reasoning), what slot it fills, rounds until that position dries up, and any injury/regression risk. End with a 1-line strategy for my next 3 rounds.`
+Give me TOP 3 picks ranked with: player name, why NOW (tier/scarcity/VOR reasoning), what slot it fills, rounds until that position dries up, and any injury/regression risk. End with a 1-line strategy for my next 3 rounds.
+
+Write in clean, conversational prose. No JSON syntax, no brackets, no code formatting. Write like a knowledgeable fantasy analyst giving advice to a friend.`
     }]);
     res.json({ recommendation: text });
   } catch (err) {
@@ -265,7 +267,9 @@ ${enriched.map(p =>
   `${p.name} (${p.position}, ${p.team}) | Games this week: ${p.weekGames} | Streaming score: ${p.streaming?.score}/100 (${p.streaming?.grade}) | Platoon: ${p.platoon?.advantage} (${p.platoon?.multiplier}x) | Opponent: ${p.opponent || 'unknown'}`
 ).join('\n')}${historicalIntel}
 
-Use the 2025 stats intelligence to assess each player's true talent level. Give START or SIT for each player backed by real performance data — flag breakout candidates and regression risks.`
+Use the 2025 stats intelligence to assess each player's true talent level. Give START or SIT for each player backed by real performance data — flag breakout candidates and regression risks.
+
+Write in clean, conversational prose. No JSON syntax, no brackets, no code formatting. Write like a fantasy analyst giving clear, actionable advice.`
     }]);
     res.json({ analysis: text });
   } catch (err) {
@@ -304,7 +308,9 @@ ${evaluation.counterOffer ? 'Suggested counter: ' + evaluation.counterOffer : ''
 My roster: ${(my_roster||[]).map(p => `${p.player_name||p.name} (${p.position})`).join(', ')}
 Their roster: ${(their_roster||[]).map(p => `${p.player_name||p.name} (${p.position})`).join(', ')}
 
-Validate and expand on this trade analysis. Identify any sell-high/buy-low dynamics, what the other manager's incentive is, and give a concrete recommendation with counter-offer if needed.`
+Validate and expand on this trade analysis. Identify any sell-high/buy-low dynamics, what the other manager's incentive is, and give a concrete recommendation with counter-offer if needed.
+
+Write in clean, conversational prose. No JSON syntax, no brackets, no code formatting. Write like a fantasy analyst giving persuasive trade advice.`
     }]);
     res.json({ analysis: text, evaluation });
   } catch (err) {
@@ -399,8 +405,10 @@ router.post('/draft/strategy', async (req, res) => {
 Pre-computed recommendation: ${strategy.recommended} strategy
 Strategy overview: ${JSON.stringify(strategy.strategy, null, 2)}
 
-Expand this into a personalized draft plan covering: early round priorities, positional scarcity windows, when to target closers, pitching philosophy, and 5 specific late-round sleeper archetypes to target.`,
-    }], 2048);
+Expand this into a personalized draft plan covering: early round priorities, positional scarcity windows, when to target closers, pitching philosophy, and 5 specific late-round sleeper archetypes to target.
+
+Write in clean, conversational prose. No JSON syntax, no brackets, no code formatting. Write like a veteran fantasy analyst advising a friend before their draft.`,
+    }], 2500);
     res.json({ strategy: text, strategyProfile: strategy });
   } catch (err) {
     res.status(500).json({ error: err.message, strategy: 'AI unavailable.', strategyProfile: strategy });
@@ -435,16 +443,18 @@ Stats: ${JSON.stringify(opponent?.stats || [])}
 Categories: ${JSON.stringify(stat_categories || ['R','HR','RBI','SB','AVG','W','SV','K','ERA','WHIP'])}
 Pre-computed category analysis: ${JSON.stringify(catAnalysis)}
 
+IMPORTANT: Write all text values in clean, conversational prose. No brackets, no code syntax. Write like a sports analyst breaking down a matchup.
+
 Return ONLY valid JSON (no markdown):
 {
-  "categories": [{ "name": "R", "my_proj": 52, "opp_proj": 45, "winner": "me", "confidence": "high", "note": "brief note" }],
+  "categories": [{ "name": "R", "my_proj": 52, "opp_proj": 45, "winner": "me", "confidence": "high", "note": "A readable sentence about this category" }],
   "projected_wins": 6, "projected_losses": 4, "projected_ties": 0,
   "overall_confidence": "medium",
-  "lineup_recommendations": "Specific actionable moves.",
-  "key_matchups": "2-3 swing categories and how to win them.",
-  "summary": "Projected to win X-Y"
+  "lineup_recommendations": "Write specific actionable moves in conversational prose",
+  "key_matchups": "Describe the 2-3 swing categories and how to win them in plain English",
+  "summary": "A clear, readable summary of the matchup projection"
 }`,
-    }], 2048);
+    }], 2500);
 
     const parsed = tryParseJSON(text);
     console.log('[Claude] /matchup/predict parsed:', parsed ? 'JSON OK' : 'FALLBACK to raw text');
@@ -632,8 +642,10 @@ Generate 3-5 specific trade proposals. For each:
 3. A fairness score estimate (-100 to +100, from MY perspective)
 4. The "pitch" — exact language to use when proposing this trade to the other manager
 
-Focus on trades that exploit my surplus to fill my voids while offering the other manager something they genuinely need.`,
-    }], 2048);
+Focus on trades that exploit my surplus to fill my voids while offering the other manager something they genuinely need.
+
+Write in clean, conversational prose. No JSON syntax, no brackets, no code formatting. Write like a fantasy analyst crafting persuasive trade pitches.`,
+    }], 2500);
 
     res.json({ proposals: text, myAnalysis: { surpluses: myAnalysis.surpluses, voids: myAnalysis.voids, sellHigh: myAnalysis.sellHigh }, tradeTargets: tradeTargets.slice(0, 5) });
   } catch (err) {
@@ -685,20 +697,22 @@ Chase categories: ${catAnalysis.chase?.join(', ') || 'N/A'}
 
 ${matchup ? `MATCHUP: vs ${matchup.opponent_name || 'opponent'}\nTheir projected: ${JSON.stringify(matchup.opp_stats || {})}` : ''}
 
+IMPORTANT: Write all text values as clean, readable sentences. No JSON syntax, no brackets, no code formatting in your text. Write like a manager giving his coaching staff the weekly game plan.
+
 Return ONLY valid JSON:
 {
-  "optimalLineup": [{ "player": "name", "position": "SP", "reason": "7 games, hot streak" }],
-  "streamingTargets": [{ "player": "name", "position": "SP", "reason": "great matchup" }],
+  "optimalLineup": [{ "player": "name", "position": "SP", "reason": "A clear sentence explaining why they should start" }],
+  "streamingTargets": [{ "player": "name", "position": "SP", "reason": "A clear sentence about the streaming opportunity" }],
   "swingCategories": ["SB", "SV"],
   "dailyMoves": {
-    "monday": "Start X over Y — favorable matchup",
-    "tuesday": "Stream Z — 2 starts this week",
-    "wednesday": "Monitor A — expected to be activated"
+    "monday": "A clear sentence about what to do Monday",
+    "tuesday": "A clear sentence about Tuesday's move",
+    "wednesday": "A clear sentence about Wednesday's adjustment"
   },
-  "keyDecisions": [{ "decision": "Start X or Y at SP2?", "recommendation": "X", "reasoning": "Better K/9 vs weak lineup" }],
+  "keyDecisions": [{ "decision": "A readable question about the decision", "recommendation": "Player name", "reasoning": "A persuasive sentence explaining why" }],
   "weeklyProjection": { "myProjected": "7-3", "opponentProjected": "3-7", "confidence": "medium" }
 }`,
-    }], 2048);
+    }], 3000);
 
     const parsed = tryParseJSON(text);
     if (parsed) return res.json({ ...parsed, lineupOptimizer: lineupOpt, catAnalysis });
