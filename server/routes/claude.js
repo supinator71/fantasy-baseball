@@ -21,11 +21,11 @@ router.get('/health', async (req, res) => {
   
   try {
     const msg = await getClient().messages.create({
-      model: 'claude-haiku-4-20250414',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 10,
       messages: [{ role: 'user', content: 'Say "ok"' }],
     });
-    res.json({ status: 'ok', keyPrefix, model: 'claude-haiku-4-20250414', response: msg.content[0].text });
+    res.json({ status: 'ok', keyPrefix, model: 'claude-haiku-4-5-20251001', response: msg.content[0].text });
   } catch (err) {
     res.json({ 
       status: 'error', 
@@ -87,7 +87,7 @@ async function callClaude(messages, maxTokens = 1500) {
     // Add a timeout to prevent infinite hangs
     const timeoutMs = 90000; // 90 seconds
     const apiCall = getClient().messages.create({
-      model: 'claude-haiku-4-20250414',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: maxTokens,
       system: SYSTEM_PROMPT,
       messages,
