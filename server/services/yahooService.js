@@ -120,7 +120,6 @@ async function getRoster(leagueKey, teamKey) {
     }
   }
   
-  console.log('[getRoster] Found players:', !!players, 'type:', typeof players, 'isArray:', Array.isArray(players));
   return toArray(players);
 }
 
@@ -158,7 +157,6 @@ async function getScoreboard(leagueKey) {
     }
   }
   
-  console.log('[getScoreboard] Found matchups:', !!matchups, 'type:', typeof matchups, 'count:', matchups?.['@attributes']?.count);
   return matchups;
 }
 
