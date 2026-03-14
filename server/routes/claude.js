@@ -21,11 +21,11 @@ router.get('/health', async (req, res) => {
   
   try {
     const msg = await getClient().messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-20250414',
       max_tokens: 10,
       messages: [{ role: 'user', content: 'Say "ok"' }],
     });
-    res.json({ status: 'ok', keyPrefix, model: 'claude-sonnet-4-6', response: msg.content[0].text });
+    res.json({ status: 'ok', keyPrefix, model: 'claude-haiku-4-20250414', response: msg.content[0].text });
   } catch (err) {
     res.json({ 
       status: 'error', 
@@ -87,7 +87,7 @@ async function callClaude(messages, maxTokens = 1500) {
     // Add a timeout to prevent infinite hangs
     const timeoutMs = 90000; // 90 seconds
     const apiCall = getClient().messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-20250414',
       max_tokens: maxTokens,
       system: SYSTEM_PROMPT,
       messages,
@@ -99,8 +99,10 @@ async function callClaude(messages, maxTokens = 1500) {
     
     const msg = await Promise.race([apiCall, timeoutPromise]);
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`[Claude] API call completed in ${elapsed}s`);
-    return msg.content[0].text;
+    const responseText = msg.content[0].text;
+    console.log(`[Claude] API call completed in ${elapsed}s, response length: ${responseText.length}`);
+    console.log(`[Claude] Response preview: ${responseText.substring(0, 200)}`);
+    return responseText;
   } catch (err) {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.error(`[Claude] API call failed after ${elapsed}s:`, err.message);
@@ -110,10 +112,24 @@ async function callClaude(messages, maxTokens = 1500) {
 }
 
 function tryParseJSON(text) {
-  const match = text.match(/\{[\s\S]*\}/);
+  if (!text) return null;
+  
+  // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+  let cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+  
+  // Try direct parse first (in case the whole response is valid JSON)
+  try { return JSON.parse(cleaned); } catch {}
+  
+  // Try to extract JSON object from the text
+  const match = cleaned.match(/\{[\s\S]*\}/);
   if (match) {
-    try { return JSON.parse(match[0]); } catch {}
+    try { return JSON.parse(match[0]); } catch (e) {
+      console.error('[Claude] JSON parse failed:', e.message);
+      console.error('[Claude] Attempted to parse:', match[0].substring(0, 200));
+    }
   }
+  
+  console.error('[Claude] Could not extract JSON from response:', text.substring(0, 300));
   return null;
 }
 
@@ -390,9 +406,12 @@ Return ONLY valid JSON (no markdown):
     }], 2048);
 
     const parsed = tryParseJSON(text);
+    console.log('[Claude] /matchup/predict parsed:', parsed ? 'JSON OK' : 'FALLBACK to raw text');
     if (parsed) return res.json(parsed);
-    res.json({ summary: text.split('\n')[0], raw: text });
+    // Fallback: wrap raw text so frontend can at least show something
+    res.json({ summary: text.split('\n')[0], raw: text, lineup_recommendations: text, projected_wins: '?', projected_losses: '?' });
   } catch (err) {
+    console.error('[Claude] /matchup/predict error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -465,9 +484,11 @@ Return ONLY valid JSON:
     }], 2048);
 
     const parsed = tryParseJSON(text);
+    console.log('[Claude] /audit parsed:', parsed ? 'JSON OK' : 'FALLBACK to raw text');
     if (parsed) return res.json({ ...parsed, vorByPlayer, catAnalysis });
     res.json({ fullAnalysis: text, vorByPlayer, catAnalysis, grade: 'N/A' });
   } catch (err) {
+    console.error('[Claude] /audit error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
