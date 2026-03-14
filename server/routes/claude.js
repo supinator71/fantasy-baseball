@@ -9,6 +9,33 @@ function getClient() {
   if (!client) client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   return client;
 }
+
+// Health check — tests the Claude API key
+router.get('/health', async (req, res) => {
+  const keySet = !!process.env.ANTHROPIC_API_KEY;
+  const keyPrefix = process.env.ANTHROPIC_API_KEY?.slice(0, 10) || 'NOT SET';
+  
+  if (!keySet) {
+    return res.json({ status: 'error', error: 'ANTHROPIC_API_KEY not set', keyPrefix });
+  }
+  
+  try {
+    const msg = await getClient().messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 10,
+      messages: [{ role: 'user', content: 'Say "ok"' }],
+    });
+    res.json({ status: 'ok', keyPrefix, model: 'claude-sonnet-4-6', response: msg.content[0].text });
+  } catch (err) {
+    res.json({ 
+      status: 'error', 
+      keyPrefix,
+      error: err.message,
+      statusCode: err.status,
+      errorType: err.error?.error?.type || err.type,
+    });
+  }
+});
 // ─────────────────────────────────────────────────────────────────────────────
 // EXPERT SYSTEM PROMPT
 // ─────────────────────────────────────────────────────────────────────────────
