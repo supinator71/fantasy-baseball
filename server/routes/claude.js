@@ -583,6 +583,25 @@ ${league_standings?.length ? JSON.stringify(league_standings.slice(0, 5)) : 'Not
 
 Use the 2025 real stats and intelligence data above to ground your analysis in actual performance. Flag breakout candidates, regression risks, age-curve concerns, and which players are contributing vs dragging each fantasy category.
 
+TOTAL ROSTER VOR SCORE: ${vorByPlayer.reduce((sum, p) => sum + (p.vor || 0), 0)} (out of a maximum ~2300 for a ${roster.length}-player roster)
+AVERAGE VOR PER PLAYER: ${(vorByPlayer.reduce((sum, p) => sum + (p.vor || 0), 0) / Math.max(1, vorByPlayer.length)).toFixed(1)}
+ELITE PLAYERS (VOR 70+): ${vorByPlayer.filter(p => p.vor >= 70).length}
+REPLACEMENT-LEVEL PLAYERS (VOR < 30): ${vorByPlayer.filter(p => p.vor < 30).length}
+
+=== GRADING RUBRIC (YOU MUST USE THIS — DO NOT DEFAULT TO B) ===
+A+ : Championship favorite. 5+ elite VOR players, zero category holes, top-tier depth at scarce positions, avg VOR >65
+A  : Strong contender. 3-4 elite assets, one minor fixable gap, excellent depth, avg VOR 55-65
+A- : Playoff-caliber. Solid core with 1-2 clear upgrade spots, avg VOR 50-55
+B+ : Good but not great. Has star power but 2-3 real weaknesses or category holes, avg VOR 45-50
+B  : League average. Competitive but unremarkable, needs multiple moves to contend, avg VOR 40-45
+B- : Below average. Some talent but structural problems (too many replacement-level players), avg VOR 35-40
+C+ : Mediocre. Multiple positions below replacement level, unbalanced roster construction, avg VOR 30-35
+C  : Weak. Needs a major overhaul or several trades to become competitive, avg VOR 25-30
+D  : Rebuilder. Should trade aging assets for prospects and draft picks
+F  : Catastrophic. Abandon ship or start over
+
+Use the VOR totals AND qualitative roster assessment together to assign the grade. Do NOT default to B — differentiate clearly.
+
 IMPORTANT FORMATTING RULES:
 - Write all text in clean, conversational prose. No code syntax, no brackets, no curly braces in your text.
 - Write strengths/weaknesses as readable sentences a fantasy manager would enjoy reading.
@@ -592,7 +611,7 @@ IMPORTANT FORMATTING RULES:
 
 Return ONLY valid JSON:
 {
-  "grade": "B+",
+  "grade": "Use the rubric above to assign the precise grade — NOT just B",
   "strengths": ["Write each strength as a clear, readable sentence or short paragraph"],
   "weaknesses": ["Write each weakness as a clear, readable sentence or short paragraph"],
   "moves": [
