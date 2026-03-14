@@ -80,13 +80,33 @@ function leagueContext(settings) {
 }
 
 async function callClaude(messages, maxTokens = 1500) {
-  const msg = await getClient().messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: maxTokens,
-    system: SYSTEM_PROMPT,
-    messages,
-  });
-  return msg.content[0].text;
+  console.log('[Claude] Starting API call...', { messageCount: messages.length, maxTokens });
+  const startTime = Date.now();
+  
+  try {
+    // Add a timeout to prevent infinite hangs
+    const timeoutMs = 90000; // 90 seconds
+    const apiCall = getClient().messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: maxTokens,
+      system: SYSTEM_PROMPT,
+      messages,
+    });
+    
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Claude API timed out after ${timeoutMs / 1000}s`)), timeoutMs)
+    );
+    
+    const msg = await Promise.race([apiCall, timeoutPromise]);
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`[Claude] API call completed in ${elapsed}s`);
+    return msg.content[0].text;
+  } catch (err) {
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.error(`[Claude] API call failed after ${elapsed}s:`, err.message);
+    console.error('[Claude] Error details:', { status: err.status, type: err.error?.error?.type || err.type });
+    throw err;
+  }
 }
 
 function tryParseJSON(text) {
