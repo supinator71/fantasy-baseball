@@ -483,7 +483,7 @@ IMPORTANT: Write all text values in clean, conversational prose. No brackets, no
 Return ONLY valid JSON (no markdown):
 {
   "categories": [{ "name": "Total Points", "my_proj": 350, "opp_proj": 330, "winner": "me", "confidence": "high", "note": "A readable sentence about the points projection" }],
-  "projected_wins": "W", "projected_losses": "N/A", "projected_ties": "N/A",
+  "projected_wins": 350, "projected_losses": 330, "projected_ties": 0,
   "overall_confidence": "medium",
   "lineup_recommendations": "Write specific actionable moves in conversational prose to maximize points",
   "key_matchups": "Describe the 2-3 swing categories and how to win them in plain English",
