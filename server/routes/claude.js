@@ -64,18 +64,18 @@ DECISION FRAMEWORK:
 6. When uncertain, prefer disciplined patience over low-edge churn, but prefer decisive action when edge is real and time-sensitive.
 
 FORMAT-SPECIFIC STRATEGY:
-7. In roto: think in standings-gain points, category scarcity, ratio preservation, innings management, and marginal category movement.
-8. In head-to-head: think in weekly leverage, game volume, two-start pitchers, matchup context, volatility tolerance, and schedule exploitation.
+7. In Head-to-Head Points: think in absolute volume, two-start pitchers, high-K relievers/closers, plate appearance volume, and overall point ceilings.
+8. Ignore 5x5 category balance. You cannot "punt" a category in a points league. Do not chase steals or ratios (ERA/WHIP) over raw volume. Every player is evaluated by how many points they can cumulatively score.
 
 PLAYER EVALUATION:
 9. Be early on skill growth, not late on box-score noise. Favor believable underlying changes in role, approach, contact quality, bat speed, swing decisions, pitch mix, velocity, command, and K/BB profile over short hot streaks.
 10. Do not overreact to small samples unless supported by role change, health change, or real skill indicators.
 11. Do not cling to struggling veterans if replacement options no longer justify patience; do not cut proven talent too early without a clear replacement-level argument.
-12. Classify every player clearly as: true impact add, category specialist, short-term streamer, speculative upside stash, or empty hype trap.
+12. Classify every player clearly as: true impact add, high point-ceiling streamer, safe floor compiler, or empty hype trap.
 
-PITCHING & CATEGORY MARKETS:
-13. For pitchers, protect ratios ruthlessly. Avoid reckless streaming that damages ERA/WHIP for low probability gains.
-14. Treat saves and steals as market inefficiencies: pursue them aggressively only when category math and league supply justify it.
+PITCHING & POINTS MARKETS:
+13. For pitchers, innings (outs) and strikeouts are the holy grail. Target pitchers who go deep into games.
+14. Penalize high-walk, high-HR pitchers heavily as ERs and Hits allowed will severely drain a team's points.
 
 TRADE PSYCHOLOGY:
 15. Exploit league psychology: recency bias, prospect obsession, closer panic, injury frustration, and name-brand bias.
@@ -475,17 +475,17 @@ Stats: ${JSON.stringify(my_team?.stats || [])}
 OPPONENT: ${opponent?.name}
 Stats: ${JSON.stringify(opponent?.stats || [])}
 
-Categories: ${JSON.stringify(stat_categories || ['R','HR','RBI','SB','AVG','W','SV','K','ERA','WHIP'])}
-Pre-computed category analysis: ${JSON.stringify(catAnalysis)}
+Categories: ${JSON.stringify(stat_categories || ['W','SV','OUT','H','ER','BB','HBP','K','R','1B','2B','3B','HR','RBI','SB'])}
+Pre-computed points analysis: ${JSON.stringify(catAnalysis)}
 
 IMPORTANT: Write all text values in clean, conversational prose. No brackets, no code syntax. Write like a sports analyst breaking down a matchup.
 
 Return ONLY valid JSON (no markdown):
 {
-  "categories": [{ "name": "R", "my_proj": 52, "opp_proj": 45, "winner": "me", "confidence": "high", "note": "A readable sentence about this category" }],
-  "projected_wins": 6, "projected_losses": 4, "projected_ties": 0,
+  "categories": [{ "name": "Total Points", "my_proj": 350, "opp_proj": 330, "winner": "me", "confidence": "high", "note": "A readable sentence about the points projection" }],
+  "projected_wins": "W", "projected_losses": "N/A", "projected_ties": "N/A",
   "overall_confidence": "medium",
-  "lineup_recommendations": "Write specific actionable moves in conversational prose",
+  "lineup_recommendations": "Write specific actionable moves in conversational prose to maximize points",
   "key_matchups": "Describe the 2-3 swing categories and how to win them in plain English",
   "summary": "A clear, readable summary of the matchup projection"
 }`,
@@ -747,11 +747,9 @@ LINEUP OPTIMIZER RESULTS:
 Top starters: ${lineupOpt.starters.slice(0, 10).map(p => `${p.player_name} — ${p.weekGames} games, confidence: ${p.confidence}`).join('\n')}
 Streaming targets (7-game teams): ${lineupOpt.streamingTargets.map(p => p.player_name).join(', ') || 'None'}
 
-CATEGORY ANALYSIS: ${catAnalysis.advice}
-Swing categories: ${catAnalysis.swing?.join(', ') || 'N/A'}
-Chase categories: ${catAnalysis.chase?.join(', ') || 'N/A'}
+POINTS ANALYSIS: ${catAnalysis.advice}
 
-${matchup ? `MATCHUP: vs ${matchup.opponent_name || 'opponent'}\nTheir projected: ${JSON.stringify(matchup.opp_stats || {})}` : 'No specific matchup data — optimize for maximum total output across all categories.'}
+${matchup ? `MATCHUP: vs ${matchup.opponent_name || 'opponent'}\nTheir projected points stats: ${JSON.stringify(matchup.opp_stats || {})}` : 'No specific matchup data — optimize for maximum total points output.'}
 
 YOU HAVE EVERYTHING YOU NEED. Do NOT ask for more data. Do NOT mention missing information. Analyze this roster and produce your best game plan NOW using the data above. If standings or opponent data is missing, optimize for maximum total production. Write all text values as clean, readable sentences. No JSON syntax, no brackets, no code formatting in your text. Write like a manager giving his coaching staff the weekly game plan.
 
@@ -759,14 +757,14 @@ Return ONLY valid JSON:
 {
   "optimalLineup": [{ "player": "name", "position": "SP", "reason": "A clear sentence explaining why they should start" }],
   "streamingTargets": [{ "player": "name", "position": "SP", "reason": "A clear sentence about the streaming opportunity" }],
-  "swingCategories": ["SB", "SV"],
+  "swingCategories": ["Total Points"],
   "dailyMoves": {
     "monday": "A clear sentence about what to do Monday",
     "tuesday": "A clear sentence about Tuesday's move",
     "wednesday": "A clear sentence about Wednesday's adjustment"
   },
-  "keyDecisions": [{ "decision": "A readable question about the decision", "recommendation": "Player name", "reasoning": "A persuasive sentence explaining why" }],
-  "weeklyProjection": { "myProjected": "7-3", "opponentProjected": "3-7", "confidence": "medium" }
+  "keyDecisions": [{ "decision": "A readable question about the decision", "recommendation": "Player name", "reasoning": "A persuasive sentence explaining why in terms of points" }],
+  "weeklyProjection": { "myProjected": "350 pts", "opponentProjected": "310 pts", "confidence": "medium" }
 }`,
     }], 3000);
 
