@@ -107,18 +107,18 @@ export default function App() {
 
 function Sidebar({ authenticated, isOpen, onClose }) {
   const navItems = [
-    { to: '/',          label: 'Dashboard',         icon: '⚾' },
-    { to: '/draft',     label: 'Draft Assistant',    icon: '📋' },
-    { to: '/roster',    label: 'My Roster',          icon: '👥' },
-    { to: '/waiver',    label: 'Waiver Wire',        icon: '🔄' },
-    { to: '/startsit',  label: 'Start / Sit',        icon: '⚡' },
-    { to: '/trade',     label: 'Trade Analyzer',     icon: '🤝' },
-    { to: '/standings', label: 'Standings',          icon: '🏆' },
-    { to: '/matchup',   label: 'Matchup Predictor',  icon: '⚔️' },
-    { to: '/audit',       label: 'Team Audit',     icon: '🏅' },
-    { to: '/tradefinder', label: 'Trade Finder',   icon: '🔀' },
-    { to: '/gameplan',    label: 'Game Plan',      icon: '🗓️' },
-    { to: '/setup',       label: 'League Setup',   icon: '⚙️' },
+    { to: '/',          label: 'My Dashboard',      icon: '⚾' },
+    { to: '/draft',     label: 'Draft Helper',      icon: '📋' },
+    { to: '/roster',    label: 'My Team',           icon: '👥' },
+    { to: '/waiver',    label: 'Free Agents',       icon: '🔄' },
+    { to: '/startsit',  label: 'Who To Start',      icon: '⚡' },
+    { to: '/trade',     label: 'Trade Analyzer',    icon: '🤝' },
+    { to: '/standings', label: 'Standings',         icon: '🏆' },
+    { to: '/matchup',   label: 'Weekly Matchup',    icon: '⚔️' },
+    { to: '/audit',     label: 'Roster Checkup',    icon: '🏅' },
+    { to: '/tradefinder', label: 'Trade Finder',    icon: '🔀' },
+    { to: '/gameplan',  label: 'Weekly Game Plan',  icon: '🗓️' },
+    { to: '/setup',     label: 'League Settings',   icon: '⚙️' },
   ]
 
   return (
@@ -132,14 +132,16 @@ function Sidebar({ authenticated, isOpen, onClose }) {
         <NavLink key={item.to} to={item.to} end={item.to === '/'}
           onClick={onClose}
           style={({ isActive }) => ({
-            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px',
-            textDecoration: 'none', borderRadius: 8, margin: '0 8px',
-            background: isActive ? '#0c2c56' : 'transparent',
-            color: isActive ? '#4aafdb' : '#7aafc4',
-            fontSize: 14, fontWeight: isActive ? 600 : 400,
-            minHeight: 44,
+            display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
+            textDecoration: 'none', borderRadius: 10, margin: '2px 8px',
+            background: isActive ? 'rgba(192, 17, 31, 0.15)' : 'transparent',
+            color: isActive ? '#f8fafc' : '#94a3b8',
+            borderRight: isActive ? '3px solid var(--primary)' : '3px solid transparent',
+            fontSize: 14, fontWeight: isActive ? 600 : 500,
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            fontFamily: 'var(--font-heading)',
           })}>
-          <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
+          <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
         </NavLink>
       ))}
@@ -181,19 +183,19 @@ function Sidebar({ authenticated, isOpen, onClose }) {
 function LoginPage() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', padding: 16 }}>
-      <div className="card" style={{ maxWidth: 420, width: '100%', textAlign: 'center' }}>
-        <div style={{ fontSize: 64, marginBottom: 16 }}>⚾</div>
-        <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Fantasy Baseball HQ</h1>
-        <p style={{ color: '#7aafc4', marginBottom: 32, lineHeight: 1.6 }}>
-          Your AI-powered draft assistant and season manager. Connect your Yahoo Fantasy league to get started.
+      <div className="card" style={{ maxWidth: 440, width: '100%', textAlign: 'center', padding: '40px 32px' }}>
+        <div style={{ fontSize: 72, marginBottom: 20, filter: 'drop-shadow(0 0 20px rgba(0,50,120,0.5))' }}>⚾</div>
+        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12, color: 'white' }}>Fantasy Baseball HQ</h1>
+        <p style={{ color: 'var(--text-muted)', marginBottom: 36, lineHeight: 1.6, fontSize: 15 }}>
+          Your intelligent, extremely simple personal assistant for Yahoo Fantasy Baseball. Dominating your league has never been easier.
         </p>
         <a href="/auth/yahoo" style={{ display: 'block', textDecoration: 'none' }}>
-          <button className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: 16 }}>
-            Connect Yahoo Fantasy
+          <button className="btn btn-primary" style={{ width: '100%', padding: '16px', fontSize: 16, borderRadius: 12 }}>
+            Connect Yahoo Fantasy Account
           </button>
         </a>
-        <p style={{ marginTop: 16, fontSize: 12, color: '#4a7a94' }}>
-          You'll be redirected to Yahoo to authorize this app securely.
+        <p style={{ marginTop: 24, fontSize: 13, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-heading)' }}>
+          Secure, effortless authentication via Yahoo.
         </p>
       </div>
     </div>
