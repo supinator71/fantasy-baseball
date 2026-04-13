@@ -149,6 +149,55 @@ router.get('/league/:leagueKey/myroster', requireAuth, async (req, res) => {
   }
 })
 
+// All rosters in the league (lightweight, for AI matching)
+router.get('/league/:leagueKey/allrosters', requireAuth, async (req, res) => {
+  const { leagueKey } = req.params
+  const force = req.query.force === 'true'
+  try {
+    const result = await withCache(res, `allrosters:${leagueKey}`, TTL.ROSTER, force, async () => {
+      const standings = await yahoo.getStandings(leagueKey)
+      const myTeamKey = await yahoo.getUserTeamKey(leagueKey)
+      const allRosters = []
+      const promises = []
+      
+      for (const t of (standings || [])) {
+        const teamObj = t?.team
+        if (!teamObj) continue
+        const info = Array.isArray(teamObj) ? (Array.isArray(teamObj[0]) ? Object.assign({}, ...teamObj[0]) : teamObj[0]) : teamObj
+        const teamKey = info?.team_key
+        const teamName = info?.name
+        
+        // Skip user's own team (Trade finder analyzes opponents)
+        if (!teamKey || teamKey === myTeamKey) continue
+        
+        promises.push(
+          yahoo.getRoster(leagueKey, teamKey).then(rosterData => {
+            const playerList = []
+            for (const rosterItem of (rosterData || [])) {
+              const p = rosterItem?.player
+              if (p && Array.isArray(p)) {
+                const pInfo = Array.isArray(p[0]) ? Object.assign({}, ...p[0]) : p[0]
+                const name = pInfo.name?.full || pInfo.full_name
+                const pos = pInfo.display_position || ''
+                if (name) playerList.push(`${name} (${pos})`)
+              }
+            }
+            if (playerList.length > 0) {
+              allRosters.push({ team: teamName, players: playerList })
+            }
+          }).catch(e => console.error(`Error fetching roster for ${teamKey}:`, e.message))
+        )
+      }
+      
+      await Promise.all(promises)
+      return allRosters
+    })
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 router.get('/league/:leagueKey/standings', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
   const force = req.query.force === 'true'

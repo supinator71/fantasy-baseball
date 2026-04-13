@@ -40,10 +40,14 @@ export default function TradeFinder({ leagueSettings }) {
     setLoading(true)
     setError('')
     try {
+      // Fetch all opponent rosters
+      const allRostersRes = await axios.get(`/api/yahoo/league/${selectedLeague}/allrosters`)
+      const allRosters = allRostersRes.data || []
+      
       const { data } = await axios.post('/api/claude/trade/find', {
         my_roster: roster,
-        all_rosters: [],
-        league_standings: []
+        all_rosters: allRosters,
+        league_standings: [] // Can be filled in later if needed
       })
       setResult(data)
     } catch (err) {
@@ -104,7 +108,7 @@ export default function TradeFinder({ leagueSettings }) {
       {loading && (
         <div className="card" style={{ textAlign: 'center', padding: 48 }}>
           <div style={{ fontSize: 42, marginBottom: 12 }}>🤝</div>
-          <div className="loading">Analyzing roster compatibility and generating proposals...</div>
+          <div className="loading">Scanning league rosters and analyzing compatibility...</div>
         </div>
       )}
 

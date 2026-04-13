@@ -642,9 +642,17 @@ router.post('/trade/find', async (req, res) => {
 
   // Find teams with opposite needs
   const tradeTargets = [];
+  let allRostersSummary = '';
+  
   if (all_rosters && Array.isArray(all_rosters)) {
     all_rosters.forEach(team => {
-      const theirAnalysis = brain.analyzeRosterStrengths(team.roster || [], leagueSize);
+      // Parse lightweight player strings "Name (Pos)" back into mock objects
+      const mockRoster = (team.players || []).map(pStr => {
+        const match = pStr.match(/\((.*?)\)$/);
+        return { position: match ? match[1] : '' };
+      });
+      
+      const theirAnalysis = brain.analyzeRosterStrengths(mockRoster, leagueSize);
       // They have surplus where I have void, and vice versa
       const theirSurposPositions = theirAnalysis.surpluses.map(s => s.position);
       const matchingVoids = myAnalysis.voids.filter(v => theirSurposPositions.includes(v));
@@ -654,13 +662,19 @@ router.post('/trade/find', async (req, res) => {
 
       if (matchingVoids.length > 0 || matchingSurplus.length > 0) {
         tradeTargets.push({
-          team: team.name || team.team_name,
+          team: team.team || team.team_name || team.name, // Access team name from new format
           theyHave: matchingVoids,
           theyNeed: matchingSurplus,
           compatibility: matchingVoids.length + matchingSurplus.length,
         });
       }
     });
+
+    if (all_rosters.length > 0) {
+      allRostersSummary = '\n\n=== ENTIRE LEAGUE ROSTERS ===\n' + all_rosters.map(t => 
+        `Team: ${t.team}\nRoster: ${t.players.join(', ')}`
+      ).join('\n\n');
+    }
   }
 
   tradeTargets.sort((a, b) => b.compatibility - a.compatibility);
@@ -680,15 +694,16 @@ MY SELL-HIGH candidates: ${myAnalysis.sellHigh.map(p => p.name).join(', ') || 'N
 BEST TRADE PARTNERS (by roster compatibility):
 ${tradeTargets.slice(0, 5).map(t =>
   `${t.team}: They have surplus ${t.theyHave.join('/')} and need ${t.theyNeed.join('/')}`
-).join('\n') || 'No roster data for other teams provided — generating general trade proposals.'}
+).join('\n') || 'No roster data for other teams provided — generating general trade proposals.'}${allRostersSummary}
 
-Generate 3-5 specific trade proposals. For each:
-1. What I send and receive (specific player names)
-2. Why this makes sense for BOTH sides
-3. A fairness score estimate (-100 to +100, from MY perspective)
-4. The "pitch" — exact language to use when proposing this trade to the other manager
+Generate 3-5 specific trade proposals using the ENTIRE LEAGUE ROSTERS data above. For each:
+1. What I send and receive (specific player names sourced from the actual opposing rosters)
+2. Which specific Team/Manager I am trading with
+3. Why this makes sense for BOTH sides (addressing my surplus/void and their surplus/void)
+4. A fairness score estimate (-100 to +100, from MY perspective)
+5. The "pitch" — exact language to use when proposing this trade to the other manager
 
-Focus on trades that exploit my surplus to fill my voids while offering the other manager something they genuinely need.
+Focus heavily on trades that exploit my surplus to fill my voids while offering the specific opponent manager something they genuinely need. Do not invent players; use the actual rosters provided.
 
 Write in clean, conversational prose. No JSON syntax, no brackets, no code formatting. Write like a fantasy analyst crafting persuasive trade pitches.`,
     }], 2500);
