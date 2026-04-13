@@ -165,7 +165,7 @@ export default function WaiverWire({ leagueSettings }) {
         ) : (
           <table>
             <thead>
-              <tr><th>Player</th><th>Position</th><th>Team</th><th>Trend</th><th>Projected Stats</th><th>Action</th></tr>
+              <tr><th>Player</th><th>Position</th><th>Team</th><th>Trend</th><th>Projected Stats</th></tr>
             </thead>
             <tbody>
               {available.filter(p => posFilter === 'ALL' || p.position.includes(posFilter)).map((p, i) => (
@@ -185,13 +185,10 @@ export default function WaiverWire({ leagueSettings }) {
                     })()}
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>{renderStats(p)}</td>
-                  <td>
-                    <button className="btn btn-success" style={{ fontSize: 11, padding: '4px 10px' }}>Add</button>
-                  </td>
                 </tr>
               ))}
               {available.length === 0 && !loading && (
-                <tr><td colSpan={6} style={{ textAlign: 'center', color: '#7aafc4', padding: 32 }}>
+                <tr><td colSpan={5} style={{ textAlign: 'center', color: '#7aafc4', padding: 32 }}>
                   No available players found. Select a league above to load the waiver wire.
                   {debugInfo && (
                     <pre style={{textAlign: 'left', marginTop: 16, background: '#0a1929', padding: 12, borderRadius: 8}}>
