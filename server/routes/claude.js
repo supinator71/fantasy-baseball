@@ -358,6 +358,10 @@ router.post('/waiver', async (req, res) => {
   const { available_players, my_roster, drop_candidates } = req.body;
   const settings = getLeagueSettings();
   const leagueCtx = leagueContext(settings);
+  const leagueSize = settings?.num_teams || 12;
+
+  // Identify specific roster needs ( voids & surpluses ) to align with Team Audit
+  const myAnalysis = brain.analyzeRosterStrengths(my_roster || [], leagueSize);
 
   // fantasyBrain: waiver priority score for each player
   const scored = (available_players || []).map(p => ({
@@ -391,6 +395,8 @@ router.post('/waiver', async (req, res) => {
       role: 'user',
       content: `${leagueCtx}
 My roster: ${(my_roster||[]).map(p => `${p.player_name||p.name} (${p.position})`).join(', ')}
+My Positional Needs (Voids): ${myAnalysis.voids.join(', ') || 'None'}
+My Positional Surpluses: ${myAnalysis.surpluses.map(s => `${s.position} (${s.count})`).join(', ') || 'None'}
 Drop candidates: ${(drop_candidates||[]).map(p => `${p.player_name||p.name}`).join(', ') || 'none specified'}
 
 Waiver targets (pre-scored by priority engine):
@@ -398,7 +404,7 @@ ${scored.slice(0, 12).map(p =>
   `${p.player_name||p.name} (${p.position}, ${p.team}) — Priority: ${p.waiverScore.score}/100 [${p.waiverScore.priority}] — ${p.waiverScore.reasoning}`
 ).join('\n')}${historicalIntel}
 
-Use the 2025 stats intelligence above to identify breakout candidates, regression risks, age-curve plays. Give top 3 add/drop recommendations with specific reasoning backed by last year's real stats.`
+Use the 2025 stats intelligence AND the team's specific Positional Needs (Voids) to identify the best targets. Align your recommendations with the team's structural needs (do not recommend adding a position where the team already has a Surplus unless they are a must-add star). Give top 3 add/drop recommendations with specific reasoning backed by last year's real stats.`
     }]);
     res.json({ recommendations: text, scored: scored.slice(0, 10) });
   } catch (err) {
