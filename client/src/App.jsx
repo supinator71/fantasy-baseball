@@ -139,7 +139,7 @@ function Sidebar({ authenticated, isOpen, onClose }) {
             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             fontFamily: 'var(--font-heading)',
           })}>
-          <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0, opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
+          <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
         </NavLink>
       ))}
