@@ -4,38 +4,71 @@ const db = require('../db/database');
 
 const YAHOO_API_BASE = 'https://fantasysports.yahooapis.com/fantasy/v2';
 
-async function getAccessToken() {
-  const row = db.prepare('SELECT * FROM tokens WHERE id = 1').get();
-  if (!row) throw new Error('Not authenticated with Yahoo');
-
-  // Auto-refresh if expired
-  if (Date.now() > row.expires_at - 60000) {
-    const axios2 = require('axios');
+async function forceRefreshToken(refresh_token) {
+  try {
     const credentials = Buffer.from(
       `${process.env.YAHOO_CLIENT_ID}:${process.env.YAHOO_CLIENT_SECRET}`
     ).toString('base64');
 
-    const response = await axios2.post('https://api.login.yahoo.com/oauth2/get_token',
-      new URLSearchParams({ grant_type: 'refresh_token', refresh_token: row.refresh_token }),
+    const response = await axios.post('https://api.login.yahoo.com/oauth2/get_token',
+      new URLSearchParams({ grant_type: 'refresh_token', refresh_token }),
       { headers: { 'Authorization': `Basic ${credentials}`, 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
 
-    const { access_token, refresh_token, expires_in } = response.data;
+    const { access_token, refresh_token: new_refresh_token, expires_in } = response.data;
     const expiresAt = Date.now() + expires_in * 1000;
+    
     db.prepare('UPDATE tokens SET access_token = ?, refresh_token = ?, expires_at = ? WHERE id = 1')
-      .run(access_token, refresh_token, expiresAt);
+      .run(access_token, new_refresh_token, expiresAt);
+      
     return access_token;
+  } catch (err) {
+    console.error('[Yahoo OAuth] Refresh permanently failed. Wiping dead token.');
+    db.prepare('DELETE FROM tokens WHERE id = 1').run();
+    const error = new Error('auth_revoked');
+    error.status = 401;
+    throw error;
+  }
+}
+
+async function getAccessToken() {
+  const row = db.prepare('SELECT * FROM tokens WHERE id = 1').get();
+  if (!row) throw new Error('Not authenticated with Yahoo');
+
+  // Auto-refresh if naturally expired
+  if (Date.now() > row.expires_at - 60000) {
+    console.log('[Yahoo OAuth] Token naturally expired, auto-refreshing...');
+    return await forceRefreshToken(row.refresh_token);
   }
 
   return row.access_token;
 }
 
 async function yahooGet(endpoint) {
-  const token = await getAccessToken();
-  const response = await axios.get(`${YAHOO_API_BASE}${endpoint}?format=json`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return response.data;
+  let token = await getAccessToken();
+  
+  try {
+    const response = await axios.get(`${YAHOO_API_BASE}${endpoint}?format=json`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (err) {
+    if (err.response && err.response.status === 401) {
+      console.log('[Yahoo OAuth] Yahoo rejected unexpired token! Forcing aggressive retry...');
+      const row = db.prepare('SELECT refresh_token FROM tokens WHERE id = 1').get();
+      if (!row) throw err;
+      
+      // Force refresh right now
+      token = await forceRefreshToken(row.refresh_token);
+      
+      // Retry the exact same request seamlessly
+      const retryResponse = await axios.get(`${YAHOO_API_BASE}${endpoint}?format=json`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return retryResponse.data;
+    }
+    throw err;
+  }
 }
 
 // Helper to convert Yahoo's unpredictable list format to a standard array

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
-import { Toaster } from 'react-hot-toast'
+import { Toaster, toast } from 'react-hot-toast'
 import axios from 'axios'
 
 import Dashboard from './components/Dashboard'
@@ -32,6 +32,26 @@ export default function App() {
       window.history.replaceState({}, '', '/')
       checkAuth()
     }
+
+    // Global Interceptor catching 401s globally to fix the OAuth Death Spiral
+    const interceptor = axios.interceptors.response.use(
+      response => response,
+      error => {
+        if (error.response && error.response.status === 401) {
+          // If any request gets a permanent 401, logout forcefully
+          console.error('[OAuth] Caught 401 Death Spiral. Logging out proactively.');
+          setAuthStatus(prev => {
+            if (prev.authenticated) {
+              toast.error('Yahoo session expired. Reconnecting...', { id: 'oauth-401' });
+            }
+            return { authenticated: false, loading: false };
+          });
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => axios.interceptors.response.eject(interceptor);
   }, [])
 
   async function checkAuth() {
