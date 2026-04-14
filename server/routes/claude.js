@@ -275,9 +275,15 @@ router.post('/startsit', async (req, res) => {
     return { ...p, platoon, streaming, weekGames: games };
   });
 
-  // Fetch 2025 stats for decision context (non-blocking)
+  // Fetch 2025 stats and TODAY'S LIVE MATCHUPS for decision context (non-blocking)
   let historicalIntel = '';
+  let liveMatchups = '';
   try {
+    liveMatchups = await mlbStats.getUpcomingSchedule();
+    if (liveMatchups) {
+      liveMatchups = `\n\n=== TODAY'S LIVE MLB MATCHUPS ===\n${liveMatchups}`;
+    }
+
     const playerNames = (players || []).map(p => p.name || p.player_name).filter(Boolean);
     if (playerNames.length > 0) {
       const bulkData = await mlbStats.getBulkPlayerStats(playerNames, 2025);
@@ -303,7 +309,7 @@ Context: ${matchup_context || 'Daily optimization'}
 Players to evaluate (with pre-computed matchup intelligence):
 ${enriched.map(p =>
   `${p.name} (${p.position}, ${p.team}) | Status (Injury): ${p.status || 'Active'} | Is Starting Today: ${p.is_starting} | Games this week: ${p.weekGames} | Streaming score: ${p.streaming?.score}/100 | Yahoo Season Stats (Raw): ${JSON.stringify(p.stats)}`
-).join('\n')}${historicalIntel}
+).join('\n')}${liveMatchups}${historicalIntel}
 
 ${daily_mode ? 
   `This is a DAILY LINEUP OPTIMIZATION request. Do not write a paragraph for every single player. Instead:
@@ -312,7 +318,7 @@ ${daily_mode ?
 (CRITICAL Rule for Batters: Recommend starting if "Is Starting" is "Yes" or "Unknown". If "No", bench them).
 (CRITICAL Rule for Starting Pitchers (SP): ONLY start if "Is Starting" is exactly "Yes". If the SP is "Unknown" or "No", BENCH them immediately because they are not pitching today!)
 3. Rapid-fire list the players who should be benched today (especially anyone on the IL, not starting, or SPs who are not pitching today).
-NOTE: DO NOT complain that opponent information is 'unknown' or missing. Assume typical 2026 scheduling and structure your Start/Sit advice around raw player talent.
+NOTE: Cross-reference the user's roster with "TODAY'S LIVE MLB MATCHUPS" to penalize or reward Pitchers and Hitters based on the difficulty of their real-life opponent today!
 NOTE: Yahoo Season Stats (Raw) uses Stat IDs (e.g. 12=HR, 13=RBI, 3=AVG, 14=SB, 7=R, 26=ERA, 27=WHIP, 28=W, 33=K). Heavily rely on these to identify prospects who are blowing up right now in 2026, even if their MLB historical data is weak!` 
   : 
   `Use the 2025 stats intelligence to assess each player's true talent level. Give START or SIT for each player backed by real performance data — flag breakout candidates and regression risks.`

@@ -261,6 +261,41 @@ async function getLiveProbablePitchers() {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DAILY SCHEDULE — Fetch upcoming matchups for AI context
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function getUpcomingSchedule() {
+  const key = `upcoming_schedule`;
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.data;
+
+  try {
+    // Get schedule for today
+    const date = new Date().toISOString().split('T')[0];
+    const { data } = await axios.get(`${BASE_URL}/schedule?sportId=1&date=${date}`, {
+      timeout: 8000,
+    });
+
+    const games = data.dates?.[0]?.games || [];
+    const matchups = games.map(g => {
+      const away = g.teams?.away?.team?.name || 'Away';
+      const home = g.teams?.home?.team?.name || 'Home';
+      const awayP = g.teams?.away?.probablePitcher?.fullName || 'TBD';
+      const homeP = g.teams?.home?.probablePitcher?.fullName || 'TBD';
+      return `- ${away} @ ${home} (Pitching: ${awayP} vs ${homeP})`;
+    });
+
+    const result = matchups.join('\n');
+    cache.set(key, { data: result, ts: Date.now() });
+    
+    return result;
+  } catch (err) {
+    console.error(`[MLB Stats] Failed to fetch upcoming schedule:`, err.message);
+    return '';
+  }
+}
+
 module.exports = {
   searchPlayer,
   getPlayerStats,
@@ -268,4 +303,5 @@ module.exports = {
   getBulkPlayerStats,
   getMultiSeasonStats,
   getLiveProbablePitchers,
+  getUpcomingSchedule,
 };
