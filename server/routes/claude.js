@@ -103,7 +103,7 @@ function leagueContext(settings) {
   return `League: ${settings.num_teams || 12} teams, ${settings.scoring_type || 'Roto'} scoring, ${settings.draft_type || 'Snake'} draft. Categories: ${(settings.stat_categories || []).join(', ')}.`;
 }
 
-async function callClaude(messages, maxTokens = 1500) {
+async function callClaude(messages, maxTokens = 4000) {
   console.log('[Claude] Starting API call...', { messageCount: messages.length, maxTokens });
   const startTime = Date.now();
   
