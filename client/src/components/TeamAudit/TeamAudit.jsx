@@ -33,6 +33,7 @@ export default function TeamAudit({ leagueSettings }) {
   const [selectedLeague, setSelectedLeague] = useState('')
   const [teams, setTeams] = useState([])
   const [selectedTeam, setSelectedTeam] = useState('')
+  const [currentLoadedTeam, setCurrentLoadedTeam] = useState('')
 
   useEffect(() => {
     axios.get('/api/yahoo/leagues').then(({ data }) => {
@@ -53,8 +54,6 @@ export default function TeamAudit({ leagueSettings }) {
       loadSpecificTeamRoster(selectedTeam)
     }
   }, [selectedTeam])
-
-  const [currentLoadedTeam, setCurrentLoadedTeam] = useState('')
 
   async function loadTeams() {
     try {
