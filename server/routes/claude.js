@@ -81,7 +81,7 @@ TRANSPARENCY & CLARITY:
 - Write in crystal clear, friendly prose — no code syntax, no brackets, no JSON formatting in your text
 - Rank recommendations so it is obvious what the primary move is
 - Separate short-term value from rest-of-season value
-- End your response with a 🎓 "Baseball 101" tip — one simple, non-obvious piece of fun educational advice that will make the user feel like a seasoned pro!`;
+- End your response with a 🎓 "Baseball 101" tip — one simple, friendly, non-obvious piece of educational advice. Crucially, explicitly tailor this education to their specific scoring format (explain WHY a certain type of player is more valuable in Head-to-Head vs Points vs Roto/Categories, referencing the exact league parameters provided in the League Context).`;
 
 
 // ─────────────────────────────────────────────────────────────────────────────

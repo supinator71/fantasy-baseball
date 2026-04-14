@@ -92,15 +92,24 @@ router.get('/league/:leagueKey', requireAuth, async (req, res) => {
       });
     }
 
-    res.json({
+    const payload = {
       league_key: leagueKey,
       league_name: data?.[0]?.name || '',
       num_teams: parseInt(data?.[0]?.num_teams || 12),
       scoring_type: data?.[0]?.scoring_type || 'Roto',
       draft_type: data?.[0]?.draft_type || 'Snake',
-      roster_slots: Object.keys(roster_slots).length ? roster_slots : undefined,
-      stat_categories: stat_categories.length ? stat_categories : undefined
-    })
+      roster_slots: Object.keys(roster_slots).length ? roster_slots : {},
+      stat_categories: stat_categories.length ? stat_categories : []
+    };
+
+    // Auto-save the fetched settings into the DB natively!
+    db.prepare(`INSERT OR REPLACE INTO league_settings
+      (id, league_key, league_name, num_teams, scoring_type, draft_type, draft_position, roster_slots, stat_categories, updated_at)
+      VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(payload.league_key, payload.league_name, payload.num_teams, payload.scoring_type, payload.draft_type, 1, 
+      JSON.stringify(payload.roster_slots), JSON.stringify(payload.stat_categories), Date.now());
+
+    res.json(payload);
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

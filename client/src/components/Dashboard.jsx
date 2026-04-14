@@ -9,10 +9,20 @@ export default function Dashboard({ leagueSettings }) {
   const [selectedLeague, setSelectedLeague] = useState('')
   const [cachedAt, setCachedAt] = useState(null)
   const [fromCache, setFromCache] = useState(false)
+  const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
     fetchLeagues()
   }, [])
+
+  useEffect(() => {
+    if (selectedLeague) {
+      setSyncing(true)
+      axios.get('/api/yahoo/league/' + selectedLeague)
+        .catch(err => console.error('Failed to auto-sync league settings', err))
+        .finally(() => setSyncing(false))
+    }
+  }, [selectedLeague])
 
   async function fetchLeagues(force = false) {
     setLoading(true)
@@ -34,16 +44,16 @@ export default function Dashboard({ leagueSettings }) {
       <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Dashboard</h1>
       <p style={{ color: '#7aafc4', marginBottom: 28 }}>Welcome back. Here's your fantasy baseball overview.</p>
 
-      {!leagueSettings && (
+      {syncing && (
         <div style={{
-          background: '#0c2c56', border: '1px solid #007a7a', borderRadius: 10,
+          background: 'var(--bg-card)', border: '1px solid var(--border-glow)', borderRadius: 12,
           padding: 16, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12
         }}>
-          <span style={{ fontSize: 24 }}>⚙️</span>
+          <span className="loading" style={{ padding: 0 }}>⚙️</span>
           <div>
-            <strong>Set up your league</strong>
-            <p style={{ color: '#7aafc4', fontSize: 13, marginTop: 2 }}>
-              Go to <a href="/setup" style={{ color: '#007a7a' }}>League Setup</a> to configure your league settings for personalized AI recommendations.
+            <strong>Auto-Syncing League Rules...</strong>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 2 }}>
+              Downloading your specific scoring format and roster limits directly from Yahoo...
             </p>
           </div>
         </div>
@@ -103,14 +113,13 @@ export default function Dashboard({ leagueSettings }) {
               }} onClick={() => setSelectedLeague(league.league_key)}>
                 <div>
                   <div style={{ fontWeight: 600 }}>{league.name || 'League'}</div>
-                  <div style={{ color: '#7aafc4', fontSize: 13 }}>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
                     {league.num_teams} teams • {league.scoring_type} • {league.draft_status}
                   </div>
                 </div>
-                <a href={`/setup?league=${league.league_key}`} style={{ textDecoration: 'none' }}
-                  onClick={e => e.stopPropagation()}>
-                  <button className="btn btn-ghost" style={{ fontSize: 12 }}>Configure</button>
-                </a>
+                {league.league_key === selectedLeague && (
+                  <span className="badge badge-success" style={{ background: 'var(--primary)' }}>Active</span>
+                )}
               </div>
             ))}
           </div>

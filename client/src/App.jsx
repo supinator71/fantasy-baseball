@@ -91,7 +91,6 @@ export default function App() {
                 <Route path="/standings" element={<Standings leagueSettings={leagueSettings} />} />
                 <Route path="/matchup"   element={<MatchupPredictor leagueSettings={leagueSettings} />} />
                 <Route path="/trends"    element={<PlayerTrendsPage />} />
-                <Route path="/setup"       element={<LeagueSetup onSave={loadLeagueSettings} />} />
                 <Route path="/audit"      element={<TeamAudit leagueSettings={leagueSettings} />} />
                 <Route path="/tradefinder" element={<TradeFinder leagueSettings={leagueSettings} />} />
                 <Route path="/gameplan"   element={<GamePlan leagueSettings={leagueSettings} />} />
@@ -116,7 +115,6 @@ function Sidebar({ authenticated, isOpen, onClose }) {
     { to: '/audit',     label: 'Roster Checkup',    icon: '🏅' },
     { to: '/tradefinder', label: 'Trade Finder',    icon: '🔀' },
     { to: '/gameplan',  label: 'Weekly Game Plan',  icon: '🗓️' },
-    { to: '/setup',     label: 'League Settings',   icon: '⚙️' },
   ]
 
   return (
