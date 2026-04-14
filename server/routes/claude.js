@@ -245,8 +245,9 @@ Write in clean, conversational prose. No JSON syntax, no brackets, no code forma
 });
 
 // Start/Sit analysis — enriched with 2025 stats
+// Start/Sit analysis — enriched with 2025 stats
 router.post('/startsit', async (req, res) => {
-  const { players, matchup_context, scoring_type } = req.body;
+  const { players, matchup_context, scoring_type, daily_mode } = req.body;
   const settings = getLeagueSettings();
   const leagueCtx = leagueContext(settings);
 
@@ -289,7 +290,14 @@ ${enriched.map(p =>
   `${p.name} (${p.position}, ${p.team}) | Games this week: ${p.weekGames} | Streaming score: ${p.streaming?.score}/100 (${p.streaming?.grade}) | Platoon: ${p.platoon?.advantage} (${p.platoon?.multiplier}x) | Opponent: ${p.opponent || 'unknown'}`
 ).join('\n')}${historicalIntel}
 
-Use the 2025 stats intelligence to assess each player's true talent level. Give START or SIT for each player backed by real performance data — flag breakout candidates and regression risks.
+${daily_mode ? 
+  `This is a DAILY LINEUP OPTIMIZATION request. Do not write a paragraph for every single player. Instead:
+1. Identify the absolute "Must Starts" for today.
+2. Identify the 3-4 toughest marginal Start/Sit decisions on this roster and explain exactly what to do with them backed by real performance data.
+3. Rapid-fire list the players who should be benched today.` 
+  : 
+  `Use the 2025 stats intelligence to assess each player's true talent level. Give START or SIT for each player backed by real performance data — flag breakout candidates and regression risks.`
+}
 
 Write in clean, conversational prose. No JSON syntax, no brackets, no code formatting. Write like a fantasy analyst giving clear, actionable advice.`
     }]);
