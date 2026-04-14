@@ -45,8 +45,13 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+p {
+  line-height: 1.6;
 }
 
 /* ===================== BUTTONS ===================== */
@@ -250,8 +255,11 @@ tr:hover td {
 
 .main-content {
   flex: 1;
-  padding: 32px;
+  padding: 40px 48px;
   overflow-y: auto;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 /* ===================== SIDEBAR ===================== */
@@ -296,13 +304,14 @@ tr:hover td {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
-  border-radius: 10px;
+  padding: 14px 16px;
+  border-radius: 12px;
   color: var(--text-muted);
   text-decoration: none;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  letter-spacing: 0.01em;
 }
 
 .sidebar-nav-item:hover {
@@ -424,17 +433,20 @@ tr:hover td {
   }
 
   .main-content {
-    padding: 20px !important;
+    padding: 24px 16px !important;
   }
 
   .card table, table {
     display: block;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    width: 100%;
+    margin-bottom: 8px;
   }
 
   th, td {
     white-space: nowrap;
+    padding: 12px;
   }
 
   .grid-2, .grid-2-tight {
@@ -452,7 +464,8 @@ tr:hover td {
   }
 
   .card {
-    padding: 20px;
+    padding: 20px 16px;
+    border-radius: 12px;
   }
 
   .btn {
