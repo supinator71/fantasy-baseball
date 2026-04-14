@@ -52,15 +52,15 @@ export default function Dashboard({ leagueSettings }) {
     <div>
       {/* Hero Banner */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 28, marginBottom: 32,
+        display: 'flex', alignItems: 'center', gap: 20, marginBottom: 28,
         background: 'linear-gradient(135deg, rgba(192,17,31,0.12) 0%, rgba(0,50,120,0.15) 100%)',
-        border: '1px solid rgba(192,17,31,0.25)', borderRadius: 20,
-        padding: '24px 32px', flexWrap: 'wrap', position: 'relative', overflow: 'hidden'
+        border: '1px solid rgba(192,17,31,0.25)', borderRadius: 16,
+        padding: '20px 20px', flexWrap: 'wrap', position: 'relative', overflow: 'hidden'
       }}>
         {/* Decorative background glow */}
         <div style={{
           position: 'absolute', right: -40, top: -40,
-          width: 200, height: 200, borderRadius: '50%',
+          width: 160, height: 160, borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(192,17,31,0.15), transparent 70%)',
           pointerEvents: 'none'
         }} />
@@ -69,14 +69,14 @@ export default function Dashboard({ leagueSettings }) {
           alt="Batflip.app Mascot"
           className="mascot-hero"
         />
-        <div>
-          <div style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'var(--font-heading)' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4, fontFamily: 'var(--font-heading)' }}>
             ⚡ AI-Powered Fantasy Intelligence
           </div>
-          <h1 style={{ fontSize: 36, fontWeight: 800, marginBottom: 6, letterSpacing: -1.5, lineHeight: 1.1 }}>
+          <h1 style={{ fontSize: 'clamp(22px, 6vw, 34px)', fontWeight: 800, marginBottom: 4, letterSpacing: -1, lineHeight: 1.1 }}>
             Batflip <span style={{ color: 'var(--primary)' }}>Intelligence</span> HQ
           </h1>
-          <p style={{ color: '#7aafc4', fontSize: 15, margin: 0 }}>
+          <p style={{ color: '#7aafc4', fontSize: 14, margin: 0, lineHeight: 1.4 }}>
             Welcome back to <strong style={{ color: '#f8fafc' }}>batflip.app</strong> — your automated fantasy analytics command center.
           </p>
         </div>
@@ -97,26 +97,25 @@ export default function Dashboard({ leagueSettings }) {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 28 }}>
         {[
-          { label: 'Draft Assistant',    icon: '📋', href: '/draft',     desc: 'Real-time draft help' },
           { label: 'My Roster',          icon: '👥', href: '/roster',    desc: 'Manage your players' },
           { label: 'Waiver Wire',        icon: '🔄', href: '/waiver',    desc: 'Find hidden gems' },
           { label: 'Start / Sit',        icon: '⚡', href: '/startsit',  desc: 'Optimize your lineup' },
           { label: 'Trade Analyzer',     icon: '🤝', href: '/trade',     desc: 'Evaluate trades' },
           { label: 'Standings',          icon: '🏆', href: '/standings', desc: 'Track your position' },
-          { label: 'Matchup Predictor',  icon: '⚔️', href: '/matchup',      desc: 'AI-powered weekly predictions' },
-          { label: 'Team Audit',         icon: '📊', href: '/audit',        desc: 'Grade + actionable moves' },
-          { label: 'Trade Finder',       icon: '💡', href: '/tradefinder',  desc: 'AI trade proposals with pitch' },
-          { label: 'Weekly Game Plan',   icon: '📅', href: '/gameplan',     desc: 'Lineup & daily move optimizer' },
+          { label: 'Matchup Predictor',  icon: '⚔️', href: '/matchup',      desc: 'AI weekly predictions' },
+          { label: 'Team Audit',         icon: '📊', href: '/audit',        desc: 'Grade your team' },
+          { label: 'Trade Finder',       icon: '💡', href: '/tradefinder',  desc: 'AI trade proposals' },
+          { label: 'Weekly Game Plan',   icon: '📅', href: '/gameplan',     desc: 'Lineup optimizer' },
         ].map(item => (
           <a key={item.href} href={item.href} style={{ textDecoration: 'none' }}>
-            <div className="card" style={{ cursor: 'pointer', transition: 'border-color 0.2s' }}
+            <div className="card" style={{ cursor: 'pointer', transition: 'border-color 0.2s', padding: '16px' }}
               onMouseEnter={e => e.currentTarget.style.borderColor = '#007a7a'}
               onMouseLeave={e => e.currentTarget.style.borderColor = '#1e3d5c'}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>{item.icon}</div>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>{item.label}</div>
-              <div style={{ color: '#7aafc4', fontSize: 13 }}>{item.desc}</div>
+              <div style={{ fontSize: 28, marginBottom: 6 }}>{item.icon}</div>
+              <div style={{ fontWeight: 600, marginBottom: 2, fontSize: 13, lineHeight: 1.2 }}>{item.label}</div>
+              <div style={{ color: '#7aafc4', fontSize: 12 }}>{item.desc}</div>
             </div>
           </a>
         ))}
@@ -127,7 +126,7 @@ export default function Dashboard({ leagueSettings }) {
           <h2 style={{ fontSize: 18, fontWeight: 600 }}>Your Yahoo Leagues</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             {leagues.length > 1 && (
-              <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>
+              <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: '100%', maxWidth: 220 }}>
                 {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
               </select>
             )}
@@ -147,7 +146,8 @@ export default function Dashboard({ leagueSettings }) {
                 border: `1px solid ${league.league_key === selectedLeague ? '#007a7a' : '#1e3d5c'}`,
                 borderRadius: 8, padding: 16,
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                cursor: 'pointer', transition: 'all 0.15s'
+                flexWrap: 'wrap', gap: 8,
+              cursor: 'pointer', transition: 'all 0.15s'
               }} onClick={() => setSelectedLeague(league.league_key)}>
                 <div>
                   <div style={{ fontWeight: 600 }}>{league.name || 'League'}</div>
