@@ -17,7 +17,7 @@ export default function Baseball101() {
           Baseball is a game played between two teams taking turns hitting and fielding. The objective is to score more <strong>Runs</strong>. 
           A run is scored when a hitter safely rounds all four bases and crosses home plate. 
           The fielding team tries to get three <strong>Outs</strong>. Once they get three outs, it is their turn to hit. 
-          There are nine innings in a standard game.
+          There are nine <strong>Innings</strong> in a standard game. Each inning is split into two halves: the <strong>Top</strong> of the inning (where the Away team bats) and the <strong>Bottom</strong> of the inning (where the Home team bats). The break in between is called the Middle of the inning.
         </p>
       </div>
 
@@ -45,8 +45,12 @@ export default function Baseball101() {
               <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Running to the next base while the pitcher is throwing the ball to the catcher. Huge for fantasy points!</div>
             </div>
             <div>
-              <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>OBP & OPS</div>
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>On-Base Percentage (how often you get on base via hits or walks). OPS is OBP + Slugging (power).</div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>OBP (On-Base Percentage)</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>How often a batter reaches base via a hit or a walk.</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>OPS (On-Base Plus Slugging)</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>A combined metric of OBP and Slugging Percentage (power). An OPS over .800 is great; over .900 is MVP-level.</div>
             </div>
           </div>
         </div>
