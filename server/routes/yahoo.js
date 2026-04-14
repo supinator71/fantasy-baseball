@@ -149,6 +149,32 @@ router.get('/league/:leagueKey/myroster', requireAuth, async (req, res) => {
   }
 })
 
+// Specific team's roster as flat player array (for opponent auditing)
+router.get('/league/:leagueKey/team/:teamKey/rosterstats', requireAuth, async (req, res) => {
+  const { leagueKey, teamKey } = req.params
+  const force = req.query.force === 'true'
+  try {
+    const result = await withCache(res, `rosterstats:${leagueKey}:${teamKey}`, TTL.ROSTER, force, async () => {
+      const rosterData = await yahoo.getRoster(leagueKey, teamKey)
+      const playerKeys = []
+      for (const rosterItem of (rosterData || [])) {
+        const p = rosterItem?.player
+        if (p && Array.isArray(p)) {
+          const infoArray = Array.isArray(p[0]) ? p[0] : []
+          const info = Object.assign({}, ...infoArray)
+          if (info.player_key) playerKeys.push(info.player_key)
+        }
+      }
+      if (!playerKeys.length) return { players: [], teamKey }
+      const players = await yahoo.getBatchPlayerStats(leagueKey, playerKeys, null)
+      return { players, teamKey }
+    })
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // All rosters in the league (lightweight, for AI matching)
 router.get('/league/:leagueKey/allrosters', requireAuth, async (req, res) => {
   const { leagueKey } = req.params

@@ -31,11 +31,8 @@ function PriorityBadge({ priority }) {
 export default function TeamAudit({ leagueSettings }) {
   const [leagues, setLeagues] = useState([])
   const [selectedLeague, setSelectedLeague] = useState('')
-  const [roster, setRoster] = useState([])
-  const [rosterLoading, setRosterLoading] = useState(false)
-  const [audit, setAudit] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [teams, setTeams] = useState([])
+  const [selectedTeam, setSelectedTeam] = useState('')
 
   useEffect(() => {
     axios.get('/api/yahoo/leagues').then(({ data }) => {
@@ -45,8 +42,36 @@ export default function TeamAudit({ leagueSettings }) {
   }, [])
 
   useEffect(() => {
-    if (selectedLeague) loadRoster()
+    if (selectedLeague) {
+      loadTeams()
+      loadRoster()
+    }
   }, [selectedLeague])
+
+  useEffect(() => {
+    if (selectedTeam && roster.length && selectedTeam !== currentLoadedTeam) {
+      loadSpecificTeamRoster(selectedTeam)
+    }
+  }, [selectedTeam])
+
+  const [currentLoadedTeam, setCurrentLoadedTeam] = useState('')
+
+  async function loadTeams() {
+    try {
+      const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/standings`)
+      const parsedTeams = (data || []).map(t => {
+        const teamObj = t?.team
+        const info = Array.isArray(teamObj) ? (Array.isArray(teamObj[0]) ? Object.assign({}, ...teamObj[0]) : teamObj[0]) : teamObj
+        return {
+          team_key: info?.team_key,
+          name: info?.name
+        }
+      }).filter(t => t.team_key)
+      setTeams(parsedTeams)
+    } catch (err) {
+      console.error('Failed to load teams', err)
+    }
+  }
 
   async function loadRoster() {
     setRosterLoading(true)
@@ -55,8 +80,27 @@ export default function TeamAudit({ leagueSettings }) {
     try {
       const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/myroster`)
       setRoster(data.players || [])
+      if (data.teamKey) {
+        setSelectedTeam(data.teamKey)
+        setCurrentLoadedTeam(data.teamKey)
+      }
     } catch (err) {
       setError('Could not load roster. Make sure your league is configured.')
+    } finally {
+      setRosterLoading(false)
+    }
+  }
+
+  async function loadSpecificTeamRoster(teamKey) {
+    setRosterLoading(true)
+    setAudit(null)
+    setError('')
+    try {
+      const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/team/${teamKey}/rosterstats`)
+      setRoster(data.players || [])
+      setCurrentLoadedTeam(teamKey)
+    } catch (err) {
+      setError(`Could not load roster for selected team.`)
     } finally {
       setRosterLoading(false)
     }
@@ -88,9 +132,17 @@ export default function TeamAudit({ leagueSettings }) {
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>Team Audit</h1>
           <p style={{ color: '#7aafc4' }}>AI-powered roster analysis — grades, VOR rankings, and actionable moves</p>
         </div>
-        <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>
-          {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
-        </select>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ minWidth: 200, padding: '8px 12px', borderRadius: 6, background: '#122840', color: '#fff', border: '1px solid #1e3d5c' }}>
+            {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
+          </select>
+
+          {teams.length > 0 && (
+            <select value={selectedTeam} onChange={e => setSelectedTeam(e.target.value)} style={{ minWidth: 200, padding: '8px 12px', borderRadius: 6, background: '#122840', color: '#fff', border: '1px solid #1e3d5c' }}>
+              {teams.map((t, i) => <option key={i} value={t.team_key}>{t.name}</option>)}
+            </select>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -104,8 +156,8 @@ export default function TeamAudit({ leagueSettings }) {
 
       {!rosterLoading && roster.length > 0 && !audit && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600 }}>Your Roster ({roster.length} players)</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 12 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600 }}>Roster ({roster.length} players)</h3>
             <button className="btn btn-primary" onClick={runAudit} disabled={loading}
               style={{ padding: '10px 24px', fontSize: 14 }}>
               {loading ? '🤖 Analyzing...' : '🤖 Run Full Audit'}
