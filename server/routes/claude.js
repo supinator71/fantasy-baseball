@@ -420,7 +420,7 @@ ${scored.slice(0, 12).map(p =>
 
 Use the 2025 stats intelligence AND the team's specific Positional Needs (Voids) to identify the best targets. Align your recommendations with the team's structural needs (do not recommend adding a position where the team already has a Surplus unless they are a must-add star). Give top 3 add/drop recommendations with specific reasoning backed by last year's real stats.
 
-CRITICAL LOGIC RULE: If you choose to display what the roster will look like "After these moves", you MUST actually remove the dropped players from that list, and insert the added players. Do NOT list a player you just recommended dropping.`
+CRITICAL LOGIC RULE: Do NOT generate a "Summary" or "After these moves your roster will look like..." section where you list out the entire roster again. It wastes tokens and frequently results in hallucinations where you accidentally list players you just said to drop. Only provide the actionable analysis and direct Drop/Add recommendations.`
     }]);
     res.json({ recommendations: text, scored: scored.slice(0, 10) });
   } catch (err) {
