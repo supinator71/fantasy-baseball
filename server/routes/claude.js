@@ -828,17 +828,32 @@ router.post('/gameplan', rateLimiter('gameplan'), async (req, res) => {
     return res.status(400).json({ error: 'Roster is required.' });
   }
 
-  // fantasyBrain: lineup optimization + category analysis
+  // ── Split roster: active vs unavailable (IL / suspended / OUT) ──────────
+  const IL_STATUSES = ['IL', 'IL10', 'IL15', 'IL60', 'DL', 'DL10', 'DL15', 'DL60', 'O', 'OUT', 'SUSPENDED', 'NA'];
+  function isUnavailable(p) {
+    if (!p.status) return false;
+    const s = String(p.status).toUpperCase().trim();
+    return IL_STATUSES.some(x => s.includes(x));
+  }
+  const activeRoster       = my_roster.filter(p => !isUnavailable(p));
+  const unavailablePlayers = my_roster.filter(p => isUnavailable(p));
+
+  // fantasyBrain: lineup optimization on ACTIVE players only
   const weekSchedule = {};
-  my_roster.forEach(p => {
+  activeRoster.forEach(p => {
     const team = String(p.team || '').toUpperCase();
     weekSchedule[team] = brain.getWeeklyGameCount(team, week_number || 1);
   });
 
-  const lineupOpt = brain.optimizeLineup(my_roster, weekSchedule, scoringType);
+  const lineupOpt = brain.optimizeLineup(activeRoster, weekSchedule, scoringType);
   const catAnalysis = matchup
     ? brain.analyzeCategories(matchup.my_stats || {}, [{ stats: matchup.opp_stats || {} }], scoringType)
     : { advice: 'No matchup provided — optimizing for maximum output.' };
+
+  // Build unavailable section for the prompt
+  const unavailableStr = unavailablePlayers.length > 0
+    ? `\n⚠️ UNAVAILABLE — DO NOT START OR RECOMMEND (IL/Suspended/Out): ${unavailablePlayers.map(p => `${p.player_name || p.name} [${p.status}]`).join(', ')}\nThese players are physically unavailable this week. Exclude them from every lineup slot, streaming suggestion, and key decision recommendation.`
+    : '';
 
   try {
     const text = await callClaude([{
@@ -847,19 +862,20 @@ router.post('/gameplan', rateLimiter('gameplan'), async (req, res) => {
 
 === WEEKLY GAME PLAN — Week ${week_number || 'current'} ===
 
-DATA ACCURACY NOTE: This roster is pulled directly from the Yahoo Fantasy API for the 2026 season. All player team assignments are correct and reflect current 2026 rosters after offseason moves. Do not question any team assignments — analyze as given.
+DATA ACCURACY NOTE: This roster is pulled directly from the Yahoo Fantasy API for the 2026 season. All player team assignments are correct. Do not question any team assignments — analyze as given.
+${unavailableStr}
 
-MY ROSTER: ${my_roster.map(p => `${p.player_name||p.name} (${p.position}, ${p.team})`).join(', ')}
+ACTIVE ROSTER (${activeRoster.length} available): ${activeRoster.map(p => `${p.player_name||p.name} (${p.position}, ${p.team})`).join(', ')}
 
-LINEUP OPTIMIZER RESULTS:
+LINEUP OPTIMIZER RESULTS (active players only):
 Top starters: ${lineupOpt.starters.slice(0, 10).map(p => `${p.player_name} — ${p.weekGames} games, confidence: ${p.confidence}`).join('\n')}
 Streaming targets (7-game teams): ${lineupOpt.streamingTargets.map(p => p.player_name).join(', ') || 'None'}
 
 POINTS ANALYSIS: ${catAnalysis.advice}
 
-${matchup ? `MATCHUP: vs ${matchup.opponent_name || 'opponent'}\nTheir projected points stats: ${JSON.stringify(matchup.opp_stats || {})}` : 'No specific matchup data — optimize for maximum total points output.'}
+${matchup ? `MATCHUP: vs ${matchup.opponent_name || 'opponent'}\nTheir projected stats: ${JSON.stringify(matchup.opp_stats || {})}` : 'No specific matchup data — optimize for maximum total points output.'}
 
-YOU HAVE EVERYTHING YOU NEED. Do NOT ask for more data. Do NOT mention missing information. Analyze this roster and produce your best game plan NOW using the data above. If standings or opponent data is missing, optimize for maximum total production. Write all text values as clean, readable sentences. No JSON syntax, no brackets, no code formatting in your text. Write like a manager giving his coaching staff the weekly game plan.
+YOU HAVE EVERYTHING YOU NEED. Do NOT ask for more data. Analyze this roster and produce your best game plan NOW. Write clean, readable sentences. No JSON syntax in your text. Write like a manager giving his coaching staff the weekly game plan.
 
 Return ONLY valid JSON:
 {
