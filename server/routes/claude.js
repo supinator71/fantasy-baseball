@@ -188,7 +188,9 @@ router.post('/draft/recommend', async (req, res) => {
   const roundsLeft = totalRounds - currentRound;
 
   // fantasyBrain: VOR + scarcity for top available
-  const enrichedPlayers = (available_players || []).slice(0, 20).map(p => {
+  const enrichedPlayers = (available_players || [])
+    .filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
+    .slice(0, 20).map(p => {
     const pos = String(p.position || '').split('/')[0].toUpperCase();
     const vor = brain.calculateVOR(p.stats || {}, pos, teams, settings?.scoring_type);
     const scarcity = brain.getPositionalScarcity(pos, teams);
@@ -399,13 +401,18 @@ router.post('/waiver', async (req, res) => {
   const myAnalysis = brain.analyzeRosterStrengths(my_roster || [], leagueSize);
 
   // fantasyBrain: waiver priority score for each player
-  const scored = (available_players || []).map(p => ({
+  const scored = (available_players || [])
+    .filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
+    .map(p => ({
     ...p,
     waiverScore: brain.scoreWaiverTarget(p, my_roster || [], settings || {}),
   })).sort((a, b) => b.waiverScore.score - a.waiverScore.score);
 
   // Calculate VOR for the current roster so the AI mathematically understands who is actually droppable
-  const rosterWithVOR = (my_roster || []).map(p => {
+  // CRITICAL FIX: Explicitly exclude injured players from being considered droppable mathematically, as 0 VOR is misleading.
+  const rosterWithVOR = (my_roster || [])
+    .filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
+    .map(p => {
     const pos = String(p.position || '').split('/')[0].toUpperCase();
     return {
       name: p.player_name || p.name,
@@ -588,7 +595,7 @@ router.post('/audit', async (req, res) => {
 
   // VOR for every active player (ignoring injured/out)
   const vorByPlayer = roster
-    .filter(p => !p.status || (!p.status.includes('IL') && ['O', 'Out', 'Suspended'].indexOf(p.status) === -1))
+    .filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
     .map(p => ({
     name: p.player_name || p.name,
     position: String(p.position || '').split('/')[0].toUpperCase(),

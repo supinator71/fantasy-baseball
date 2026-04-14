@@ -157,7 +157,7 @@ const SGP_DENOMINATORS = {
   W: 5.5, SV: 6.5, K: 40, ERA_BASELINE: 4.00, WHIP_BASELINE: 1.30
 }
 
-function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType = 'Points') {
+function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType = 'Points', statMapping = null) {
   if (!playerStats || Object.keys(playerStats).length === 0) return 0
 
   const pos = String(position || '').split('/')[0].split(',')[0].trim().toUpperCase()
@@ -166,9 +166,17 @@ function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType =
   const format = String(scoringType).toLowerCase();
   const isPoints = format.includes('point') || format === 'points';
 
-  // Helper macro to fetch stats from either standardized names (HR) or typical Yahoo stat IDs ('7', '12', etc.)
-  const getStat = (...keys) => {
-    for (const k of keys) {
+  // Helper macro to fetch stats securely avoiding collisions
+  const getStat = (statName, ...fallbackKeys) => {
+    // 1. Prioritize explicit league mapping if it exists
+    if (statMapping && statMapping[statName]) {
+      const explicitId = statMapping[statName];
+      if (playerStats[explicitId] !== undefined && playerStats[explicitId] !== '-' && playerStats[explicitId] !== '') {
+        return parseFloat(playerStats[explicitId]) || 0;
+      }
+    }
+    // 2. Fall back to generic ID guessing
+    for (const k of fallbackKeys) {
       if (playerStats[k] !== undefined && playerStats[k] !== '-' && playerStats[k] !== '') {
         return parseFloat(playerStats[k]) || 0;
       }
@@ -179,18 +187,18 @@ function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType =
   if (isPoints) {
     let playerPts = 0
     if (!isPitcher) {
-      const hits = getStat('H', '4', '8')
-      const doubles = getStat('2B', '10', '5', '9')
-      const triples = getStat('3B', '11', '6', '10')
-      const hrs = getStat('HR', '12', '7', '11')
-      const singles = getStat('1B', '9', '4', '8') - doubles - triples - hrs || 0
+      const hits = getStat('H', '4')
+      const doubles = getStat('2B', '5', '10')
+      const triples = getStat('3B', '6', '11')
+      const hrs = getStat('HR', '12')
+      const singles = getStat('1B', '9') || (hits - doubles - triples - hrs) || 0
       
       playerPts += (getStat('R', '7', '60') * HITTING_WEIGHTS.R)
       playerPts += (Math.max(0, singles) * HITTING_WEIGHTS['1B'])
       playerPts += (doubles * HITTING_WEIGHTS['2B'])
       playerPts += (triples * HITTING_WEIGHTS['3B'])
       playerPts += (hrs * HITTING_WEIGHTS.HR)
-      playerPts += (getStat('RBI', '13', '8', '12') * HITTING_WEIGHTS.RBI)
+      playerPts += (getStat('RBI', '13') * HITTING_WEIGHTS.RBI)
       playerPts += (getStat('SB', '16', '23') * HITTING_WEIGHTS.SB)
       playerPts += (getStat('BB', '18', '26') * HITTING_WEIGHTS.BB)
       playerPts += (getStat('HBP', '20', '51') * HITTING_WEIGHTS.HBP)
@@ -201,16 +209,16 @@ function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType =
       playerPts += (getStat('W', '28') * PITCHING_WEIGHTS.W)
       playerPts += (getStat('SV', '32') * PITCHING_WEIGHTS.SV)
       playerPts += (outs * PITCHING_WEIGHTS.OUT)
-      playerPts += (getStat('HA', 'H', '43', '44') * PITCHING_WEIGHTS.H)
+      playerPts += (getStat('HA', '43') * PITCHING_WEIGHTS.H)
       playerPts += (getStat('ER', '47') * PITCHING_WEIGHTS.ER)
-      playerPts += (getStat('BBA', 'BB', '46', '55') * PITCHING_WEIGHTS.BB)
-      playerPts += (getStat('HBPA', 'HBP', '57') * PITCHING_WEIGHTS.HBP)
+      playerPts += (getStat('BBA', '46') * PITCHING_WEIGHTS.BB)
+      playerPts += (getStat('HBPA', '57') * PITCHING_WEIGHTS.HBP)
       playerPts += (getStat('K', '42') * PITCHING_WEIGHTS.K)
     }
     const rawScore = playerPts
     if (rawScore <= 0) return 0
-    // Removed the rigid "- 250" baseline subtraction because it mathematically zeroes out all players in the first month of the season
-    return Math.round(Math.min(100, Math.max(0, rawScore / 5)))
+    // Removed specific Math.min(100) cap to ensure hyper-elite players evaluate proportionally in Trade algorithms
+    return Math.round(Math.max(0, rawScore / 5))
   } 
   else {
     // CATEGORIES / ROTO — Use Standings Gain Points (SGP) Evaluation
@@ -218,12 +226,12 @@ function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType =
     
     if (!isPitcher) {
       sgpTotal += (getStat('R', '7', '60') / SGP_DENOMINATORS.R);
-      sgpTotal += (getStat('HR', '12', '7', '11') / SGP_DENOMINATORS.HR);
-      sgpTotal += (getStat('RBI', '13', '8', '12') / SGP_DENOMINATORS.RBI);
+      sgpTotal += (getStat('HR', '12') / SGP_DENOMINATORS.HR);
+      sgpTotal += (getStat('RBI', '13') / SGP_DENOMINATORS.RBI);
       sgpTotal += (getStat('SB', '16', '23') / SGP_DENOMINATORS.SB);
       
       const ab = getStat('AB', '2', '5');
-      const avg = getStat('AVG', '3', '4');
+      const avg = getStat('AVG', '3');
       if (ab > 0) {
         // Impact on team AVG: typical denominator is around ~12 for SGP impact
         sgpTotal += ((avg - SGP_DENOMINATORS.AVG_BASELINE) * Math.min(ab, 150)) / 15;
@@ -243,9 +251,9 @@ function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType =
       }
     }
     
-    // Normalize SGP total to the familiar 0-100 VOR scale
+    // Normalize SGP total to the familiar VOR scale (uncapped)
     if (sgpTotal <= -10) return 0;
-    return Math.round(Math.min(100, Math.max(0, (sgpTotal + 5) * 4)));
+    return Math.round(Math.max(0, (sgpTotal + 5) * 4));
   }
 }
 
@@ -381,10 +389,11 @@ function platoonAdvantage(batterHand, pitcherHand) {
 function evaluateTrade(giving = [], receiving = [], myRoster = [], leagueContext = {}) {
   const leagueSize = leagueContext.num_teams || 12
   const scoringType = leagueContext.scoring_type || 'Points'
+  const statMapping = leagueContext.statMap || null
 
   // VOR score for each side
-  const givingVOR = giving.reduce((sum, p) => sum + calculateVOR(p.stats || {}, p.position, leagueSize, scoringType), 0)
-  const receivingVOR = receiving.reduce((sum, p) => sum + calculateVOR(p.stats || {}, p.position, leagueSize, scoringType), 0)
+  const givingVOR = giving.reduce((sum, p) => sum + calculateVOR(p.stats || {}, p.position, leagueSize, scoringType, statMapping), 0)
+  const receivingVOR = receiving.reduce((sum, p) => sum + calculateVOR(p.stats || {}, p.position, leagueSize, scoringType, statMapping), 0)
 
   // Positional scarcity weight for what I'm giving up vs receiving
   const givingScarcity = giving.reduce((sum, p) => {
@@ -683,14 +692,21 @@ function getDraftStrategy(draftPosition, numTeams = 12, scoringType = 'Roto') {
 // ROSTER ANALYSIS HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-function analyzeRosterStrengths(roster = [], leagueSize = 12) {
+function analyzeRosterStrengths(roster = [], leagueContext = {}) {
   const byPosition = {}
   const vorByPlayer = []
+  const leagueSize = leagueContext.num_teams || 12
+  const scoringType = leagueContext.scoring_type || 'Points'
+  const statMapping = leagueContext.statMap || null
 
-  roster.forEach(player => {
+  // Filter out injured/suspended players before evaluating roster strengths
+  // so a 0 VOR due to injury doesn't artificially trigger a "buy low" or "void" miscalculation
+  const activeRoster = roster.filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
+
+  activeRoster.forEach(player => {
     const pos = String(player.position || '').split('/')[0].toUpperCase()
     if (!byPosition[pos]) byPosition[pos] = []
-    const vor = calculateVOR(player.stats || {}, pos, leagueSize)
+    const vor = calculateVOR(player.stats || {}, pos, leagueSize, scoringType, statMapping)
     byPosition[pos].push({ ...player, vor })
     vorByPlayer.push({ name: player.player_name || player.name, position: pos, vor })
   })

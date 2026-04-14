@@ -536,41 +536,67 @@ router.get('/league/:leagueKey/matchup', requireAuth, async (req, res) => {
 
 // ── Trends ────────────────────────────────────────────────────────────────────
 function calculateTrend(seasonStats, recentStats, position) {
-  const hasSeason = Object.values(seasonStats || {}).some(v => parseFloat(v) > 0)
-  if (!hasSeason) return 'neutral'
+  // If we lack recent stats, we cannot determine a recent momentum trend
+  const hasRecent = Object.values(recentStats || {}).some(v => parseFloat(v) > 0)
+  if (!hasRecent) return 'neutral'
 
   const isPitcher = /SP|RP|P/.test(String(position))
   let score = 0;
 
   if (isPitcher) {
-    const era = parseFloat(seasonStats?.['26']); 
-    const whip = parseFloat(seasonStats?.['27']);
-    if (era && era > 0) {
-      if (era < 3.00) score += 15;
-      else if (era < 3.50) score += 5;
-      else if (era > 4.50) score -= 10;
+    const sERA = parseFloat(seasonStats?.['26']) || 4.00; 
+    const rERA = parseFloat(recentStats?.['26']);
+    
+    if (!isNaN(rERA)) {
+      // Reward elite recent ERA, penalize blowups
+      if (rERA <= 2.50) score += 10;
+      else if (rERA >= 5.50) score -= 10;
+      
+      // Context of recent vs season average
+      if (rERA <= sERA * 0.7) score += 10; // Pitching much better recently
+      else if (rERA >= sERA * 1.3) score -= 10; // Pitching much worse
     }
-    if (whip && whip > 0) {
-      if (whip < 1.10) score += 15;
-      else if (whip > 1.40) score -= 10;
-    }
+    
+    // Recent Counting stats (W, SV, Ks)
+    const rW = parseFloat(recentStats?.['28'] || 0);
+    const rSV = parseFloat(recentStats?.['32'] || 0);
+    const rK = parseFloat(recentStats?.['42'] || 0);
+    if (rW > 0 || rSV > 0) score += 5;
+    if (rK >= 10) score += 5;
+    
   } else {
-    const avg = parseFloat(seasonStats?.['3']); 
-    const hr = parseFloat(seasonStats?.['7']);
-    if (avg && avg > 0) {
-      if (avg >= 0.280) score += 15;
-      else if (avg >= 0.260) score += 5;
-      else if (avg <= 0.230) score -= 10;
+    // HITTERS
+    const sAVG = parseFloat(seasonStats?.['3']) || 0.250;
+    const rAVG = parseFloat(recentStats?.['3']);
+    
+    if (!isNaN(rAVG)) {
+      // Reward elite recent average, penalize slumps
+      if (rAVG >= 0.330) score += 10;
+      else if (rAVG <= 0.200) score -= 10;
+      
+      // Context of recent vs season average
+      if (rAVG >= sAVG + 0.050) score += 10;
+      else if (rAVG <= sAVG - 0.050) score -= 10;
     }
-    // High HR accrual automatically pushes a player into rising/hot
-    if (hr >= 4) score += 10; 
-    else if (hr >= 2) score += 5;
+    
+    // Recent Counting stats (HR:7, RBI:12, SB:16)
+    const rHR = parseFloat(recentStats?.['7'] || 0);
+    const rRBI = parseFloat(recentStats?.['12'] || 0);
+    const rSB = parseFloat(recentStats?.['16'] || 0);
+    
+    // A single good week of power or speed heavily impacts momentum
+    if (rHR >= 2) score += 10;
+    else if (rHR === 1) score += 3;
+    
+    if (rRBI >= 5) score += 5;
+    if (rSB >= 2) score += 5;
   }
 
-  if (score >= 15) return 'hot'
-  if (score > 0) return 'rising'
-  if (score < 0) return 'cold'
-  return 'neutral'
+  // Final trend evaluation based strictly on recent performance contextualized against the season
+  if (score >= 15) return 'hot';
+  if (score > 0) return 'rising';
+  if (score <= -10) return 'cold';
+  return 'neutral';
 }
 
 function trendDisplayStats(recentStats, seasonStats, position) {
