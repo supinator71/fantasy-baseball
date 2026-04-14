@@ -266,13 +266,16 @@ router.post('/startsit', async (req, res) => {
   const { players, matchup_context, scoring_type, daily_mode } = req.body;
   const settings = getLeagueSettings();
   const leagueCtx = leagueContext(settings);
+  const leagueSize = settings?.num_teams || 12;
 
   // fantasyBrain: streaming value + platoon for each player
   const enriched = (players || []).map(p => {
+    const pos = String(p.position || '').split('/')[0].toUpperCase();
+    const vor = brain.calculateVOR(p.stats || {}, pos, leagueSize, settings?.scoring_type);
     const platoon = brain.platoonAdvantage(p.bats || p.hand, p.pitcher_hand || 'R');
     const streaming = brain.streamingValue(p, p.opponent_stats || {}, settings?.scoring_type);
     const games = brain.getWeeklyGameCount(p.team || '', 1);
-    return { ...p, platoon, streaming, weekGames: games };
+    return { ...p, platoon, streaming, weekGames: games, vor };
   });
 
   // Fetch 2025 stats, TODAY'S LIVE MATCHUPS, and BREAKING NEWS for decision context (non-blocking)
@@ -314,7 +317,7 @@ Context: ${matchup_context || 'Daily optimization'}
 
 Players to evaluate (with pre-computed matchup intelligence):
 ${enriched.map(p =>
-  `${p.name} (${p.position}, ${p.team}) | Status (Injury): ${p.status || 'Active'} | Is Starting Today: ${p.is_starting} | Games this week: ${p.weekGames} | Streaming score: ${p.streaming?.score}/100 | Yahoo Season Stats (Raw): ${JSON.stringify(p.stats)}`
+  `${p.name} (${p.position}, ${p.team}) | Status (Injury): ${p.status || 'Active'} | Is Starting Today: ${p.is_starting} | VOR: ${p.vor} | Games this week: ${p.weekGames} | Streaming score: ${p.streaming?.score}/100 | Yahoo Season Stats (Raw): ${JSON.stringify(p.stats)}`
 ).join('\n')}${liveMatchups}${breakingNews}${historicalIntel}
 
 ${daily_mode ? 
@@ -330,7 +333,13 @@ NOTE: Yahoo Season Stats (Raw) uses Stat IDs (e.g. 12=HR, 13=RBI, 3=AVG, 14=SB, 
   `Use the 2025 stats intelligence to assess each player's true talent level. Give START or SIT for each player backed by real performance data — flag breakout candidates and regression risks.`
 }
 
-Write in clean, conversational prose. No JSON syntax, no brackets, no code formatting. Write like a fantasy analyst giving clear, actionable advice.`
+CRITICAL "SHOW YOUR WORK" RULE: When recommending a Start/Sit decision, you MUST explicitly cite the exact numeric math used locally in your prompt.
+Format your recommendations using strictly formatted markdown lists with bolded metric badges.
+Example format for your answers:
+- **[Player Name]** \`[VOR: XX | Stream: YY/100]\` 🟢 **START** -> *Logic:* [Brief explicit explanation of why the math demands this]
+- **[Player Name]** \`[VOR: XX | Stream: YY/100]\` 🔴 **SIT** -> *Logic:* [Brief explicit explanation]
+
+DO NOT write conversational paragraphs without these mathematical badges! You are a mathematical intelligence engine.`
     }]);
     res.json({ analysis: text });
   } catch (err) {
@@ -445,6 +454,12 @@ ${scored.slice(0, 12).map(p =>
 ).join('\n')}${historicalIntel}
 
 Use the 2025 stats intelligence AND the team's specific Positional Needs (Voids) to identify the best targets. Align your recommendations with the team's structural needs (do not recommend adding a position where the team already has a Surplus unless they are a must-add star). Give top 3 add/drop recommendations with specific reasoning backed by last year's real stats.
+
+CRITICAL "SHOW YOUR WORK" RULE: Do NOT formulate paragraphs of general advice. You MUST explicitly cite the math.
+Format your recommendations using strictly formatted markdown lists with bolded metric badges.
+Example format for your answers:
+- 🟢 **ADD: [Player Name]** \`[Priority Score: YY/100]\` -> *Logic:* [Brief explicit explanation of why the math demands this]
+- 🔴 **DROP: [Player Name]** \`[VOR: XX]\` -> *Logic:* [Brief explicit explanation of why their math dictates they are the drop]
 
 CRITICAL LOGIC RULE: Do NOT generate a "Summary" or "After these moves your roster will look like..." section where you list out the entire roster again. It wastes tokens and frequently results in hallucinations where you accidentally list players you just said to drop. Only provide the actionable analysis and direct Drop/Add recommendations.`
     }]);
@@ -651,7 +666,8 @@ F  : Catastrophic. Abandon ship or start over
 Use the VOR totals AND qualitative roster assessment together to assign the grade. Do NOT default to B — differentiate clearly.
 
 IMPORTANT FORMATTING RULES:
-- Write all text in clean, conversational prose. No code syntax, no brackets, no curly braces in your text.
+- Write all text in clean, conversational prose.
+- Inside strengths, weaknesses, and moves strings, you MUST format player names with explicitly bolded mathematical metric badges. Example: "**Julio Rodriguez** `[VOR: 85]`"
 - Write strengths/weaknesses as readable sentences a fantasy manager would enjoy reading.
 - For moves, write "action" as a clear headline (e.g. "Trade Contreras and Jansen for a young starter") and "reasoning" as a persuasive paragraph.
 - The championshipPath should read like a coach's motivational game plan, not a numbered list.
@@ -761,7 +777,10 @@ Generate 3-5 specific trade proposals using the ENTIRE LEAGUE ROSTERS data above
 
 Focus heavily on trades that exploit my surplus to fill my voids while offering the specific opponent manager something they genuinely need. Do not invent players; use the actual rosters provided.
 
-Write in clean, conversational prose. No JSON syntax, no brackets, no code formatting. Write like a fantasy analyst crafting persuasive trade pitches.`,
+CRITICAL "SHOW YOUR WORK" RULE: You MUST explicitly cite the math. For every trade, explicitly write:
+**Net VOR Impact:** [+X / -X] in bold.
+And next to every player name involved in the trade, include their markdown badge. Example: "**Carlos Correa** \`[VOR: 65]\`".
+Do NOT write paragraphs without citing these numbers. You are a mathematical engine.`,
     }], 2500);
 
     res.json({ proposals: text, myAnalysis: { surpluses: myAnalysis.surpluses, voids: myAnalysis.voids, sellHigh: myAnalysis.sellHigh }, tradeTargets: tradeTargets.slice(0, 5) });
