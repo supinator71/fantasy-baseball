@@ -5,6 +5,7 @@
  */
 
 const axios = require('axios');
+const xml2js = require('xml2js');
 
 const BASE_URL = 'https://statsapi.mlb.com/api/v1';
 
@@ -296,6 +297,43 @@ async function getUpcomingSchedule() {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// BREAKING NEWS — Fetch real-time injury and transaction news from Rotowire RSS
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function getBreakingNews() {
+  const key = `breaking_news`;
+  const cached = cache.get(key);
+  // Cache news for 5 minutes
+  if (cached && Date.now() - cached.ts < 5 * 60 * 1000) return cached.data;
+
+  try {
+    const { data } = await axios.get('https://www.rotowire.com/rss/news.php?sport=MLB', {
+      timeout: 5000,
+    });
+
+    return new Promise((resolve) => {
+      xml2js.parseString(data, (err, result) => {
+        if (err) {
+          console.error(`[MLB Stats] Failed to parse XML for breaking news:`, err.message);
+          return resolve('');
+        }
+        
+        const items = result?.rss?.channel?.[0]?.item || [];
+        // Extract the top 15 breaking headlines
+        const headlines = items.slice(0, 15).map(i => `- ${i.title[0]}`);
+        const resultString = headlines.join('\n');
+        
+        cache.set(key, { data: resultString, ts: Date.now() });
+        resolve(resultString);
+      });
+    });
+  } catch (err) {
+    console.error(`[MLB Stats] Failed to fetch breaking news:`, err.message);
+    return '';
+  }
+}
+
 module.exports = {
   searchPlayer,
   getPlayerStats,
@@ -304,4 +342,5 @@ module.exports = {
   getMultiSeasonStats,
   getLiveProbablePitchers,
   getUpcomingSchedule,
+  getBreakingNews,
 };

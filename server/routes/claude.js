@@ -275,13 +275,19 @@ router.post('/startsit', async (req, res) => {
     return { ...p, platoon, streaming, weekGames: games };
   });
 
-  // Fetch 2025 stats and TODAY'S LIVE MATCHUPS for decision context (non-blocking)
+  // Fetch 2025 stats, TODAY'S LIVE MATCHUPS, and BREAKING NEWS for decision context (non-blocking)
   let historicalIntel = '';
   let liveMatchups = '';
+  let breakingNews = '';
   try {
     liveMatchups = await mlbStats.getUpcomingSchedule();
     if (liveMatchups) {
       liveMatchups = `\n\n=== TODAY'S LIVE MLB MATCHUPS ===\n${liveMatchups}`;
+    }
+
+    breakingNews = await mlbStats.getBreakingNews();
+    if (breakingNews) {
+      breakingNews = `\n\n=== BREAKING MLB MEDICAL/ROSTER NEWS ===\n${breakingNews}`;
     }
 
     const playerNames = (players || []).map(p => p.name || p.player_name).filter(Boolean);
@@ -309,7 +315,7 @@ Context: ${matchup_context || 'Daily optimization'}
 Players to evaluate (with pre-computed matchup intelligence):
 ${enriched.map(p =>
   `${p.name} (${p.position}, ${p.team}) | Status (Injury): ${p.status || 'Active'} | Is Starting Today: ${p.is_starting} | Games this week: ${p.weekGames} | Streaming score: ${p.streaming?.score}/100 | Yahoo Season Stats (Raw): ${JSON.stringify(p.stats)}`
-).join('\n')}${liveMatchups}${historicalIntel}
+).join('\n')}${liveMatchups}${breakingNews}${historicalIntel}
 
 ${daily_mode ? 
   `This is a DAILY LINEUP OPTIMIZATION request. Do not write a paragraph for every single player. Instead:
@@ -399,9 +405,14 @@ router.post('/waiver', async (req, res) => {
     };
   }).sort((a, b) => b.vor - a.vor);
 
-  // Fetch real 2025 stats for top waiver targets (non-blocking)
+  // Fetch real 2025 stats and breaking news for top waiver targets (non-blocking)
   let historicalIntel = '';
+  let breakingNews = '';
   try {
+    breakingNews = await mlbStats.getBreakingNews();
+    if (breakingNews) {
+      breakingNews = `\n=== BREAKING MLB MEDICAL/ROSTER NEWS ===\n${breakingNews}\n`;
+    }
     const topNames = scored.slice(0, 8).map(p => p.player_name || p.name).filter(Boolean);
     if (topNames.length > 0) {
       const bulkData = await mlbStats.getBulkPlayerStats(topNames, 2025);
@@ -424,7 +435,7 @@ router.post('/waiver', async (req, res) => {
     const text = await callClaude([{
       role: 'user',
       content: `${leagueCtx}
-My roster (sorted by VOR value, 0-100): ${rosterWithVOR.map(p => `${p.name} (${p.position}, VOR: ${p.vor})`).join(', ')}
+${breakingNews}My roster (sorted by VOR value, 0-100): ${rosterWithVOR.map(p => `${p.name} (${p.position}, VOR: ${p.vor})`).join(', ')}
 My Positional Needs (Voids): ${myAnalysis.voids.join(', ') || 'None'}
 My Positional Surpluses: ${myAnalysis.surpluses.map(s => `${s.position} (${s.count})`).join(', ') || 'None'}
 
