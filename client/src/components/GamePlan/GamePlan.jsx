@@ -213,10 +213,13 @@ export default function GamePlan({ leagueSettings }) {
             )}
           </div>
 
-          {/* Key decisions */}
+          {/* Key Decisions */}
           {plan.keyDecisions?.length > 0 && (
             <div className="card" style={{ marginBottom: 16 }}>
-              <h3 style={{ color: '#007a7a', marginBottom: 12 }}>🧠 Key Decisions</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                <img src="/cyborg_mascot_pointing.png" alt="Galactic Slugger" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-glow)' }} />
+                <h3 style={{ color: '#007a7a', margin: 0 }}>🧠 Key Decisions</h3>
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {plan.keyDecisions.map((d, i) => (
                   <div key={i} style={{

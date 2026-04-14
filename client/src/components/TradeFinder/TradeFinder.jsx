@@ -154,7 +154,10 @@ export default function TradeFinder({ leagueSettings }) {
 
           {/* Trade proposals */}
           <div className="card" style={{ marginBottom: 16 }}>
-            <h3 style={{ color: '#007a7a', marginBottom: 12 }}>🎯 AI Trade Proposals</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <img src="/cyborg_mascot_homerun.png" alt="Galactic Slugger" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-glow)' }} />
+              <h3 style={{ color: '#007a7a', margin: 0 }}>🎯 AI Trade Proposals</h3>
+            </div>
             <div className="ai-response">{result.proposals}</div>
           </div>
 

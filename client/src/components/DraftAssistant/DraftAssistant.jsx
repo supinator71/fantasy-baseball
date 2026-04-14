@@ -507,8 +507,11 @@ export default function DraftAssistant({ leagueSettings }) {
       {/* AI Recommendation */}
       {(aiRec || aiLoading) && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h3 style={{ color: '#00a86b' }}>⚡ AI Recommendation — Round {currentRound}</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <img src="/cyborg_mascot_bat.png" alt="Galactic Slugger Draft Mascot" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-glow)', boxShadow: '0 0 10px rgba(0,200,255,0.2)' }} />
+              <h3 style={{ color: '#00a86b', margin: 0 }}>⚡ AI Recommendation — Round {currentRound}</h3>
+            </div>
             <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setAiRec(null)}>Dismiss</button>
           </div>
           {aiLoading

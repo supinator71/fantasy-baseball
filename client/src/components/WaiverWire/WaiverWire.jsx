@@ -142,8 +142,11 @@ export default function WaiverWire({ leagueSettings }) {
 
       {aiRec && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h3 style={{ color: '#00a86b' }}>⚡ Waiver Wire Recommendations</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <img src="/cyborg_mascot_pointing.png" alt="Galactic Slugger" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-glow)' }} />
+              <h3 style={{ color: '#00a86b', margin: 0 }}>⚡ Waiver Wire Recommendations</h3>
+            </div>
             <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setAiRec('')}>Dismiss</button>
           </div>
           <div className="ai-response">{aiRec}</div>

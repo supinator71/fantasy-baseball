@@ -75,7 +75,10 @@ export default function TradeAnalyzer({ leagueSettings }) {
 
       {result && (
         <div className="card">
-          <h3 style={{ color: '#00a86b', marginBottom: 12 }}>⚡ Trade Analysis</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <img src="/cyborg_mascot_homerun.png" alt="Galactic Slugger" style={{ width: 44, height: 44, borderRadius: '50%', border: '1px solid var(--border-glow)' }} />
+            <h3 style={{ color: '#00a86b', margin: 0 }}>Trade Analysis</h3>
+          </div>
           <div className="ai-response">{result}</div>
         </div>
       )}
