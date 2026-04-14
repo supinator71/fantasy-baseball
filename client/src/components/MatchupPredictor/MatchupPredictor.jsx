@@ -86,6 +86,14 @@ export default function MatchupPredictor({ leagueSettings }) {
     return myVal === 0 && oppVal === 0;
   });
 
+  const formatCategory = (name) => {
+    const map = {
+      '7': 'R', '8': 'H', '9': 'BB (Hitter)', '10': 'K (Hitter)', '11': 'TB', '12': 'HR', '13': 'RBI', '14': 'SF', '16': 'SB', '3': 'AVG', '4': 'OBP', '5': 'SLG', '55': 'OPS',
+      '26': 'ERA', '27': 'WHIP', '28': 'W', '29': 'L', '30': 'CG', '31': 'SHO', '32': 'SV', '33': 'K', '34': 'HLD', '42': 'BB (Pitcher)', '50': 'IP', '60': 'QS'
+    }
+    return map[String(name).trim()] || name;
+  }
+
   return (
     <div>
       {/* Header */}
@@ -194,7 +202,7 @@ export default function MatchupPredictor({ leagueSettings }) {
                         background: cat.my_winning ? 'rgba(0,168,107,0.2)' : cat.opp_winning ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.06)',
                         fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
                         color: cat.my_winning ? '#00a86b' : cat.opp_winning ? '#ef4444' : '#7aafc4'
-                      }}>{cat.name}</span>
+                      }}>{formatCategory(cat.name)}</span>
                     </td>
                     <td style={{ paddingLeft: 24, fontWeight: 600, fontSize: 15,
                       color: cat.opp_winning ? '#00a86b' : cat.my_winning ? '#ef4444' : '#e2e8f0'
