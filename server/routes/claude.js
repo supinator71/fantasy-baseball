@@ -288,15 +288,16 @@ Context: ${matchup_context || 'Standard week'}
 
 Players to evaluate (with pre-computed matchup intelligence):
 ${enriched.map(p =>
-  `${p.name} (${p.position}, ${p.team}) | Status (Injury): ${p.status || 'Active'} | Games this week: ${p.weekGames} | Streaming score: ${p.streaming?.score}/100 (${p.streaming?.grade}) | Platoon: ${p.platoon?.advantage} (${p.platoon?.multiplier}x)`
+  `${p.name} (${p.position}, ${p.team}) | Status (Injury): ${p.status || 'Active'} | Is Starting Today: ${p.is_starting} | Games this week: ${p.weekGames} | Streaming score: ${p.streaming?.score}/100 | Yahoo Season Stats (Raw): ${JSON.stringify(p.stats)}`
 ).join('\n')}${historicalIntel}
 
 ${daily_mode ? 
   `This is a DAILY LINEUP OPTIMIZATION request. Do not write a paragraph for every single player. Instead:
 1. Identify the absolute "Must Starts" for today. (CRITICAL: NEVER recommend starting a player with Status "IL", "O", or "DTD").
-2. Identify the 3-4 toughest marginal Start/Sit decisions on this roster and explain exactly what to do with them backed by real performance data.
-3. Rapid-fire list the players who should be benched today (especially anyone on the IL).
-NOTE: DO NOT complain that opponent information is 'unknown' or missing. Assume typical 2026 scheduling and structure your Start/Sit advice around raw player talent and breakout metrics.` 
+2. Identify the 3-4 toughest marginal Start/Sit decisions on this roster and explain exactly what to do with them. (Only recommend starting players whose "Is Starting Today" is "Yes" or "Unknown". If "No", they MUST sit!)
+3. Rapid-fire list the players who should be benched today (especially anyone on the IL or not starting).
+NOTE: DO NOT complain that opponent information is 'unknown' or missing. Assume typical 2026 scheduling and structure your Start/Sit advice around raw player talent.
+NOTE: Yahoo Season Stats (Raw) uses Stat IDs (e.g. 12=HR, 13=RBI, 3=AVG, 14=SB, 7=R, 26=ERA, 27=WHIP, 28=W, 33=K). Heavily rely on these to identify prospects who are blowing up right now in 2026, even if their MLB historical data is weak!` 
   : 
   `Use the 2025 stats intelligence to assess each player's true talent level. Give START or SIT for each player backed by real performance data — flag breakout candidates and regression risks.`
 }

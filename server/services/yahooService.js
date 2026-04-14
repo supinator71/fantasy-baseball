@@ -212,6 +212,7 @@ function parsePlayersStats(raw) {
       position: info.display_position || info.eligible_positions?.position || '',
       team: info.editorial_team_abbr || '',
       status: info.status || '',
+      is_starting: info.starting_status?.is_starting === 1 ? 'Yes' : (info.starting_status?.is_starting === 0 ? 'No' : 'Unknown'),
       stats
     });
   }
