@@ -86,14 +86,74 @@ export default function MatchupPredictor({ leagueSettings }) {
     return myVal === 0 && oppVal === 0;
   });
 
-  const formatCategory = (name) => {
-    const map = {
-      '0': 'GP', '1': 'R', '2': 'H', '3': 'AVG', '4': 'OBP', '5': 'SLG', '6': 'AB', 
-      '7': 'R', '8': 'H', '9': '1B', '10': '2B', '11': '3B', '12': 'HR', '13': 'RBI', '14': 'SH', '15': 'SF', '16': 'SB', '17': 'CS', '18': 'BB', '19': 'IBB', '20': 'HBP', '21': 'K', '22': 'GIDP', '23': 'CYC', '24': 'TB',
-      '26': 'ERA', '27': 'WHIP', '28': 'W', '29': 'L', '30': 'CG', '31': 'SHO', '32': 'SV', '33': 'OUT', '34': 'H', '35': 'TBF', '36': 'R', '37': 'ER', '38': 'HR', '39': 'BB', '40': 'IBB', '41': 'HBP', '42': 'K', '43': 'WP', '44': 'BLK', '45': 'SB', '46': 'CS', '47': 'PKO', '48': 'GIDP', '50': 'IP',
-      '54': 'OPS', '55': 'OPS', '60': 'H/AB', '61': 'XBH', '65': 'NSB', '83': 'QS', '84': 'BSV', '85': 'HLD'
+  const STAT_DICT = {
+    '0': { abbv: 'GP', full: 'Games Played' },
+    '1': { abbv: 'R', full: 'Runs' },
+    '2': { abbv: 'H', full: 'Hits' },
+    '3': { abbv: 'AVG', full: 'Batting Avg' },
+    '4': { abbv: 'OBP', full: 'On-Base %' },
+    '5': { abbv: 'SLG', full: 'Slugging %' },
+    '6': { abbv: 'AB', full: 'At Bats' },
+    '7': { abbv: 'R', full: 'Runs' },
+    '8': { abbv: 'H', full: 'Hits' },
+    '9': { abbv: '1B', full: 'Singles' },
+    '10': { abbv: '2B', full: 'Doubles' },
+    '11': { abbv: '3B', full: 'Triples' },
+    '12': { abbv: 'HR', full: 'Home Runs' },
+    '13': { abbv: 'RBI', full: 'Runs Batted In' },
+    '14': { abbv: 'SH', full: 'Sacrifice Hits' },
+    '15': { abbv: 'SF', full: 'Sacrifice Flies' },
+    '16': { abbv: 'SB', full: 'Stolen Bases' },
+    '17': { abbv: 'CS', full: 'Caught Stealing' },
+    '18': { abbv: 'BB', full: 'Walks (Hitter)' },
+    '19': { abbv: 'IBB', full: 'Int. Walks' },
+    '20': { abbv: 'HBP', full: 'Hit By Pitch' },
+    '21': { abbv: 'K', full: 'Strikeouts (Hitter)' },
+    '22': { abbv: 'GIDP', full: 'Grounded Into DP' },
+    '23': { abbv: 'CYC', full: 'Hitting for the Cycle' },
+    '24': { abbv: 'TB', full: 'Total Bases' },
+    '26': { abbv: 'ERA', full: 'Earned Run Avg' },
+    '27': { abbv: 'WHIP', full: 'Walks+Hits/Inning' },
+    '28': { abbv: 'W', full: 'Wins' },
+    '29': { abbv: 'L', full: 'Losses' },
+    '30': { abbv: 'CG', full: 'Complete Games' },
+    '31': { abbv: 'SHO', full: 'Shutouts' },
+    '32': { abbv: 'SV', full: 'Saves' },
+    '33': { abbv: 'OUT', full: 'Outs Pitched' },
+    '34': { abbv: 'H', full: 'Hits Allowed' },
+    '35': { abbv: 'TBF', full: 'Total Batters Faced' },
+    '36': { abbv: 'R', full: 'Runs Allowed' },
+    '37': { abbv: 'ER', full: 'Earned Runs' },
+    '38': { abbv: 'HR', full: 'Home Runs Allowed' },
+    '39': { abbv: 'BB', full: 'Walks Issued' },
+    '40': { abbv: 'IBB', full: 'Int. Walks Issued' },
+    '41': { abbv: 'HBP', full: 'Hit Batsmen' },
+    '42': { abbv: 'K', full: 'Strikeouts (Pitcher)' },
+    '43': { abbv: 'WP', full: 'Wild Pitches' },
+    '44': { abbv: 'BLK', full: 'Balks' },
+    '45': { abbv: 'SB', full: 'Stolen Bases Allowed' },
+    '46': { abbv: 'CS', full: 'Caught Stealing Allowed' },
+    '47': { abbv: 'PKO', full: 'Pickoffs' },
+    '48': { abbv: 'GIDP', full: 'Double Plays Induced' },
+    '50': { abbv: 'IP', full: 'Innings Pitched' },
+    '54': { abbv: 'OPS', full: 'On-Base + Slugging' },
+    '55': { abbv: 'OPS', full: 'On-Base + Slugging' },
+    '60': { abbv: 'H/AB', full: 'Hits/At Bats' },
+    '61': { abbv: 'XBH', full: 'Extra Base Hits' },
+    '65': { abbv: 'NSB', full: 'Net Stolen Bases' },
+    '83': { abbv: 'QS', full: 'Quality Starts' },
+    '84': { abbv: 'BSV', full: 'Blown Saves' },
+    '85': { abbv: 'HLD', full: 'Holds' }
+  };
+
+  const getStatInfo = (stat_id, name) => {
+    // If Yahoo already resolved it to 'HR', just use it.
+    if (name && isNaN(parseInt(name))) {
+      const match = Object.values(STAT_DICT).find(s => s?.abbv === name);
+      return match || { abbv: name, full: name };
     }
-    return map[String(name).trim()] || name;
+    const key = String(stat_id || name).trim();
+    return STAT_DICT[key] || { abbv: key, full: 'Unknown Stat' };
   }
 
   return (
@@ -204,7 +264,7 @@ export default function MatchupPredictor({ leagueSettings }) {
                         background: cat.my_winning ? 'rgba(0,168,107,0.2)' : cat.opp_winning ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.06)',
                         fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
                         color: cat.my_winning ? '#00a86b' : cat.opp_winning ? '#ef4444' : '#7aafc4'
-                      }}>{formatCategory(cat.name)}</span>
+                      }}>{getStatInfo(cat.stat_id, cat.name).abbv}</span>
                     </td>
                     <td style={{ paddingLeft: 24, fontWeight: 600, fontSize: 15,
                       color: cat.opp_winning ? '#00a86b' : cat.my_winning ? '#ef4444' : '#e2e8f0'
@@ -221,16 +281,12 @@ export default function MatchupPredictor({ leagueSettings }) {
               </tbody>
             </table>
             {matchup.stats?.length > 0 && (
-              <div style={{ padding: '12px 16px', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid #1e3d5c', fontSize: 11, color: '#7aafc4', lineHeight: 1.6 }}>
+              <div style={{ padding: '12px 16px', background: 'rgba(0,0,0,0.3)', borderTop: '1px solid #1e3d5c', fontSize: 11, color: '#7aafc4', lineHeight: 1.6 }}>
                 <strong style={{ color: '#4aafdb' }}>Key:</strong>{' '}
-                {Array.from(new Set(matchup.stats.map(s => formatCategory(s.name)))).map(abbv => {
-                  const fullNames = {
-                    'GP': 'Games Played', 'R': 'Runs', 'H': 'Hits', '1B': 'Singles', '2B': 'Doubles', '3B': 'Triples', 'HR': 'Home Runs', 'RBI': 'Runs Batted In', 'SB': 'Stolen Bases', 'BB': 'Walks', 'K': 'Strikeouts',
-                    'AVG': 'Batting Avg', 'OBP': 'On-Base %', 'SLG': 'Slugging %', 'OPS': 'On-Base + Slugging', 'TB': 'Total Bases', 'XBH': 'Extra Base Hits', 'NSB': 'Net Stolen Bases',
-                    'W': 'Wins', 'L': 'Losses', 'SV': 'Saves', 'ERA': 'Earned Run Avg', 'WHIP': 'Walks+Hits/Inning', 'IP': 'Innings Pitched', 'QS': 'Quality Starts', 'HLD': 'Holds', 'BSV': 'Blown Saves', 'OUT': 'Outs', 'CG': 'Complete Games', 'SHO': 'Shutouts'
-                  };
-                  return fullNames[abbv] ? `${abbv} = ${fullNames[abbv]}` : null;
-                }).filter(Boolean).join(' • ')}
+                {Array.from(new Set(matchup.stats.map(s => s.stat_id || s.name))).map(id => {
+                  const info = getStatInfo(id, id);
+                  return info.abbv !== info.full ? `${info.abbv} = ${info.full}` : null;
+                }).filter(Boolean).join(' • ') || 'No shorthand metrics to display.'}
               </div>
             )}
           </div>
