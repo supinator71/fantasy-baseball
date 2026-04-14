@@ -84,7 +84,6 @@ export default function App() {
             ) : (
               <Routes>
                 <Route path="/"          element={<Dashboard leagueSettings={leagueSettings} />} />
-                <Route path="/draft"     element={<DraftAssistant leagueSettings={leagueSettings} />} />
                 <Route path="/roster"    element={<RosterManager leagueSettings={leagueSettings} />} />
                 <Route path="/waiver"    element={<WaiverWire leagueSettings={leagueSettings} />} />
                 <Route path="/startsit"  element={<StartSit leagueSettings={leagueSettings} />} />
@@ -108,7 +107,6 @@ export default function App() {
 function Sidebar({ authenticated, isOpen, onClose }) {
   const navItems = [
     { to: '/',          label: 'My Dashboard',      icon: '⚾' },
-    { to: '/draft',     label: 'Draft Helper',      icon: '📋' },
     { to: '/roster',    label: 'My Team',           icon: '👥' },
     { to: '/waiver',    label: 'Free Agents (Waiver Wire)',       icon: '🔄' },
     { to: '/startsit',  label: 'Who To Start',      icon: '⚡' },
