@@ -23,28 +23,29 @@ function TrendBadge({ trend }) {
   )
 }
 
-function StatRow({ label, recent, season, lowerBetter }) {
-  if (recent === undefined && season === undefined) return null
-  const r = parseFloat(recent)
+function StatRow({ label, season, lowerBetter }) {
+  if (season === undefined) return null
   const s = parseFloat(season)
-  const improved = !isNaN(r) && !isNaN(s) && s > 0 &&
-    (lowerBetter ? r < s * 0.95 : r > s * 1.05)
-  const worsened = !isNaN(r) && !isNaN(s) && s > 0 &&
-    (lowerBetter ? r > s * 1.05 : r < s * 0.95)
+
+  // We determine if they pass the "good" threshold for coloring 
+  // (same thresholds backing calculateTrend)
+  let isGood = false;
+  let isBad = false;
+  if (!isNaN(s) && s > 0) {
+    if (label === 'ERA') { isGood = s < 3.50; isBad = s > 4.50; }
+    else if (label === 'WHIP') { isGood = s < 1.15; isBad = s > 1.35; }
+    else if (label === 'AVG') { isGood = s >= 0.270; isBad = s <= 0.230; }
+    else if (label === 'HR') { isGood = s >= 3; }
+  }
 
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
       <span style={{ fontSize: 11, color: '#4a7a94', width: 36 }}>{label}</span>
       <span style={{
         fontSize: 13, fontWeight: 600,
-        color: improved ? '#00a86b' : worsened ? '#ef4444' : '#e2e8f0'
+        color: isGood ? '#00a86b' : isBad ? '#ef4444' : '#e2e8f0'
       }}>
-        {recent !== undefined ? recent : '—'}
-        {improved && <span style={{ fontSize: 10, marginLeft: 3 }}>▲</span>}
-        {worsened && <span style={{ fontSize: 10, marginLeft: 3 }}>▼</span>}
-      </span>
-      <span style={{ fontSize: 11, color: '#4a7a94' }}>
-        {season !== undefined ? season : '—'} <span style={{ fontSize: 9 }}>szn</span>
+        {season !== undefined ? season : '—'}
       </span>
     </div>
   )
@@ -73,13 +74,13 @@ function PlayerCard({ player, highlight }) {
       </div>
       <div style={{ borderTop: '1px solid #1e3d5c', paddingTop: 8, marginTop: 4 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#4a7a94', marginBottom: 4 }}>
-          <span>7-day</span><span>season</span>
+          <span>Stat</span><span>Season</span>
         </div>
         {(player.displayStats || []).map((s, i) => (
           <StatRow key={i} {...s} />
         ))}
         {(!player.displayStats || player.displayStats.length === 0) && (
-          <div style={{ fontSize: 12, color: '#4a7a94' }}>No recent stats available</div>
+          <div style={{ fontSize: 12, color: '#4a7a94' }}>No stats available</div>
         )}
       </div>
     </div>

@@ -586,8 +586,10 @@ router.post('/audit', async (req, res) => {
     settings?.scoring_type || 'Roto'
   );
 
-  // VOR for every player
-  const vorByPlayer = roster.map(p => ({
+  // VOR for every active player (ignoring injured/out)
+  const vorByPlayer = roster
+    .filter(p => !p.status || (!p.status.includes('IL') && ['O', 'Out', 'Suspended'].indexOf(p.status) === -1))
+    .map(p => ({
     name: p.player_name || p.name,
     position: String(p.position || '').split('/')[0].toUpperCase(),
     vor: brain.calculateVOR(p.stats || {}, p.position, leagueSize, settings?.scoring_type),
