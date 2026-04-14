@@ -50,8 +50,21 @@ export default function Dashboard({ leagueSettings }) {
 
   return (
     <div>
-      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Dashboard</h1>
-      <p style={{ color: '#7aafc4', marginBottom: 28 }}>Welcome back. Here's your fantasy baseball overview.</p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, marginBottom: 28, flexWrap: 'wrap' }}>
+        <img 
+          src="/cyborg_batflip.png" 
+          alt="Batflip.app Mascot" 
+          style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border-glow)', boxShadow: '0 0 20px rgba(192, 17, 31, 0.4)' }} 
+        />
+        <div>
+          <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 4, letterSpacing: -1 }}>
+            Batflip Intelligence <span style={{ color: 'var(--primary)' }}>HQ</span>
+          </h1>
+          <p style={{ color: '#7aafc4', fontSize: 15, margin: 0 }}>
+            Welcome back to <strong style={{ color: '#f8fafc' }}>batflip.app</strong>. Here is your automated fantasy analytics overview.
+          </p>
+        </div>
+      </div>
 
       {syncing && (
         <div style={{
