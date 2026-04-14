@@ -383,6 +383,16 @@ router.post('/waiver', async (req, res) => {
     waiverScore: brain.scoreWaiverTarget(p, my_roster || [], settings || {}),
   })).sort((a, b) => b.waiverScore.score - a.waiverScore.score);
 
+  // Calculate VOR for the current roster so the AI mathematically understands who is actually droppable
+  const rosterWithVOR = (my_roster || []).map(p => {
+    const pos = String(p.position || '').split('/')[0].toUpperCase();
+    return {
+      name: p.player_name || p.name,
+      position: pos,
+      vor: brain.calculateVOR(p.stats || {}, pos, leagueSize, settings?.scoring_type)
+    };
+  }).sort((a, b) => b.vor - a.vor);
+
   // Fetch real 2025 stats for top waiver targets (non-blocking)
   let historicalIntel = '';
   try {
@@ -408,7 +418,7 @@ router.post('/waiver', async (req, res) => {
     const text = await callClaude([{
       role: 'user',
       content: `${leagueCtx}
-My roster: ${(my_roster||[]).map(p => `${p.player_name||p.name} (${p.position})`).join(', ')}
+My roster (sorted by VOR value, 0-100): ${rosterWithVOR.map(p => `${p.name} (${p.position}, VOR: ${p.vor})`).join(', ')}
 My Positional Needs (Voids): ${myAnalysis.voids.join(', ') || 'None'}
 My Positional Surpluses: ${myAnalysis.surpluses.map(s => `${s.position} (${s.count})`).join(', ') || 'None'}
 
