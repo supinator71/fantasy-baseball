@@ -288,14 +288,14 @@ Context: ${matchup_context || 'Standard week'}
 
 Players to evaluate (with pre-computed matchup intelligence):
 ${enriched.map(p =>
-  `${p.name} (${p.position}, ${p.team}) | Games this week: ${p.weekGames} | Streaming score: ${p.streaming?.score}/100 (${p.streaming?.grade}) | Platoon: ${p.platoon?.advantage} (${p.platoon?.multiplier}x) | Opponent: ${p.opponent || 'unknown'}`
+  `${p.name} (${p.position}, ${p.team}) | Status (Injury): ${p.status || 'Active'} | Games this week: ${p.weekGames} | Streaming score: ${p.streaming?.score}/100 (${p.streaming?.grade}) | Platoon: ${p.platoon?.advantage} (${p.platoon?.multiplier}x)`
 ).join('\n')}${historicalIntel}
 
 ${daily_mode ? 
   `This is a DAILY LINEUP OPTIMIZATION request. Do not write a paragraph for every single player. Instead:
-1. Identify the absolute "Must Starts" for today.
+1. Identify the absolute "Must Starts" for today. (CRITICAL: NEVER recommend starting a player with Status "IL", "O", or "DTD").
 2. Identify the 3-4 toughest marginal Start/Sit decisions on this roster and explain exactly what to do with them backed by real performance data.
-3. Rapid-fire list the players who should be benched today.
+3. Rapid-fire list the players who should be benched today (especially anyone on the IL).
 NOTE: DO NOT complain that opponent information is 'unknown' or missing. Assume typical 2026 scheduling and structure your Start/Sit advice around raw player talent and breakout metrics.` 
   : 
   `Use the 2025 stats intelligence to assess each player's true talent level. Give START or SIT for each player backed by real performance data — flag breakout candidates and regression risks.`

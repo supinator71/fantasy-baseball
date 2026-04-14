@@ -211,6 +211,7 @@ function parsePlayersStats(raw) {
       name: info.full_name || info.name?.full || 'Unknown',
       position: info.display_position || info.eligible_positions?.position || '',
       team: info.editorial_team_abbr || '',
+      status: info.status || '',
       stats
     });
   }
