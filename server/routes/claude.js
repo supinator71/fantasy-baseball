@@ -100,7 +100,16 @@ function getLeagueSettings() {
 
 function leagueContext(settings) {
   if (!settings) return '';
-  return `League: ${settings.num_teams || 12} teams, ${settings.scoring_type || 'Roto'} scoring, ${settings.draft_type || 'Snake'} draft. Categories: ${(settings.stat_categories || []).join(', ')}.`;
+  let format = settings.scoring_type || 'Head-to-Head Points';
+  if (format.toLowerCase().includes('head') && !format.toLowerCase().includes('point')) {
+    format = 'Head-to-Head Points'; // Force points for this user's specific leagues per request
+  } else if (format.toLowerCase() === 'roto') {
+    format = 'Rotisserie (Roto)';
+  }
+  
+  return `League Rules: ${settings.num_teams || 12} teams, **${format} scoring**. 
+(CRITICAL RULE: The user is playing ${format}. DO NOT give 5x5 Roto advice. DO NOT talk about balancing categories. Give advice explicitly tailored for ${format} where total volume matters most!)
+Scoring Events/Categories: ${(settings.stat_categories || []).join(', ')}.`;
 }
 
 async function callClaude(messages, maxTokens = 4000) {
@@ -283,8 +292,7 @@ router.post('/startsit', async (req, res) => {
     const text = await callClaude([{
       role: 'user',
       content: `${leagueCtx}
-Scoring: ${scoring_type || settings?.scoring_type || 'Roto'}
-Context: ${matchup_context || 'Standard week'}
+Context: ${matchup_context || 'Daily optimization'}
 
 Players to evaluate (with pre-computed matchup intelligence):
 ${enriched.map(p =>
