@@ -294,8 +294,10 @@ ${enriched.map(p =>
 ${daily_mode ? 
   `This is a DAILY LINEUP OPTIMIZATION request. Do not write a paragraph for every single player. Instead:
 1. Identify the absolute "Must Starts" for today. (CRITICAL: NEVER recommend starting a player with Status "IL", "O", or "DTD").
-2. Identify the 3-4 toughest marginal Start/Sit decisions on this roster and explain exactly what to do with them. (Only recommend starting players whose "Is Starting Today" is "Yes" or "Unknown". If "No", they MUST sit!)
-3. Rapid-fire list the players who should be benched today (especially anyone on the IL or not starting).
+2. Identify the 3-4 toughest marginal Start/Sit decisions on this roster and explain exactly what to do with them. 
+(CRITICAL Rule for Batters: Recommend starting if "Is Starting" is "Yes" or "Unknown". If "No", bench them).
+(CRITICAL Rule for Starting Pitchers (SP): ONLY start if "Is Starting" is exactly "Yes". If the SP is "Unknown" or "No", BENCH them immediately because they are not pitching today!)
+3. Rapid-fire list the players who should be benched today (especially anyone on the IL, not starting, or SPs who are not pitching today).
 NOTE: DO NOT complain that opponent information is 'unknown' or missing. Assume typical 2026 scheduling and structure your Start/Sit advice around raw player talent.
 NOTE: Yahoo Season Stats (Raw) uses Stat IDs (e.g. 12=HR, 13=RBI, 3=AVG, 14=SB, 7=R, 26=ERA, 27=WHIP, 28=W, 33=K). Heavily rely on these to identify prospects who are blowing up right now in 2026, even if their MLB historical data is weak!` 
   : 
