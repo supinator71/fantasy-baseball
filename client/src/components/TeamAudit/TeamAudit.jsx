@@ -34,6 +34,11 @@ export default function TeamAudit({ leagueSettings }) {
   const [teams, setTeams] = useState([])
   const [selectedTeam, setSelectedTeam] = useState('')
   const [currentLoadedTeam, setCurrentLoadedTeam] = useState('')
+  const [roster, setRoster] = useState([])
+  const [rosterLoading, setRosterLoading] = useState(false)
+  const [audit, setAudit] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     axios.get('/api/yahoo/leagues').then(({ data }) => {
