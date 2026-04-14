@@ -6,7 +6,7 @@ const DB_FILE = path.join(DB_DIR, 'data.json');
 
 const DEFAULT_DATA = {
   tokens: null,
-  league_settings: null,
+  league_settings: {},   // map: { [league_key]: settingsObj }
   draft_board: [],
   my_roster: [],
   notes: []
@@ -46,10 +46,14 @@ const db = {
           data.tokens = null;
           save(data);
         }
-        // League settings
+        // League settings — stored per league_key
         else if (query.includes('INSERT OR REPLACE INTO league_settings')) {
-          data.league_settings = {
-            id: 1, league_key: args[0], league_name: args[1], num_teams: args[2],
+          if (!data.league_settings || typeof data.league_settings !== 'object' || Array.isArray(data.league_settings)) {
+            data.league_settings = {};
+          }
+          const leagueKey = args[0];
+          data.league_settings[leagueKey] = {
+            league_key: args[0], league_name: args[1], num_teams: args[2],
             scoring_type: args[3], draft_type: args[4], draft_position: args[5],
             roster_slots: args[6], stat_categories: args[7], updated_at: args[8]
           };
@@ -78,7 +82,17 @@ const db = {
       get(...args) {
         const data = load();
         if (query.includes('FROM tokens')) return data.tokens;
-        if (query.includes('FROM league_settings')) return data.league_settings;
+        if (query.includes('FROM league_settings')) {
+          // Support lookup by league_key arg, or fall back to most recently updated
+          const map = data.league_settings;
+          if (!map || typeof map !== 'object' || Array.isArray(map)) return null;
+          const leagueKey = args[0];
+          if (leagueKey && map[leagueKey]) return map[leagueKey];
+          // Fallback: return the most recently updated entry
+          const entries = Object.values(map);
+          if (!entries.length) return null;
+          return entries.sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0))[0];
+        }
         if (query.includes('COUNT(*) as count FROM draft_board WHERE drafted = 1')) return { count: data.draft_board.filter(p => p.drafted).length };
         if (query.includes('COUNT(*) as count FROM draft_board WHERE drafted_by')) return { count: data.draft_board.filter(p => p.drafted_by === 'me').length };
         if (query.includes('COUNT(*) as count FROM draft_board')) return { count: data.draft_board.length };

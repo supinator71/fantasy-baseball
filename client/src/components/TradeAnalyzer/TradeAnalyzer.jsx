@@ -1,14 +1,23 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
 export default function TradeAnalyzer({ leagueSettings }) {
+  const [leagues, setLeagues] = useState([])
+  const [selectedLeague, setSelectedLeague] = useState('')
   const [giving, setGiving] = useState('')
   const [receiving, setReceiving] = useState('')
   const [myRoster, setMyRoster] = useState('')
   const [theirRoster, setTheirRoster] = useState('')
   const [result, setResult] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    axios.get('/api/yahoo/leagues').then(({ data }) => {
+      setLeagues(data)
+      if (data[0]?.league_key) setSelectedLeague(data[0].league_key)
+    }).catch(() => {})
+  }, [])
 
   async function analyze() {
     if (!giving.trim() || !receiving.trim()) return toast.error('Enter players on both sides of the trade')
@@ -19,7 +28,8 @@ export default function TradeAnalyzer({ leagueSettings }) {
         giving: giving.split(',').map(p => p.trim()),
         receiving: receiving.split(',').map(p => p.trim()),
         my_roster: myRoster.split(',').map(p => p.trim()).filter(Boolean),
-        their_roster: theirRoster.split(',').map(p => p.trim()).filter(Boolean)
+        their_roster: theirRoster.split(',').map(p => p.trim()).filter(Boolean),
+        league_key: selectedLeague
       })
       setResult(data.analysis)
     } catch {

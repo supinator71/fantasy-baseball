@@ -44,7 +44,8 @@ export default function StartSit({ leagueSettings }) {
         players: roster,
         matchup_context: 'TODAY_DAILY_OPTIMIZER: Evaluate my ENTIRE roster for TODAY. Who are the absolute Must-Starts today? Who should be immediately benched? Identify my 3 toughest start/sit decisions and tell me what to do.',
         scoring_type: leagueSettings?.scoring_type || 'Roto 5x5',
-        daily_mode: true
+        daily_mode: true,
+        league_key: selectedLeague
       })
       setResult(data.analysis)
     } catch {

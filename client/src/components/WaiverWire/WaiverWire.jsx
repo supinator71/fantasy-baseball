@@ -79,7 +79,8 @@ export default function WaiverWire({ leagueSettings }) {
     try {
       const { data } = await axios.post('/api/claude/waiver', {
         available_players: available.slice(0, 20),
-        my_roster: myRoster
+        my_roster: myRoster,
+        league_key: selectedLeague
       })
       setAiRec(data.recommendations)
     } catch (err) {
