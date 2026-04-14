@@ -41,6 +41,7 @@ export default function WaiverWire({ leagueSettings }) {
   async function fetchAvailable() {
     setLoading(true)
     setDebugInfo(null)
+    setAiRec('')
     try {
       const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/players`, {
         params: { status: 'A', force: 'true' }
