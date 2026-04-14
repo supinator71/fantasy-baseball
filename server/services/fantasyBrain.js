@@ -166,36 +166,46 @@ function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType =
   const format = String(scoringType).toLowerCase();
   const isPoints = format.includes('point') || format === 'points';
 
+  // Helper macro to fetch stats from either standardized names (HR) or typical Yahoo stat IDs ('7', '12', etc.)
+  const getStat = (...keys) => {
+    for (const k of keys) {
+      if (playerStats[k] !== undefined && playerStats[k] !== '-' && playerStats[k] !== '') {
+        return parseFloat(playerStats[k]) || 0;
+      }
+    }
+    return 0;
+  }
+
   if (isPoints) {
     let playerPts = 0
     if (!isPitcher) {
-      const hits = parseFloat(playerStats.H || 0)
-      const doubles = parseFloat(playerStats['2B'] || 0)
-      const triples = parseFloat(playerStats['3B'] || 0)
-      const hrs = parseFloat(playerStats.HR || 0)
-      const singles = parseFloat(playerStats['1B'] || hits - doubles - triples - hrs || 0)
-
-      playerPts += (parseFloat(playerStats.R || 0) * HITTING_WEIGHTS.R)
-      playerPts += (singles * HITTING_WEIGHTS['1B'])
+      const hits = getStat('H', '4', '8')
+      const doubles = getStat('2B', '5', '9')
+      const triples = getStat('3B', '6', '10')
+      const hrs = getStat('HR', '7', '11', '12')
+      const singles = getStat('1B', '4', '8') - doubles - triples - hrs || 0
+      
+      playerPts += (getStat('R', '7', '60') * HITTING_WEIGHTS.R)
+      playerPts += (Math.max(0, singles) * HITTING_WEIGHTS['1B'])
       playerPts += (doubles * HITTING_WEIGHTS['2B'])
       playerPts += (triples * HITTING_WEIGHTS['3B'])
       playerPts += (hrs * HITTING_WEIGHTS.HR)
-      playerPts += (parseFloat(playerStats.RBI || 0) * HITTING_WEIGHTS.RBI)
-      playerPts += (parseFloat(playerStats.SB || 0) * HITTING_WEIGHTS.SB)
-      playerPts += (parseFloat(playerStats.BB || 0) * HITTING_WEIGHTS.BB)
-      playerPts += (parseFloat(playerStats.HBP || 0) * HITTING_WEIGHTS.HBP)
+      playerPts += (getStat('RBI', '8', '12', '13') * HITTING_WEIGHTS.RBI)
+      playerPts += (getStat('SB', '16', '23') * HITTING_WEIGHTS.SB)
+      playerPts += (getStat('BB', '18', '26') * HITTING_WEIGHTS.BB)
+      playerPts += (getStat('HBP', '20', '51') * HITTING_WEIGHTS.HBP)
     } else {
-      const ip = parseFloat(playerStats.IP || 0)
+      const ip = getStat('IP', '50')
       const outs = Math.floor(ip) * 3 + Math.round((ip % 1) * 10)
 
-      playerPts += (parseFloat(playerStats.W || 0) * PITCHING_WEIGHTS.W)
-      playerPts += (parseFloat(playerStats.SV || 0) * PITCHING_WEIGHTS.SV)
+      playerPts += (getStat('W', '28') * PITCHING_WEIGHTS.W)
+      playerPts += (getStat('SV', '32') * PITCHING_WEIGHTS.SV)
       playerPts += (outs * PITCHING_WEIGHTS.OUT)
-      playerPts += (parseFloat(playerStats.HA || playerStats.H || 0) * PITCHING_WEIGHTS.H)
-      playerPts += (parseFloat(playerStats.ER || 0) * PITCHING_WEIGHTS.ER)
-      playerPts += (parseFloat(playerStats.BBA || playerStats.BB || 0) * PITCHING_WEIGHTS.BB)
-      playerPts += (parseFloat(playerStats.HBPA || playerStats.HBP || 0) * PITCHING_WEIGHTS.HBP)
-      playerPts += (parseFloat(playerStats.K || 0) * PITCHING_WEIGHTS.K)
+      playerPts += (getStat('HA', 'H', '43', '44') * PITCHING_WEIGHTS.H)
+      playerPts += (getStat('ER', '47') * PITCHING_WEIGHTS.ER)
+      playerPts += (getStat('BBA', 'BB', '46', '55') * PITCHING_WEIGHTS.BB)
+      playerPts += (getStat('HBPA', 'HBP', '57') * PITCHING_WEIGHTS.HBP)
+      playerPts += (getStat('K', '42') * PITCHING_WEIGHTS.K)
     }
     const rawScore = playerPts
     if (rawScore <= 0) return 0
@@ -206,25 +216,25 @@ function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType =
     let sgpTotal = 0;
     
     if (!isPitcher) {
-      sgpTotal += (parseFloat(playerStats.R || 0) / SGP_DENOMINATORS.R);
-      sgpTotal += (parseFloat(playerStats.HR || 0) / SGP_DENOMINATORS.HR);
-      sgpTotal += (parseFloat(playerStats.RBI || 0) / SGP_DENOMINATORS.RBI);
-      sgpTotal += (parseFloat(playerStats.SB || 0) / SGP_DENOMINATORS.SB);
+      sgpTotal += (getStat('R', '7', '60') / SGP_DENOMINATORS.R);
+      sgpTotal += (getStat('HR', '7', '11', '12') / SGP_DENOMINATORS.HR);
+      sgpTotal += (getStat('RBI', '8', '12', '13') / SGP_DENOMINATORS.RBI);
+      sgpTotal += (getStat('SB', '16', '23') / SGP_DENOMINATORS.SB);
       
-      const ab = parseFloat(playerStats.AB || 0);
-      const avg = parseFloat(playerStats.AVG || 0);
+      const ab = getStat('AB', '2', '5');
+      const avg = getStat('AVG', '3', '4');
       if (ab > 0) {
         // Impact on team AVG: typical denominator is around ~12 for SGP impact
         sgpTotal += ((avg - SGP_DENOMINATORS.AVG_BASELINE) * ab) / 15;
       }
     } else {
-      sgpTotal += (parseFloat(playerStats.W || 0) / SGP_DENOMINATORS.W);
-      sgpTotal += (parseFloat(playerStats.SV || 0) / SGP_DENOMINATORS.SV);
-      sgpTotal += (parseFloat(playerStats.K || 0) / SGP_DENOMINATORS.K);
+      sgpTotal += (getStat('W', '28') / SGP_DENOMINATORS.W);
+      sgpTotal += (getStat('SV', '32') / SGP_DENOMINATORS.SV);
+      sgpTotal += (getStat('K', '42') / SGP_DENOMINATORS.K);
       
-      const ip = parseFloat(playerStats.IP || 0);
-      const era = parseFloat(playerStats.ERA || SGP_DENOMINATORS.ERA_BASELINE);
-      const whip = parseFloat(playerStats.WHIP || SGP_DENOMINATORS.WHIP_BASELINE);
+      const ip = getStat('IP', '50');
+      const era = getStat('ERA', '26') || SGP_DENOMINATORS.ERA_BASELINE;
+      const whip = getStat('WHIP', '27') || SGP_DENOMINATORS.WHIP_BASELINE;
       if (ip > 0) {
         // Ratio impacts: lower ERA/WHIP over more innings generates positive SGP
         sgpTotal += ((SGP_DENOMINATORS.ERA_BASELINE - era) * ip) / 20;

@@ -537,7 +537,11 @@ router.get('/league/:leagueKey/matchup', requireAuth, async (req, res) => {
 // ── Trends ────────────────────────────────────────────────────────────────────
 function calculateTrend(seasonStats, recentStats, position) {
   const hasRecent = Object.values(recentStats || {}).some(v => parseFloat(v) > 0)
-  if (!hasRecent) return 'cold'
+  const hasSeason = Object.values(seasonStats || {}).some(v => parseFloat(v) > 0)
+  
+  if (!hasRecent) {
+    return hasSeason ? 'cold' : 'neutral'
+  }
 
   const isPitcher = /SP|RP|P/.test(String(position))
   let delta = 0
