@@ -4,7 +4,6 @@ import { Toaster, toast } from 'react-hot-toast'
 import axios from 'axios'
 
 import Dashboard from './components/Dashboard'
-import DraftAssistant from './components/DraftAssistant/DraftAssistant'
 import RosterManager from './components/RosterManager/RosterManager'
 import WaiverWire from './components/WaiverWire/WaiverWire'
 import StartSit from './components/StartSit/StartSit'

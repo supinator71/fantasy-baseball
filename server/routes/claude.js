@@ -181,93 +181,13 @@ function tryParseJSON(text) {
 // EXISTING ENDPOINTS — ENHANCED WITH fantasyBrain
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Draft pick recommendation
-router.post('/draft/recommend', rateLimiter('draft'), async (req, res) => {
-  const { available_players, my_roster, pick_number, total_picks, needs, roster_slots, num_teams, league_key } = req.body;
-  const settings = getLeagueSettings(league_key);
-  const leagueCtx = leagueContext(settings);
-  const slots = roster_slots || settings?.roster_slots || { SP:2, RP:2, C:1, '1B':1, '2B':1, '3B':1, SS:1, OF:3, UTIL:1, BN:4 };
-  const teams = num_teams || settings?.num_teams || 12;
-  const totalRounds = Math.ceil((total_picks || teams * 23) / teams);
-  const currentRound = Math.ceil((pick_number || 1) / teams);
-  const roundsLeft = totalRounds - currentRound;
-
-  // fantasyBrain: VOR + scarcity for top available
-  const enrichedPlayers = (available_players || [])
-    .filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
-    .slice(0, 20).map(p => {
-    const pos = String(p.position || '').split('/')[0].toUpperCase();
-    const vor = brain.calculateVOR(p.stats || {}, pos, teams, settings?.scoring_type);
-    const scarcity = brain.getPositionalScarcity(pos, teams);
-    const adpValue = (pick_number || 1) - (p.adp || pick_number || 1);
-    return { ...p, vor, scarcity: scarcity.tier, dropoff: scarcity.replacementDropoff, adpValue: +adpValue.toFixed(1) };
-  });
-
-  // Draft strategy recommendation
-  const draftPos = settings?.draft_position || 1;
-  const strategy = brain.getDraftStrategy(draftPos, teams, settings?.scoring_type || 'Roto');
-
-  // Build scarcity alerts
-  const filled = {};
-  (my_roster || []).forEach(p => { const pos = String(p.position || '').split('/')[0].toUpperCase(); filled[pos] = (filled[pos] || 0) + 1; });
-  const scarcityAlerts = Object.entries(slots)
-    .filter(([pos]) => pos !== 'BN' && pos !== 'IL')
-    .map(([pos, req]) => {
-      const have = filled[pos] || 0;
-      const need = Math.max(0, req - have);
-      if (need <= 0) return null;
-      const s = brain.getPositionalScarcity(pos, teams);
-      return `${s.tier === 'elite' ? '🚨' : s.tier === 'scarce' ? '⚠️' : '📋'} ${pos}: need ${need} more — ${s.replacementDropoff} dropoff — draft window: ${s.draftWindow}`;
-    }).filter(Boolean);
-
-  // Tier breaks
-  const sorted = [...enrichedPlayers].sort((a, b) => (a.adp || 999) - (b.adp || 999));
-  const tierBreaks = [];
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const gap = (sorted[i+1]?.adp || 999) - (sorted[i]?.adp || 0);
-    if (gap > 12) tierBreaks.push(`Tier drop after ${sorted[i].player_name} (ADP ${sorted[i].adp}) — gap of ${gap.toFixed(0)} picks`);
-  }
-
-  const roundStrategy = currentRound <= 3 ? 'BPA ONLY — do NOT reach for need' :
-    currentRound <= 6 ? 'BPA with need awareness — address C/SS if top options remain' :
-    currentRound <= 10 ? 'Fill remaining slots — target scarce positions before pool dries up' :
-    'Streamers, upside fliers, closers with path to saves';
-
-  try {
-    const text = await callClaude([{
-      role: 'user',
-      content: `${leagueCtx}
-
-=== DRAFT SITUATION ===
-Pick #${pick_number} | Round ${currentRound}/${totalRounds} | ${roundsLeft} rounds left
-Round strategy: ${roundStrategy}
-Recommended overall strategy: ${strategy.recommended} — ${strategy.strategy.description}
-
-=== MY ROSTER ===
-${(my_roster||[]).length ? my_roster.map(p => `${p.player_name} (${p.position})`).join(', ') : 'Empty'}
-
-=== POSITIONAL SCARCITY ALERTS ===
-${scarcityAlerts.length ? scarcityAlerts.join('\n') : 'No critical voids.'}
-
-=== TIER BREAKS ===
-${tierBreaks.length ? tierBreaks.slice(0, 4).join('\n') : 'No major tier breaks.'}
-
-=== TOP AVAILABLE (by Smart Score, with VOR) ===
-${enrichedPlayers.map(p =>
-  `${p.player_name} | ${p.position} | ADP ${p.adp} | VOR ${p.vor}/100 | Scarcity: ${p.scarcity} | ADP value: ${p.adpValue > 0 ? '+' : ''}${p.adpValue}`
-).join('\n')}
-
-Give me TOP 3 picks ranked with: player name, why NOW (tier/scarcity/VOR reasoning), what slot it fills, rounds until that position dries up, and any injury/regression risk. End with a 1-line strategy for my next 3 rounds.
-
-Write in clean, conversational prose. No JSON syntax, no brackets, no code formatting. Write like a knowledgeable fantasy analyst giving advice to a friend.`
-    }]);
-    res.json({ recommendation: text });
-  } catch (err) {
-    res.status(500).json({ error: err.message, recommendation: 'AI unavailable — use Smart Score column to guide your pick.' });
-  }
+// Draft pick recommendation — DISABLED (draft module removed from product)
+router.post('/draft/recommend', (req, res) => {
+  res.status(410).json({ error: 'Draft Assistant has been removed. Use Waiver Wire and Trade Finder for in-season roster moves.' });
 });
 
 // Start/Sit analysis — enriched with 2025 stats
+
 // Start/Sit analysis — enriched with 2025 stats
 router.post('/startsit', rateLimiter('startsit'), async (req, res) => {
   const { players, matchup_context, scoring_type, daily_mode, league_key } = req.body;
