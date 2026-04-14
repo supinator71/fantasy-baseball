@@ -129,8 +129,7 @@ function Sidebar({ authenticated, isOpen, onClose }) {
   const navItems = [
     { to: '/',            label: 'My Dashboard',             icon: '⚾' },
     { to: '/roster',      label: 'My Team',                  icon: '◈' },
-    { to: '/waiver',      label: 'Free Agents',              icon: '⟳' },
-    { to: '/waiver',      label: 'Waiver Wire',              icon: '📋' },
+    { to: '/waiver',      label: 'Free Agents / Waiver Wire', icon: '⟳' },
     { to: '/startsit',    label: 'Who To Start',             icon: '⚡' },
     { to: '/trade',       label: 'Trade Analyzer',           icon: '⇌' },
     { to: '/standings',   label: 'Standings',                icon: '◎' },
