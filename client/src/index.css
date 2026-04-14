@@ -521,3 +521,64 @@ tr:hover td {
 
   h1 { font-size: 24px !important; }
 }
+
+/* ===================== MASCOT ANIMATIONS ===================== */
+@keyframes mascot-float {
+  0%   { transform: translateY(0px) rotate(-1deg); }
+  50%  { transform: translateY(-10px) rotate(1deg); }
+  100% { transform: translateY(0px) rotate(-1deg); }
+}
+
+@keyframes mascot-glow {
+  0%   { box-shadow: 0 0 20px rgba(192,17,31,0.4), 0 0 60px rgba(0,150,255,0.15); }
+  50%  { box-shadow: 0 0 40px rgba(192,17,31,0.7), 0 0 80px rgba(0,150,255,0.3); }
+  100% { box-shadow: 0 0 20px rgba(192,17,31,0.4), 0 0 60px rgba(0,150,255,0.15); }
+}
+
+@keyframes mascot-glow-blue {
+  0%   { box-shadow: 0 0 20px rgba(0,150,255,0.4), 0 0 50px rgba(0,200,255,0.1); }
+  50%  { box-shadow: 0 0 40px rgba(0,150,255,0.7), 0 0 80px rgba(0,200,255,0.25); }
+  100% { box-shadow: 0 0 20px rgba(0,150,255,0.4), 0 0 50px rgba(0,200,255,0.1); }
+}
+
+/* Hero mascot — large, floating, glowing (Dashboard) */
+.mascot-hero {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(192,17,31,0.6);
+  animation: mascot-float 4s ease-in-out infinite, mascot-glow 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 16px rgba(192,17,31,0.5));
+  flex-shrink: 0;
+}
+
+/* Page header mascot — medium, blue glow (Waiver, GamePlan) */
+.mascot-header {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(0,150,255,0.6);
+  animation: mascot-float 5s ease-in-out infinite, mascot-glow-blue 3.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 12px rgba(0,150,255,0.4));
+  flex-shrink: 0;
+}
+
+/* AI result mascot — medium, mixed glow (Trade, Draft, Matchup) */
+.mascot-ai {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(192,17,31,0.5);
+  animation: mascot-float 4.5s ease-in-out infinite 0.5s, mascot-glow 4s ease-in-out infinite;
+  filter: drop-shadow(0 0 14px rgba(192,17,31,0.4));
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .mascot-hero   { width: 80px;  height: 80px; }
+  .mascot-header { width: 64px;  height: 64px; }
+  .mascot-ai     { width: 72px;  height: 72px; }
+}

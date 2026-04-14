@@ -50,18 +50,34 @@ export default function Dashboard({ leagueSettings }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, marginBottom: 28, flexWrap: 'wrap' }}>
-        <img 
-          src="/cyborg_batflip.png" 
-          alt="Batflip.app Mascot" 
-          style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border-glow)', boxShadow: '0 0 20px rgba(192, 17, 31, 0.4)' }} 
+      {/* Hero Banner */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 28, marginBottom: 32,
+        background: 'linear-gradient(135deg, rgba(192,17,31,0.12) 0%, rgba(0,50,120,0.15) 100%)',
+        border: '1px solid rgba(192,17,31,0.25)', borderRadius: 20,
+        padding: '24px 32px', flexWrap: 'wrap', position: 'relative', overflow: 'hidden'
+      }}>
+        {/* Decorative background glow */}
+        <div style={{
+          position: 'absolute', right: -40, top: -40,
+          width: 200, height: 200, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(192,17,31,0.15), transparent 70%)',
+          pointerEvents: 'none'
+        }} />
+        <img
+          src="/cyborg_batflip.png"
+          alt="Batflip.app Mascot"
+          className="mascot-hero"
         />
         <div>
-          <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 4, letterSpacing: -1 }}>
-            Batflip Intelligence <span style={{ color: 'var(--primary)' }}>HQ</span>
+          <div style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'var(--font-heading)' }}>
+            ⚡ AI-Powered Fantasy Intelligence
+          </div>
+          <h1 style={{ fontSize: 36, fontWeight: 800, marginBottom: 6, letterSpacing: -1.5, lineHeight: 1.1 }}>
+            Batflip <span style={{ color: 'var(--primary)' }}>Intelligence</span> HQ
           </h1>
           <p style={{ color: '#7aafc4', fontSize: 15, margin: 0 }}>
-            Welcome back to <strong style={{ color: '#f8fafc' }}>batflip.app</strong>. Here is your automated fantasy analytics overview.
+            Welcome back to <strong style={{ color: '#f8fafc' }}>batflip.app</strong> — your automated fantasy analytics command center.
           </p>
         </div>
       </div>

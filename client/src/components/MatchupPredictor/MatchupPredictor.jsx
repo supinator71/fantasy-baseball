@@ -312,7 +312,7 @@ export default function MatchupPredictor({ leagueSettings }) {
             border: '1px solid #007a7a'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 16 }}>
-              <img src="/cyborg_mascot_homerun.png" alt="Galactic Slugger Mascot" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-glow)', boxShadow: '0 0 10px rgba(0,200,255,0.2)' }} />
+              <img src="/cyborg_mascot_homerun.png" alt="Galactic Slugger Mascot" className="mascot-ai" />
               <div style={{ fontSize: 13, color: '#7aafc4', textTransform: 'uppercase', letterSpacing: 2 }}>
                 AI Projected Score
               </div>
