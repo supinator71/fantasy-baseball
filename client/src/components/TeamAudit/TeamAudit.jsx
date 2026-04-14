@@ -118,7 +118,8 @@ export default function TeamAudit({ leagueSettings }) {
       const { data } = await axios.post('/api/claude/audit', {
         roster,
         league_standings: [],
-        my_stats: {}
+        my_stats: {},
+        league_key: selectedLeague
       })
       setAudit(data)
     } catch (err) {

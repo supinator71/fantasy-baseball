@@ -66,7 +66,8 @@ export default function MatchupPredictor({ leagueSettings }) {
         my_team: matchup.myTeam,
         opponent: matchup.opponent,
         stat_categories: leagueSettings?.stat_categories || ['R','HR','RBI','SB','AVG','W','SV','K','ERA','WHIP'],
-        week: matchup.week
+        week: matchup.week,
+        league_key: selectedLeague
       })
       setPrediction(data)
     } catch (err) {

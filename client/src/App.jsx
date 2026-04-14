@@ -71,7 +71,7 @@ export default function App() {
   }
 
   if (authStatus.loading) {
-    return <div className="loading" style={{ height: '100vh', fontSize: 18 }}>Loading Fantasy Baseball HQ...</div>
+    return <div className="loading" style={{ height: '100vh', fontSize: 18 }}>⚾ Loading Batflip HQ...</div>
   }
 
   return (
@@ -97,7 +97,7 @@ export default function App() {
             <button className="hamburger-btn" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
               ☰
             </button>
-            <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>⚾ Fantasy HQ</span>
+            <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.02em', fontFamily: 'var(--font-heading)' }}>⚾ Batflip HQ</span>
           </div>
 
           <main className="main-content">
@@ -128,24 +128,24 @@ export default function App() {
 
 function Sidebar({ authenticated, isOpen, onClose }) {
   const navItems = [
-    { to: '/',          label: 'My Dashboard',      icon: '⚾' },
-    { to: '/roster',    label: 'My Team',           icon: '👥' },
-    { to: '/waiver',    label: 'Free Agents (Waiver Wire)',       icon: '🔄' },
-    { to: '/startsit',  label: 'Who To Start',      icon: '⚡' },
-    { to: '/trade',     label: 'Trade Analyzer',    icon: '🤝' },
-    { to: '/standings', label: 'Standings',         icon: '🏆' },
-    { to: '/matchup',   label: 'Weekly Matchup',    icon: '⚔️' },
-    { to: '/audit',     label: 'Roster Checkup',    icon: '🏅' },
-    { to: '/tradefinder', label: 'Trade Finder',    icon: '🔀' },
-    { to: '/gameplan',  label: 'Weekly Game Plan',  icon: '🗓️' },
-    { to: '/baseball101', label: 'Baseball 101',    icon: '🎓' },
+    { to: '/',            label: 'My Dashboard',             icon: '⚾' },
+    { to: '/roster',      label: 'My Team',                  icon: '◈' },
+    { to: '/waiver',      label: 'Free Agents',              icon: '⟳' },
+    { to: '/startsit',    label: 'Who To Start',             icon: '⚡' },
+    { to: '/trade',       label: 'Trade Analyzer',           icon: '⇌' },
+    { to: '/standings',   label: 'Standings',                icon: '◎' },
+    { to: '/matchup',     label: 'Weekly Matchup',           icon: '⚔' },
+    { to: '/audit',       label: 'Roster Checkup',           icon: '▣' },
+    { to: '/tradefinder', label: 'Trade Finder',             icon: '◆' },
+    { to: '/gameplan',    label: 'Weekly Game Plan',         icon: '▦' },
+    { to: '/baseball101', label: 'Baseball 101',             icon: '🎓' },
   ]
 
   return (
     <nav className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div style={{ padding: '0 16px 20px', borderBottom: '1px solid var(--border)', marginBottom: 8 }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>⚾ Fantasy HQ</div>
-        <div style={{ fontSize: 12, color: 'var(--primary)', marginTop: 4, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Season Manager</div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em', textShadow: '0 2px 10px rgba(0,0,0,0.5)', fontFamily: 'var(--font-heading)' }}>⚾ Batflip <span style={{ color: 'var(--primary)' }}>HQ</span></div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Fantasy Intelligence</div>
       </div>
 
       {authenticated && navItems.map(item => (

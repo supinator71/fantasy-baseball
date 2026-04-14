@@ -4,6 +4,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const db = require('../db/database');
 const brain = require('../services/fantasyBrain');
 const mlbStats = require('../services/mlbStatsService');
+const { rateLimiter, getStats } = require('../middleware/rateLimiter');
 
 let client = null;
 function getClient() {
@@ -37,6 +38,10 @@ router.get('/health', async (req, res) => {
     });
   }
 });
+
+// Admin: rate limit stats
+router.get('/ratelimit/stats', (req, res) => res.json(getStats()));
+
 // ─────────────────────────────────────────────────────────────────────────────
 // EXPERT SYSTEM PROMPT
 // ─────────────────────────────────────────────────────────────────────────────
@@ -88,8 +93,8 @@ TRANSPARENCY & CLARITY:
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-function getLeagueSettings() {
-  const s = db.prepare('SELECT * FROM league_settings WHERE id = 1').get();
+function getLeagueSettings(leagueKey) {
+  const s = db.prepare('SELECT * FROM league_settings WHERE league_key = ?').get(leagueKey || null);
   if (!s) return null;
   try {
     s.roster_slots = typeof s.roster_slots === 'string' ? JSON.parse(s.roster_slots) : (s.roster_slots || {});
@@ -177,9 +182,9 @@ function tryParseJSON(text) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Draft pick recommendation
-router.post('/draft/recommend', async (req, res) => {
-  const { available_players, my_roster, pick_number, total_picks, needs, roster_slots, num_teams } = req.body;
-  const settings = getLeagueSettings();
+router.post('/draft/recommend', rateLimiter('draft'), async (req, res) => {
+  const { available_players, my_roster, pick_number, total_picks, needs, roster_slots, num_teams, league_key } = req.body;
+  const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
   const slots = roster_slots || settings?.roster_slots || { SP:2, RP:2, C:1, '1B':1, '2B':1, '3B':1, SS:1, OF:3, UTIL:1, BN:4 };
   const teams = num_teams || settings?.num_teams || 12;
@@ -264,9 +269,9 @@ Write in clean, conversational prose. No JSON syntax, no brackets, no code forma
 
 // Start/Sit analysis — enriched with 2025 stats
 // Start/Sit analysis — enriched with 2025 stats
-router.post('/startsit', async (req, res) => {
-  const { players, matchup_context, scoring_type, daily_mode } = req.body;
-  const settings = getLeagueSettings();
+router.post('/startsit', rateLimiter('startsit'), async (req, res) => {
+  const { players, matchup_context, scoring_type, daily_mode, league_key } = req.body;
+  const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
   const leagueSize = settings?.num_teams || 12;
 
@@ -350,9 +355,9 @@ DO NOT write conversational paragraphs without these mathematical badges! You ar
 });
 
 // Trade analysis
-router.post('/trade', async (req, res) => {
-  const { giving, receiving, my_roster, their_roster } = req.body;
-  const settings = getLeagueSettings();
+router.post('/trade', rateLimiter('trade'), async (req, res) => {
+  const { giving, receiving, my_roster, their_roster, league_key } = req.body;
+  const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
 
   // fantasyBrain: trade fairness engine
@@ -391,9 +396,9 @@ Write in clean, conversational prose. No JSON syntax, no brackets, no code forma
 });
 
 // Waiver wire — enriched with 2025 MLB stats + intelligence
-router.post('/waiver', async (req, res) => {
-  const { available_players, my_roster, drop_candidates } = req.body;
-  const settings = getLeagueSettings();
+router.post('/waiver', rateLimiter('waiver'), async (req, res) => {
+  const { available_players, my_roster, drop_candidates, league_key } = req.body;
+  const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
   const leagueSize = settings?.num_teams || 12;
 
@@ -477,9 +482,9 @@ CRITICAL LOGIC RULE: Do NOT generate a "Summary" or "After these moves your rost
 });
 
 // General question
-router.post('/ask', async (req, res) => {
-  const { question, context } = req.body;
-  const settings = getLeagueSettings();
+router.post('/ask', rateLimiter('ask'), async (req, res) => {
+  const { question, context, league_key } = req.body;
+  const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
 
   try {
@@ -521,9 +526,9 @@ Write in clean, conversational prose. No JSON syntax, no brackets, no code forma
 });
 
 // Matchup prediction
-router.post('/matchup/predict', async (req, res) => {
-  const { my_team, opponent, stat_categories, week } = req.body;
-  const settings = getLeagueSettings();
+router.post('/matchup/predict', rateLimiter('matchup'), async (req, res) => {
+  const { my_team, opponent, stat_categories, week, league_key } = req.body;
+  const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
 
   // Category analysis
@@ -575,9 +580,9 @@ Return ONLY valid JSON (no markdown):
 // ─────────────────────────────────────────────────────────────────────────────
 // STEP 3: FULL TEAM AUDIT
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/audit', async (req, res) => {
-  const { roster, league_standings } = req.body;
-  const settings = getLeagueSettings();
+router.post('/audit', rateLimiter('audit'), async (req, res) => {
+  const { roster, league_standings, league_key } = req.body;
+  const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
   const leagueSize = settings?.num_teams || 12;
 
@@ -720,9 +725,9 @@ Return ONLY valid JSON:
 // ─────────────────────────────────────────────────────────────────────────────
 // STEP 4: TRADE FINDER
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/trade/find', async (req, res) => {
-  const { my_roster, all_rosters, league_standings } = req.body;
-  const settings = getLeagueSettings();
+router.post('/trade/find', rateLimiter('tradefinder'), async (req, res) => {
+  const { my_roster, all_rosters, league_standings, league_key } = req.body;
+  const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
   const leagueSize = settings?.num_teams || 12;
 
@@ -813,9 +818,9 @@ Do NOT write paragraphs without citing these numbers. You are a mathematical eng
 // ─────────────────────────────────────────────────────────────────────────────
 // STEP 5: WEEKLY GAME PLAN
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/gameplan', async (req, res) => {
-  const { my_roster, matchup, league_context, week_number } = req.body;
-  const settings = getLeagueSettings();
+router.post('/gameplan', rateLimiter('gameplan'), async (req, res) => {
+  const { my_roster, matchup, league_context, week_number, league_key } = req.body;
+  const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
   const scoringType = settings?.scoring_type || league_context?.scoring_type || 'Roto';
 

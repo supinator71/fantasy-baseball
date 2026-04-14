@@ -47,7 +47,8 @@ export default function TradeFinder({ leagueSettings }) {
       const { data } = await axios.post('/api/claude/trade/find', {
         my_roster: roster,
         all_rosters: allRosters,
-        league_standings: [] // Can be filled in later if needed
+        league_standings: [],
+        league_key: selectedLeague
       })
       setResult(data)
     } catch (err) {
