@@ -610,25 +610,25 @@ export default function DraftAssistant({ leagueSettings }) {
                           borderLeft: isFull ? '3px solid #ef4444' : isCritical ? '3px solid #f59e0b' : isNeeded ? '3px solid #00a86b' : '3px solid transparent',
                           opacity: isFull ? 0.65 : 1,
                         }}>
-                          <td>
+                          <td data-label="Smart">
                             <span style={{ fontSize: 12, fontWeight: 800, color: ssColor }}>
                               {ss > 0 ? `+${ss}` : ss}
                             </span>
                           </td>
-                          <td>
+                          <td data-label="ADP Val">
                             <span style={{ fontSize: 11, color: avColor }}>
                               {player.adpValue > 0 ? `+${player.adpValue}` : player.adpValue}
                             </span>
                           </td>
-                          <td style={{ fontWeight: 500 }}>
+                          <td data-label="Player" style={{ fontWeight: 500 }}>
                             {player.player_name}
                             {isMulti && <span style={{ fontSize: 9, color: '#7aafc4', marginLeft: 4 }}>MULTI</span>}
                           </td>
-                          <td>
+                          <td data-label="Pos">
                             <span className={`badge badge-${pos.toLowerCase()}`}>{player.position}</span>
                           </td>
-                          <td style={{ color: '#7aafc4' }}>{player.team}</td>
-                          <td>
+                          <td data-label="Team" style={{ color: '#7aafc4' }}>{player.team}</td>
+                          <td data-label="Need">
                             {isFull
                               ? <span style={{ fontSize: 11, color: '#ef4444', fontWeight: 700 }}>FULL</span>
                               : isCritical
@@ -638,7 +638,7 @@ export default function DraftAssistant({ leagueSettings }) {
                                   : <span style={{ fontSize: 11, color: '#4a7a94' }}>UTIL/BN</span>
                             }
                           </td>
-                          <td>
+                          <td data-label="Actions">
                             <div style={{ display: 'flex', gap: 6 }}>
                               <button className="btn btn-success" style={{ fontSize: 11, padding: '4px 10px' }}
                                 onClick={() => markDrafted(player, 'me')}>Draft Me</button>
@@ -662,15 +662,15 @@ export default function DraftAssistant({ leagueSettings }) {
                       <tr><td colSpan={7} style={{ background: '#122840', color: '#4a7a94', fontSize: 12, textAlign: 'center' }}>— DRAFTED —</td></tr>
                       {filteredDrafted.map(player => (
                         <tr key={player.player_key} style={{ opacity: 0.4 }}>
-                          <td>—</td>
-                          <td style={{ fontSize: 12, color: '#4a7a94' }}>{player.adp}</td>
-                          <td style={{ textDecoration: 'line-through' }}>{player.player_name}</td>
-                          <td><span className={`badge badge-${primaryPos(player.position).toLowerCase()}`}>{player.position}</span></td>
-                          <td style={{ color: '#7aafc4' }}>{player.team}</td>
-                          <td><span style={{ fontSize: 12, color: player.drafted_by === 'me' ? '#007a7a' : '#ef4444' }}>
+                          <td data-label="Smart">—</td>
+                          <td data-label="ADP Val" style={{ fontSize: 12, color: '#4a7a94' }}>{player.adp}</td>
+                          <td data-label="Player" style={{ textDecoration: 'line-through' }}>{player.player_name}</td>
+                          <td data-label="Pos"><span className={`badge badge-${primaryPos(player.position).toLowerCase()}`}>{player.position}</span></td>
+                          <td data-label="Team" style={{ color: '#7aafc4' }}>{player.team}</td>
+                          <td data-label="Need"><span style={{ fontSize: 12, color: player.drafted_by === 'me' ? '#007a7a' : '#ef4444' }}>
                             {player.drafted_by === 'me' ? `Mine R${player.draft_round}` : `#${player.draft_pick}`}
                           </span></td>
-                          <td>
+                          <td data-label="Actions">
                             <button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 8px' }}
                               onClick={() => undoPick(player)}>Undo</button>
                           </td>
@@ -723,16 +723,16 @@ function MyTeam({ team, rosterStatus, onUndo }) {
               const val = +(player.draft_pick - (player.adp || player.draft_pick)).toFixed(1)
               return (
                 <tr key={player.player_key}>
-                  <td style={{ color: '#7aafc4' }}>{player.draft_pick}</td>
-                  <td style={{ color: '#7aafc4' }}>{player.draft_round}</td>
-                  <td style={{ fontWeight: 500 }}>{player.player_name}</td>
-                  <td><span className={`badge badge-${primaryPos(player.position).toLowerCase()}`}>{player.position}</span></td>
-                  <td style={{ color: '#7aafc4', fontSize: 12 }}>{player.adp}</td>
-                  <td style={{ fontSize: 12, color: val >= 3 ? '#00a86b' : val >= 0 ? '#f59e0b' : '#ef4444', fontWeight: 700 }}>
+                  <td data-label="#" style={{ color: '#7aafc4' }}>{player.draft_pick}</td>
+                  <td data-label="Rd" style={{ color: '#7aafc4' }}>{player.draft_round}</td>
+                  <td data-label="Player" style={{ fontWeight: 500 }}>{player.player_name}</td>
+                  <td data-label="Pos"><span className={`badge badge-${primaryPos(player.position).toLowerCase()}`}>{player.position}</span></td>
+                  <td data-label="ADP" style={{ color: '#7aafc4', fontSize: 12 }}>{player.adp}</td>
+                  <td data-label="Value" style={{ fontSize: 12, color: val >= 3 ? '#00a86b' : val >= 0 ? '#f59e0b' : '#ef4444', fontWeight: 700 }}>
                     {val > 0 ? `+${val}` : val}
                   </td>
-                  <td style={{ color: '#7aafc4' }}>{player.team}</td>
-                  <td><button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => onUndo(player)}>Undo</button></td>
+                  <td data-label="Team" style={{ color: '#7aafc4' }}>{player.team}</td>
+                  <td data-label="Actions"><button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => onUndo(player)}>Undo</button></td>
                 </tr>
               )
             })}

@@ -169,10 +169,10 @@ export default function WaiverWire({ leagueSettings }) {
             <tbody>
               {available.filter(p => posFilter === 'ALL' || p.position.includes(posFilter)).map((p, i) => (
                 <tr key={i}>
-                  <td style={{ fontWeight: 500 }}>{p.name}</td>
-                  <td><span className={`badge badge-${p.position.split(',')[0].toLowerCase().trim()}`}>{p.position}</span></td>
-                  <td style={{ color: '#7aafc4' }}>{p.team}</td>
-                  <td style={{ textAlign: 'center' }}>
+                  <td data-label="Player" style={{ fontWeight: 500 }}>{p.name}</td>
+                  <td data-label="Position"><span className={`badge badge-${p.position.split(',')[0].toLowerCase().trim()}`}>{p.position}</span></td>
+                  <td data-label="Team" style={{ color: '#7aafc4' }}>{p.team}</td>
+                  <td data-label="Trend" style={{ textAlign: 'right' }}>
                     {(() => {
                       const t = trendMap[p.name]
                       if (!t) return <span style={{ color: '#4a7a94', fontSize: 12 }}>—</span>
@@ -183,7 +183,7 @@ export default function WaiverWire({ leagueSettings }) {
                       return <span title={t.summary} style={{ color: '#4aafdb', fontSize: 12, cursor: 'help' }}>—</span>
                     })()}
                   </td>
-                  <td style={{ whiteSpace: 'nowrap' }}>{renderStats(p)}</td>
+                  <td data-label="Projected Stats" style={{ whiteSpace: 'nowrap' }}>{renderStats(p)}</td>
                 </tr>
               ))}
               {available.length === 0 && !loading && (

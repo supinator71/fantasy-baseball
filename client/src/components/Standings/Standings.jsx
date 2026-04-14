@@ -74,7 +74,7 @@ export default function Standings({ leagueSettings }) {
             <tbody>
               {standings.map((team, i) => (
                 <tr key={i} style={team.rank <= 4 ? { background: 'rgba(0, 168, 107, 0.05)' } : {}}>
-                  <td>
+                  <td data-label="Rank">
                     <span style={{
                       display: 'inline-block', width: 28, height: 28, borderRadius: '50%',
                       background: team.rank === 1 ? '#f59e0b' : team.rank <= 4 ? '#0c2c56' : '#122840',
@@ -82,12 +82,12 @@ export default function Standings({ leagueSettings }) {
                       textAlign: 'center', lineHeight: '28px', fontSize: 13, fontWeight: 700
                     }}>{team.rank}</span>
                   </td>
-                  <td style={{ fontWeight: 600 }}>{team.name}</td>
-                  <td style={{ color: '#7aafc4' }}>{team.manager}</td>
-                  <td style={{ color: '#00a86b' }}>{team.wins}</td>
-                  <td style={{ color: '#ef4444' }}>{team.losses}</td>
-                  <td style={{ color: '#7aafc4' }}>{team.ties}</td>
-                  <td>{(+team.pct * 100).toFixed(1)}%</td>
+                  <td data-label="Team" style={{ fontWeight: 600 }}>{team.name}</td>
+                  <td data-label="Manager" style={{ color: '#7aafc4' }}>{team.manager}</td>
+                  <td data-label="W" style={{ color: '#00a86b' }}>{team.wins}</td>
+                  <td data-label="L" style={{ color: '#ef4444' }}>{team.losses}</td>
+                  <td data-label="T" style={{ color: '#7aafc4' }}>{team.ties}</td>
+                  <td data-label="Pct">{(+team.pct * 100).toFixed(1)}%</td>
                 </tr>
               ))}
               {standings.length === 0 && !loading && (

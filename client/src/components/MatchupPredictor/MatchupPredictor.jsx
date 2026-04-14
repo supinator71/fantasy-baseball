@@ -252,13 +252,13 @@ export default function MatchupPredictor({ leagueSettings }) {
                   <tr key={i} style={{
                     background: cat.my_winning ? 'rgba(0,168,107,0.06)' : cat.opp_winning ? 'rgba(239,68,68,0.06)' : 'transparent'
                   }}>
-                    <td style={{ textAlign: 'right', paddingRight: 24, fontWeight: 600, fontSize: 15,
+                    <td data-label="My Team" style={{ textAlign: 'right', paddingRight: 24, fontWeight: 600, fontSize: 15,
                       color: cat.my_winning ? '#00a86b' : cat.opp_winning ? '#ef4444' : '#e2e8f0'
                     }}>
                       {cat.my_winning && <span style={{ marginRight: 8, fontSize: 12 }}>▲</span>}
                       {cat.my_value ?? '—'}
                     </td>
-                    <td style={{ textAlign: 'center' }}>
+                    <td data-label="Category" style={{ textAlign: 'center' }}>
                       <span style={{
                         display: 'inline-block', padding: '3px 10px', borderRadius: 4,
                         background: cat.my_winning ? 'rgba(0,168,107,0.2)' : cat.opp_winning ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.06)',
@@ -266,7 +266,7 @@ export default function MatchupPredictor({ leagueSettings }) {
                         color: cat.my_winning ? '#00a86b' : cat.opp_winning ? '#ef4444' : '#7aafc4'
                       }}>{getStatInfo(cat.stat_id, cat.name).abbv}</span>
                     </td>
-                    <td style={{ paddingLeft: 24, fontWeight: 600, fontSize: 15,
+                    <td data-label="Opponent" style={{ paddingLeft: 24, fontWeight: 600, fontSize: 15,
                       color: cat.opp_winning ? '#00a86b' : cat.my_winning ? '#ef4444' : '#e2e8f0'
                     }}>
                       {cat.opp_value ?? '—'}

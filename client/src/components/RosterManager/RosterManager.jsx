@@ -162,18 +162,18 @@ function RosterSection({ title, players, color, trendMap = {} }) {
         <tbody>
           {players.map((p, i) => (
             <tr key={i}>
-              <td style={{ color: '#7aafc4', fontSize: 12, fontWeight: 600 }}>{p.status}</td>
-              <td style={{ fontWeight: 500 }}>{p.name}</td>
-              <td>
+              <td data-label="Slot" style={{ color: '#7aafc4', fontSize: 12, fontWeight: 600 }}>{p.status}</td>
+              <td data-label="Player" style={{ fontWeight: 500 }}>{p.name}</td>
+              <td data-label="Position">
                 {(Array.isArray(p.positions) ? p.positions : [p.positions]).map((pos, j) => (
                   <span key={j} className={`badge badge-${String(pos).toLowerCase()}`} style={{ marginRight: 4 }}>{pos}</span>
                 ))}
               </td>
-              <td style={{ color: '#7aafc4' }}>{p.team}</td>
-              <td style={{ textAlign: 'center' }}>
+              <td data-label="Team" style={{ color: '#7aafc4' }}>{p.team}</td>
+              <td data-label="Trend" style={{ textAlign: 'right' }}>
                 <TrendArrow trend={trendMap[p.name]} />
               </td>
-              <td>
+              <td data-label="Status">
                 {p.injury ? (
                   <span style={{ color: '#ef4444', fontSize: 12 }}>{p.injury}</span>
                 ) : (

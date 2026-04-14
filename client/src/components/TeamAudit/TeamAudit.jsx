@@ -282,11 +282,11 @@ export default function TeamAudit({ leagueSettings }) {
                 <tbody>
                   {audit.vorByPlayer.map((p, i) => (
                     <tr key={i}>
-                      <td style={{ fontWeight: 600 }}>{p.name}</td>
-                      <td>
+                      <td data-label="Player" style={{ fontWeight: 600 }}>{p.name}</td>
+                      <td data-label="Pos">
                         <span className={`badge badge-${String(p.position || '').toLowerCase()}`}>{p.position}</span>
                       </td>
-                      <td>
+                      <td data-label="VOR Score">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <div style={{
                             width: Math.max(4, (p.vor / 100) * 80), height: 6, borderRadius: 3,
@@ -295,7 +295,7 @@ export default function TeamAudit({ leagueSettings }) {
                           <span style={{ fontSize: 13, fontWeight: 600 }}>{p.vor}/100</span>
                         </div>
                       </td>
-                      <td>
+                      <td data-label="Scarcity">
                         <span style={{
                           fontSize: 11, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
                           background: p.scarcity === 'elite' ? 'rgba(239,68,68,0.15)' : p.scarcity === 'scarce' ? 'rgba(245,158,11,0.15)' : 'rgba(74,175,219,0.1)',
