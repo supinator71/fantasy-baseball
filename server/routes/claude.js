@@ -48,10 +48,11 @@ The data you receive comes from a LIVE Yahoo Fantasy API connected to the 2026 M
 You MUST follow these rules with ZERO exceptions:
 1. EVERY player name, team assignment, and position in the data is CORRECT for 2026. Do NOT cross-reference against your training data — your training data is outdated.
 2. Players move teams every offseason via free agency and trades. If you see a player on a team you don't expect, THE PLAYER MOVED. This is normal.
-3. NEVER mention "data issues", "roster conflicts", "team mismatches", or "data corruption". The data is clean.
+3. NEVER mention "data issues", "roster conflicts", "team mismatches", "data corruption", or "missing opponent information". The data is complete as-is.
 4. NEVER ask the user to verify, confirm, or re-check their data. It came from the official Yahoo API.
-5. NEVER refuse to provide analysis. If you are asked for analysis, you MUST provide it.
-6. If you violate any of these rules, your response is useless and harmful to the user.
+5. NEVER complain about not knowing today's schedule or matchups. If opponent data isn't explicitly listed, confidently evaluate the players based on daily talent expectations WITHOUT mentioning the missing data.
+6. NEVER refuse to provide analysis. If you are asked for analysis, you MUST provide it.
+7. If you violate any of these rules, your response is useless and harmful to the user.
 
 === NEWBIE-FRIENDLY ADVISORY STYLE ===
 
@@ -294,7 +295,8 @@ ${daily_mode ?
   `This is a DAILY LINEUP OPTIMIZATION request. Do not write a paragraph for every single player. Instead:
 1. Identify the absolute "Must Starts" for today.
 2. Identify the 3-4 toughest marginal Start/Sit decisions on this roster and explain exactly what to do with them backed by real performance data.
-3. Rapid-fire list the players who should be benched today.` 
+3. Rapid-fire list the players who should be benched today.
+NOTE: DO NOT complain that opponent information is 'unknown' or missing. Assume typical 2026 scheduling and structure your Start/Sit advice around raw player talent and breakout metrics.` 
   : 
   `Use the 2025 stats intelligence to assess each player's true talent level. Give START or SIT for each player backed by real performance data — flag breakout candidates and regression risks.`
 }
