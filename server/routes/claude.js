@@ -100,15 +100,21 @@ function getLeagueSettings() {
 
 function leagueContext(settings) {
   if (!settings) return '';
-  let format = settings.scoring_type || 'Head-to-Head Points';
-  if (format.toLowerCase().includes('head') && !format.toLowerCase().includes('point')) {
-    format = 'Head-to-Head Points'; // Force points for this user's specific leagues per request
-  } else if (format.toLowerCase() === 'roto') {
-    format = 'Rotisserie (Roto)';
+  const rawType = (settings.scoring_type || '').toLowerCase();
+  
+  let format = 'Rotisserie (Roto)';
+  let rule = 'DO NOT talk about weekly head-to-head matchups. Focus on long-term categorical accumulation over the whole 162-game season.';
+  
+  if (rawType.includes('headpoint')) {
+    format = 'Head-to-Head Points';
+    rule = 'DO NOT give 5x5 Roto advice. Ignore balancing categories. Give advice explicitly tailored for maximizing raw total points in a weekly matchup!';
+  } else if (rawType.includes('head')) {
+    format = 'Head-to-Head Categories';
+    rule = 'DO NOT focus solely on total points. You MUST consider how a player balances and wins specific stat categories against a weekly opponent.';
   }
   
   return `League Rules: ${settings.num_teams || 12} teams, **${format} scoring**. 
-(CRITICAL RULE: The user is playing ${format}. DO NOT give 5x5 Roto advice. DO NOT talk about balancing categories. Give advice explicitly tailored for ${format} where total volume matters most!)
+(CRITICAL RULE: The user is playing ${format}. ${rule})
 Scoring Events/Categories: ${(settings.stat_categories || []).join(', ')}.`;
 }
 
