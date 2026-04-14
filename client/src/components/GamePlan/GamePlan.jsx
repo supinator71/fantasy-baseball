@@ -95,7 +95,7 @@ export default function GamePlan({ leagueSettings }) {
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>Weekly Game Plan</h1>
           <p style={{ color: '#7aafc4' }}>AI-optimized lineup, streaming targets, daily moves, and swing category strategy</p>
         </div>
-        <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>
+        <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: '100%', maxWidth: 220 }}>
           {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
         </select>
       </div>
@@ -110,15 +110,15 @@ export default function GamePlan({ leagueSettings }) {
 
       {!rosterLoading && roster.length > 0 && !plan && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600 }}>Ready to plan (roster: {roster.length} players)</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 600 }}>Ready to plan ({roster.length} players)</h3>
             <button className="btn btn-primary" onClick={generatePlan} disabled={loading}
-              style={{ padding: '12px 24px', fontSize: 15, background: 'linear-gradient(135deg, #003278 0%, #001f4c 100%)', whiteSpace: 'nowrap' }}>
-              {loading ? '⟳ Building plan...' : '📅 Generate Weekly Game Plan'}
+              style={{ fontSize: 14, background: 'linear-gradient(135deg, #003278 0%, #001f4c 100%)' }}>
+              {loading ? '⟳ Building...' : '📅 Generate Game Plan'}
             </button>
           </div>
           <p style={{ color: '#7aafc4', fontSize: 13, margin: 0 }}>
-            Generates optimal lineup, streaming targets, daily decisions, and category strategy for this week.
+            Generates optimal lineup, streaming targets, daily decisions, and category strategy.
           </p>
         </div>
       )}
@@ -165,7 +165,7 @@ export default function GamePlan({ leagueSettings }) {
           )}
 
           {/* Optimal lineup + streaming */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
             {plan.optimalLineup?.length > 0 && (
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e3d5c', fontSize: 12, fontWeight: 700, color: '#7aafc4', textTransform: 'uppercase', letterSpacing: 1 }}>
@@ -227,8 +227,8 @@ export default function GamePlan({ leagueSettings }) {
                     background: '#122840', border: '1px solid #1e3d5c', borderRadius: 8, padding: '12px 16px',
                     borderLeft: '3px solid #4aafdb'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 4 }}>
-                      <div style={{ fontSize: 13, color: '#7aafc4' }}>{d.decision}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
+                      <div style={{ fontSize: 13, color: '#7aafc4', flex: 1, minWidth: 0 }}>{d.decision}</div>
                       <span style={{ background: 'rgba(0,168,107,0.15)', color: '#00a86b', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
                         → {d.recommendation}
                       </span>
@@ -247,13 +247,13 @@ export default function GamePlan({ leagueSettings }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {DAY_ORDER.filter(d => plan.dailyMoves[d]).map(day => (
                   <div key={day} style={{
-                    display: 'flex', gap: 16, alignItems: 'flex-start',
+                    display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start',
                     padding: '10px 14px', background: '#122840', borderRadius: 8, border: '1px solid #1e3d5c'
                   }}>
-                    <div style={{ width: 76, flexShrink: 0, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', color: '#4aafdb', paddingTop: 1 }}>
+                    <div style={{ minWidth: 70, flexShrink: 0, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', color: '#4aafdb', paddingTop: 1 }}>
                       {day.charAt(0).toUpperCase() + day.slice(1)}
                     </div>
-                    <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.4 }}>{plan.dailyMoves[day]}</div>
+                    <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.4, flex: 1, minWidth: 180 }}>{plan.dailyMoves[day]}</div>
                   </div>
                 ))}
               </div>
