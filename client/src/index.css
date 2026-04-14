@@ -12,11 +12,11 @@
   --secondary-hover: #002354;
   
   /* Glass / Depth Elements */
-  --bg-app: #030812;       /* Very deep navy/black */
-  --bg-card: rgba(0, 50, 120, 0.08);
-  --bg-card-hover: rgba(0, 50, 120, 0.12);
-  --border: rgba(255, 255, 255, 0.08);
-  --border-glow: rgba(0, 50, 120, 0.4);
+  --bg-app: #020613;       /* Very deep navy/black */
+  --bg-card: rgba(0, 35, 85, 0.2);
+  --bg-card-hover: rgba(0, 45, 105, 0.3);
+  --border: rgba(255, 255, 255, 0.12);
+  --border-glow: rgba(192, 17, 31, 0.4);
   
   /* Alerts */
   --success: #10b981;
@@ -38,8 +38,8 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   background-image: 
-    radial-gradient(ellipse at top right, rgba(0, 50, 120, 0.15), transparent 40%),
-    radial-gradient(ellipse at bottom left, rgba(192, 17, 31, 0.08), transparent 40%);
+    radial-gradient(circle at 100% 0%, rgba(0, 50, 120, 0.3), transparent 50%),
+    radial-gradient(circle at 0% 100%, rgba(192, 17, 31, 0.15), transparent 50%);
   background-attachment: fixed;
 }
 
@@ -72,14 +72,15 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-primary { 
-  background: var(--primary); 
+  background: linear-gradient(135deg, var(--primary) 0%, #fa192f 100%); 
   color: white; 
   box-shadow: 0 4px 14px rgba(192, 17, 31, 0.3);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 .btn-primary:hover { 
-  background: var(--primary-hover); 
-  box-shadow: 0 6px 20px rgba(192, 17, 31, 0.4);
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, #e51325 0%, #ff3143 100%);
+  box-shadow: 0 6px 20px rgba(192, 17, 31, 0.5);
+  transform: translateY(-2px);
 }
 
 .btn-success { background: var(--success); color: white; }
@@ -99,20 +100,20 @@ h1, h2, h3, h4, h5, h6 {
 /* ===================== CARD (GLASSMORPHISM) ===================== */
 .card {
   background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 24px;
-  transition: all 0.3s ease;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 .card:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-glow);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 50, 120, 0.1);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 24px rgba(192, 17, 31, 0.15);
 }
 
 /* ===================== BADGES ===================== */

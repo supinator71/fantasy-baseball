@@ -75,7 +75,7 @@ export default function App() {
             <button className="hamburger-btn" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
               ☰
             </button>
-            <span style={{ fontSize: 18, fontWeight: 700, color: '#007a7a' }}>⚾ Fantasy HQ</span>
+            <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>⚾ Fantasy HQ</span>
           </div>
 
           <main className="main-content">
@@ -121,9 +121,9 @@ function Sidebar({ authenticated, isOpen, onClose }) {
 
   return (
     <nav className={`sidebar ${isOpen ? 'open' : ''}`}>
-      <div style={{ padding: '0 16px 20px', borderBottom: '1px solid #1e3d5c', marginBottom: 8 }}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: '#007a7a' }}>⚾ Fantasy HQ</div>
-        <div style={{ fontSize: 11, color: '#4a7a94', marginTop: 2 }}>MLB Draft & Season Manager</div>
+      <div style={{ padding: '0 16px 20px', borderBottom: '1px solid var(--border)', marginBottom: 8 }}>
+        <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>⚾ Fantasy HQ</div>
+        <div style={{ fontSize: 12, color: 'var(--primary)', marginTop: 4, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Season Manager</div>
       </div>
 
       {authenticated && navItems.map(item => (
@@ -132,14 +132,14 @@ function Sidebar({ authenticated, isOpen, onClose }) {
           style={({ isActive }) => ({
             display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
             textDecoration: 'none', borderRadius: 10, margin: '2px 8px',
-            background: isActive ? 'rgba(192, 17, 31, 0.15)' : 'transparent',
-            color: isActive ? '#f8fafc' : '#94a3b8',
-            borderRight: isActive ? '3px solid var(--primary)' : '3px solid transparent',
+            background: isActive ? 'linear-gradient(90deg, rgba(192, 17, 31, 0.25) 0%, transparent 100%)' : 'transparent',
+            color: isActive ? '#ffffff' : 'var(--text-muted)',
+            borderLeft: isActive ? '3px solid var(--primary)' : '3px solid transparent',
             fontSize: 14, fontWeight: isActive ? 600 : 500,
             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             fontFamily: 'var(--font-heading)',
           })}>
-          <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
+          <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0, opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
         </NavLink>
       ))}
