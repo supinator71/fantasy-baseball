@@ -704,7 +704,9 @@ function analyzeRosterStrengths(roster = [], leagueContext = {}) {
   const activeRoster = roster.filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
 
   activeRoster.forEach(player => {
-    const pos = String(player.position || '').split('/')[0].toUpperCase()
+    // Yahoo returns positions as "C,1B" or "OF/1B" — normalize both delimiters
+    const primaryPos = String(player.position || '').split(/[/,]/)[0].trim().toUpperCase() || 'OF'
+    const pos = primaryPos
     if (!byPosition[pos]) byPosition[pos] = []
     const vor = calculateVOR(player.stats || {}, pos, leagueSize, scoringType, statMapping)
     byPosition[pos].push({ ...player, vor })
