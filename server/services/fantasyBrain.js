@@ -97,26 +97,47 @@ function analyzeCategories(myStats = {}, leagueStandings = [], scoringType = 'Po
   const result = { topPerformers: [], weaknesses: [], advice: '' }
 
   if (!leagueStandings || leagueStandings.length === 0) {
-    result.advice = 'No league standings provided — focus on maximizing total points output.'
+    result.advice = 'No league standings provided — focus on maximizing total output.'
     return result
   }
 
-  // Calculate generic team points based on Yahoo settings
-  const calcTeamPts = (s) => {
-    let hittingPts = (parseFloat(s.R||0) * 1.9) + (parseFloat(s['1B']||s.H||0) * 2.6) + (parseFloat(s['2B']||0) * 5.2) + (parseFloat(s['3B']||0) * 7.8) + (parseFloat(s.HR||0) * 10.4) + (parseFloat(s.RBI||0) * 1.9) + (parseFloat(s.SB||0) * 4.2) + (parseFloat(s.BB||0) * 2.6) + (parseFloat(s.HBP||0) * 2.6)
-    let pitchingPts = (parseFloat(s.W||0) * 8) + (parseFloat(s.SV||0) * 8) + ((parseFloat(s.IP||0)*3) * 1) + (parseFloat(s.HA||s.H||0) * -1.3) + (parseFloat(s.ER||0) * -3) + (parseFloat(s.BBA||s.BB||0) * -1.3) + (parseFloat(s.HBPA||s.HBP||0) * -1.3) + (parseFloat(s.K||0) * 3)
-    return hittingPts + pitchingPts
-  }
+  const format = String(scoringType).toLowerCase();
+  const isPoints = format.includes('point') || format === 'points';
 
-  const myPts = calcTeamPts(myStats)
-  const oppStats = leagueStandings[0]?.stats || leagueStandings[0] || {}
-  const oppPts = calcTeamPts(oppStats)
+  if (isPoints) {
+    // Calculate generic team points based on Yahoo settings
+    const calcTeamPts = (s) => {
+      let hittingPts = (parseFloat(s.R||0) * 1.9) + (parseFloat(s['1B']||s.H||0) * 2.6) + (parseFloat(s['2B']||0) * 5.2) + (parseFloat(s['3B']||0) * 7.8) + (parseFloat(s.HR||0) * 10.4) + (parseFloat(s.RBI||0) * 1.9) + (parseFloat(s.SB||0) * 4.2) + (parseFloat(s.BB||0) * 2.6) + (parseFloat(s.HBP||0) * 2.6)
+      let pitchingPts = (parseFloat(s.W||0) * 8) + (parseFloat(s.SV||0) * 8) + ((parseFloat(s.IP||0)*3) * 1) + (parseFloat(s.HA||s.H||0) * -1.3) + (parseFloat(s.ER||0) * -3) + (parseFloat(s.BBA||s.BB||0) * -1.3) + (parseFloat(s.HBPA||s.HBP||0) * -1.3) + (parseFloat(s.K||0) * 3)
+      return hittingPts + pitchingPts
+    }
 
-  if (myPts > 0 || oppPts > 0) {
-    const margin = myPts - oppPts
-    result.advice = `H2H Points focus: Maximize volume (2-start SPs, 7-game hitters). Projected margin: ${margin > 0 ? '+' : ''}${margin.toFixed(1)} pts against opponent.`
+    const myPts = calcTeamPts(myStats)
+    const oppStats = leagueStandings[0]?.stats || leagueStandings[0] || {}
+    const oppPts = calcTeamPts(oppStats)
+
+    if (myPts > 0 || oppPts > 0) {
+      const margin = myPts - oppPts
+      result.advice = `H2H Points focus: Maximize volume (2-start SPs, 7-game hitters). Projected margin: ${margin > 0 ? '+' : ''}${margin.toFixed(1)} pts against opponent.`
+    } else {
+      result.advice = 'Points focus: Optimize weekly lineup for maximum plate appearances and SP innings. Avoid negative points (high ER/Hits allowed).'
+    }
   } else {
-    result.advice = 'Points focus: Optimize weekly lineup for maximum plate appearances and SP innings. Avoid negative points (high ER/Hits allowed).'
+    // ROTO / CATEGORIES FOCUS
+    const cats = ['R', 'HR', 'RBI', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
+    cats.forEach(c => {
+      const myVal = parseFloat(myStats[c] || 0);
+      const oppStats = leagueStandings[0]?.stats || leagueStandings[0] || {};
+      const oppVal = parseFloat(oppStats[c] || 0);
+      if (myVal > oppVal) result.topPerformers.push(c);
+      else if (oppVal > myVal) result.weaknesses.push(c);
+    });
+
+    if (format === 'roto') {
+      result.advice = `Roto Strategy: Protect your ratios (ERA/WHIP/AVG) while streaming for volume voids like ${result.weaknesses.slice(0, 2).join('/') || 'SB/Saves'}.`;
+    } else {
+      result.advice = `H2H Category Strategy: You must win 6 categories to guarantee a victory. Focus your waiver wire adds purely on winning the swing categories: ${result.weaknesses.slice(0, 2).join(' and ') || 'Runs and Ks'}.`;
+    }
   }
 
   return result
@@ -130,55 +151,92 @@ function analyzeCategories(myStats = {}, leagueStandings = [], scoringType = 'Po
 const HITTING_WEIGHTS = { R: 1.9, '1B': 2.6, '2B': 5.2, '3B': 7.8, HR: 10.4, RBI: 1.9, SB: 4.2, BB: 2.6, HBP: 2.6 }
 const PITCHING_WEIGHTS = { W: 8, SV: 8, OUT: 1, H: -1.3, ER: -3, BB: -1.3, HBP: -1.3, K: 3 }
 
-function calculateVOR(playerStats = {}, position, leagueSize = 12) {
+// Standings Gain Points (SGP) rough denominators for 12-team 5x5 Roto/Categories
+const SGP_DENOMINATORS = {
+  HR: 6.5, R: 25, RBI: 25, SB: 6, AVG_BASELINE: 0.252,
+  W: 5.5, SV: 6.5, K: 40, ERA_BASELINE: 4.00, WHIP_BASELINE: 1.30
+}
+
+function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType = 'Points') {
   if (!playerStats || Object.keys(playerStats).length === 0) return 0
 
   const pos = String(position || '').split('/')[0].split(',')[0].trim().toUpperCase()
   const isPitcher = pos === 'SP' || pos === 'RP' || pos === 'P'
   
-  let playerPts = 0
+  const format = String(scoringType).toLowerCase();
+  const isPoints = format.includes('point') || format === 'points';
 
-  if (!isPitcher) {
-    const hits = parseFloat(playerStats.H || 0)
-    const doubles = parseFloat(playerStats['2B'] || 0)
-    const triples = parseFloat(playerStats['3B'] || 0)
-    const hrs = parseFloat(playerStats.HR || 0)
-    const singles = parseFloat(playerStats['1B'] || hits - doubles - triples - hrs || 0)
+  if (isPoints) {
+    let playerPts = 0
+    if (!isPitcher) {
+      const hits = parseFloat(playerStats.H || 0)
+      const doubles = parseFloat(playerStats['2B'] || 0)
+      const triples = parseFloat(playerStats['3B'] || 0)
+      const hrs = parseFloat(playerStats.HR || 0)
+      const singles = parseFloat(playerStats['1B'] || hits - doubles - triples - hrs || 0)
 
-    playerPts += (parseFloat(playerStats.R || 0) * HITTING_WEIGHTS.R)
-    playerPts += (singles * HITTING_WEIGHTS['1B'])
-    playerPts += (doubles * HITTING_WEIGHTS['2B'])
-    playerPts += (triples * HITTING_WEIGHTS['3B'])
-    playerPts += (hrs * HITTING_WEIGHTS.HR)
-    playerPts += (parseFloat(playerStats.RBI || 0) * HITTING_WEIGHTS.RBI)
-    playerPts += (parseFloat(playerStats.SB || 0) * HITTING_WEIGHTS.SB)
-    playerPts += (parseFloat(playerStats.BB || 0) * HITTING_WEIGHTS.BB)
-    playerPts += (parseFloat(playerStats.HBP || 0) * HITTING_WEIGHTS.HBP)
-  } else {
-    const ip = parseFloat(playerStats.IP || 0)
-    const outs = Math.floor(ip) * 3 + Math.round((ip % 1) * 10)
+      playerPts += (parseFloat(playerStats.R || 0) * HITTING_WEIGHTS.R)
+      playerPts += (singles * HITTING_WEIGHTS['1B'])
+      playerPts += (doubles * HITTING_WEIGHTS['2B'])
+      playerPts += (triples * HITTING_WEIGHTS['3B'])
+      playerPts += (hrs * HITTING_WEIGHTS.HR)
+      playerPts += (parseFloat(playerStats.RBI || 0) * HITTING_WEIGHTS.RBI)
+      playerPts += (parseFloat(playerStats.SB || 0) * HITTING_WEIGHTS.SB)
+      playerPts += (parseFloat(playerStats.BB || 0) * HITTING_WEIGHTS.BB)
+      playerPts += (parseFloat(playerStats.HBP || 0) * HITTING_WEIGHTS.HBP)
+    } else {
+      const ip = parseFloat(playerStats.IP || 0)
+      const outs = Math.floor(ip) * 3 + Math.round((ip % 1) * 10)
 
-    playerPts += (parseFloat(playerStats.W || 0) * PITCHING_WEIGHTS.W)
-    playerPts += (parseFloat(playerStats.SV || 0) * PITCHING_WEIGHTS.SV)
-    playerPts += (outs * PITCHING_WEIGHTS.OUT)
-    playerPts += (parseFloat(playerStats.HA || playerStats.H || 0) * PITCHING_WEIGHTS.H)
-    playerPts += (parseFloat(playerStats.ER || 0) * PITCHING_WEIGHTS.ER)
-    playerPts += (parseFloat(playerStats.BBA || playerStats.BB || 0) * PITCHING_WEIGHTS.BB)
-    playerPts += (parseFloat(playerStats.HBPA || playerStats.HBP || 0) * PITCHING_WEIGHTS.HBP)
-    playerPts += (parseFloat(playerStats.K || 0) * PITCHING_WEIGHTS.K)
+      playerPts += (parseFloat(playerStats.W || 0) * PITCHING_WEIGHTS.W)
+      playerPts += (parseFloat(playerStats.SV || 0) * PITCHING_WEIGHTS.SV)
+      playerPts += (outs * PITCHING_WEIGHTS.OUT)
+      playerPts += (parseFloat(playerStats.HA || playerStats.H || 0) * PITCHING_WEIGHTS.H)
+      playerPts += (parseFloat(playerStats.ER || 0) * PITCHING_WEIGHTS.ER)
+      playerPts += (parseFloat(playerStats.BBA || playerStats.BB || 0) * PITCHING_WEIGHTS.BB)
+      playerPts += (parseFloat(playerStats.HBPA || playerStats.HBP || 0) * PITCHING_WEIGHTS.HBP)
+      playerPts += (parseFloat(playerStats.K || 0) * PITCHING_WEIGHTS.K)
+    }
+    const rawScore = playerPts
+    if (rawScore <= 0) return 0
+    return Math.round(Math.min(100, Math.max(0, (rawScore - 250) / 5)))
+  } 
+  else {
+    // CATEGORIES / ROTO — Use Standings Gain Points (SGP) Evaluation
+    let sgpTotal = 0;
+    
+    if (!isPitcher) {
+      sgpTotal += (parseFloat(playerStats.R || 0) / SGP_DENOMINATORS.R);
+      sgpTotal += (parseFloat(playerStats.HR || 0) / SGP_DENOMINATORS.HR);
+      sgpTotal += (parseFloat(playerStats.RBI || 0) / SGP_DENOMINATORS.RBI);
+      sgpTotal += (parseFloat(playerStats.SB || 0) / SGP_DENOMINATORS.SB);
+      
+      const ab = parseFloat(playerStats.AB || 0);
+      const avg = parseFloat(playerStats.AVG || 0);
+      if (ab > 0) {
+        // Impact on team AVG: typical denominator is around ~12 for SGP impact
+        sgpTotal += ((avg - SGP_DENOMINATORS.AVG_BASELINE) * ab) / 15;
+      }
+    } else {
+      sgpTotal += (parseFloat(playerStats.W || 0) / SGP_DENOMINATORS.W);
+      sgpTotal += (parseFloat(playerStats.SV || 0) / SGP_DENOMINATORS.SV);
+      sgpTotal += (parseFloat(playerStats.K || 0) / SGP_DENOMINATORS.K);
+      
+      const ip = parseFloat(playerStats.IP || 0);
+      const era = parseFloat(playerStats.ERA || SGP_DENOMINATORS.ERA_BASELINE);
+      const whip = parseFloat(playerStats.WHIP || SGP_DENOMINATORS.WHIP_BASELINE);
+      if (ip > 0) {
+        // Ratio impacts: lower ERA/WHIP over more innings generates positive SGP
+        sgpTotal += ((SGP_DENOMINATORS.ERA_BASELINE - era) * ip) / 20;
+        sgpTotal += ((SGP_DENOMINATORS.WHIP_BASELINE - whip) * ip) / 5;
+      }
+    }
+    
+    // Normalize SGP total to the familiar 0-100 VOR scale for legacy compatibility
+    // A replacement level player is around 0 SGP. An elite player is ~15+ SGP.
+    if (sgpTotal <= -5) return 0;
+    return Math.round(Math.min(100, Math.max(0, (sgpTotal + 2) * 5)));
   }
-
-  // To map raw points to a 0-100 VOR score, we set a rough baseline
-  // A typical elite hitter/pitcher might score 600-800 points, replacement level ~300.
-  // We'll normalize to 0-100 for compatibility with other functions.
-  
-  const rawScore = playerPts
-  
-  if (rawScore <= 0) return 0
-  
-  const normalized = Math.min(100, Math.max(0, (rawScore - 250) / 5))
-
-  return Math.round(normalized)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -217,11 +275,11 @@ const BALLPARK_FACTORS = {
   LAD: 0.93, NYM: 0.92, WSH: 0.92, LAA: 0.91, HOU: 0.91, CWS: 0.90,
 }
 
-function streamingValue(pitcher = {}, opposingTeamStats = {}) {
+function streamingValue(pitcher = {}, opposingTeamStats = {}, scoringType = 'Points') {
   let score = 50  // neutral baseline
-
-  // In Points format, volume (innings) and Ks are heavily rewarded.
-  // We want to avoid teams with high walk rates or high run scoring.
+  
+  const format = String(scoringType).toLowerCase();
+  const isPoints = format.includes('point') || format === 'points';
 
   // Opponent offensive quality
   const oppWOBA = parseFloat(opposingTeamStats.wOBA || opposingTeamStats.avg || 0.315)
@@ -229,13 +287,6 @@ function streamingValue(pitcher = {}, opposingTeamStats = {}) {
   else if (oppWOBA < 0.310) score += 8
   else if (oppWOBA > 0.330) score -= 15
   else if (oppWOBA > 0.320) score -= 8
-
-  // Opponent K-rate — High K opponents yield massive points bonuses
-  const oppKRate = parseFloat(opposingTeamStats.kRate || opposingTeamStats.k_pct || 0.22)
-  if (oppKRate > 0.26) score += 20 // Huge boost in points
-  else if (oppKRate > 0.24) score += 10
-  else if (oppKRate < 0.20) score -= 10
-  else if (oppKRate < 0.18) score -= 18 // Low Ks = low points ceiling
 
   // Pitcher's recent K/9
   const kPer9 = parseFloat(pitcher.k9 || pitcher.k_per_9 || 8.0)
@@ -251,16 +302,43 @@ function streamingValue(pitcher = {}, opposingTeamStats = {}) {
   else if (parkFactor > 1.10) score -= 10
   else if (parkFactor > 1.05) score -= 5
 
-  // Pitcher innings depth (more outs = more points)
-  const avgIP = parseFloat(pitcher.ip_per_start || pitcher.avg_ip || 5.0)
-  if (avgIP >= 6.0) score += 15
-  else if (avgIP >= 5.5) score += 8
-  else if (avgIP < 4.5) score -= 15
+  if (isPoints) {
+    // POINTS FORMAT: Volume and Ks are heavily rewarded. Avoid high K opponents for safety.
+    const oppKRate = parseFloat(opposingTeamStats.kRate || opposingTeamStats.k_pct || 0.22)
+    if (oppKRate > 0.26) score += 20 // Huge boost in points
+    else if (oppKRate > 0.24) score += 10
+    else if (oppKRate < 0.20) score -= 10
+    else if (oppKRate < 0.18) score -= 18 // Low Ks = low points ceiling
+
+    // Pitcher innings depth (more outs = more points)
+    const avgIP = parseFloat(pitcher.ip_per_start || pitcher.avg_ip || 5.0)
+    if (avgIP >= 6.0) score += 15
+    else if (avgIP >= 5.5) score += 8
+    else if (avgIP < 4.5) score -= 15
+  } else {
+    // ROTO / CATEGORIES FORMAT: Ratios (ERA/WHIP) can destroy a week. 
+    // High K opponents are nice, but not worth a blow-up.
+    const pitcherERA = parseFloat(pitcher.era || 4.00)
+    const pitcherWHIP = parseFloat(pitcher.whip || 1.30)
+    
+    // Severely penalize high-ratio pitchers
+    if (pitcherERA > 4.50) score -= 20;
+    else if (pitcherERA > 4.00) score -= 10;
+    else if (pitcherERA < 3.20) score += 10;
+
+    if (pitcherWHIP > 1.40) score -= 15;
+    else if (pitcherWHIP < 1.15) score += 10;
+    
+    // Opponent team OBP heavily impacts WHIP ratio
+    const oppOBP = parseFloat(opposingTeamStats.obp || 0.320)
+    if (oppOBP > 0.335) score -= 12; // Very risky for WHIP
+    else if (oppOBP < 0.300) score += 8;
+  }
 
   return {
     score: Math.min(100, Math.max(0, Math.round(score))),
     grade: score >= 75 ? 'Elite stream' : score >= 60 ? 'Good stream' : score >= 45 ? 'Neutral' : score >= 30 ? 'Risky' : 'Avoid',
-    factors: { oppWOBA, oppKRate, kPer9, parkFactor, avgIP }
+    factors: { oppWOBA, kPer9, parkFactor, format: isPoints ? 'Points-focused' : 'Ratio-focused' }
   }
 }
 
@@ -292,10 +370,11 @@ function platoonAdvantage(batterHand, pitcherHand) {
 
 function evaluateTrade(giving = [], receiving = [], myRoster = [], leagueContext = {}) {
   const leagueSize = leagueContext.num_teams || 12
+  const scoringType = leagueContext.scoring_type || 'Points'
 
   // VOR score for each side
-  const givingVOR = giving.reduce((sum, p) => sum + calculateVOR(p.stats || {}, p.position, leagueSize), 0)
-  const receivingVOR = receiving.reduce((sum, p) => sum + calculateVOR(p.stats || {}, p.position, leagueSize), 0)
+  const givingVOR = giving.reduce((sum, p) => sum + calculateVOR(p.stats || {}, p.position, leagueSize, scoringType), 0)
+  const receivingVOR = receiving.reduce((sum, p) => sum + calculateVOR(p.stats || {}, p.position, leagueSize, scoringType), 0)
 
   // Positional scarcity weight for what I'm giving up vs receiving
   const givingScarcity = giving.reduce((sum, p) => {

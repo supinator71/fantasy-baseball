@@ -190,7 +190,7 @@ router.post('/draft/recommend', async (req, res) => {
   // fantasyBrain: VOR + scarcity for top available
   const enrichedPlayers = (available_players || []).slice(0, 20).map(p => {
     const pos = String(p.position || '').split('/')[0].toUpperCase();
-    const vor = brain.calculateVOR(p.stats || {}, pos, teams);
+    const vor = brain.calculateVOR(p.stats || {}, pos, teams, settings?.scoring_type);
     const scarcity = brain.getPositionalScarcity(pos, teams);
     const adpValue = (pick_number || 1) - (p.adp || pick_number || 1);
     return { ...p, vor, scarcity: scarcity.tier, dropoff: scarcity.replacementDropoff, adpValue: +adpValue.toFixed(1) };
@@ -270,7 +270,7 @@ router.post('/startsit', async (req, res) => {
   // fantasyBrain: streaming value + platoon for each player
   const enriched = (players || []).map(p => {
     const platoon = brain.platoonAdvantage(p.bats || p.hand, p.pitcher_hand || 'R');
-    const streaming = brain.streamingValue(p, p.opponent_stats || {});
+    const streaming = brain.streamingValue(p, p.opponent_stats || {}, settings?.scoring_type);
     const games = brain.getWeeklyGameCount(p.team || '', 1);
     return { ...p, platoon, streaming, weekGames: games };
   });
@@ -498,16 +498,16 @@ OPPONENT: ${opponent?.name}
 Stats: ${JSON.stringify(opponent?.stats || [])}
 
 Categories: ${JSON.stringify(stat_categories || ['W','SV','OUT','H','ER','BB','HBP','K','R','1B','2B','3B','HR','RBI','SB'])}
-Pre-computed points analysis: ${JSON.stringify(catAnalysis)}
+Pre-computed matchup analysis: ${JSON.stringify(catAnalysis)}
 
 IMPORTANT: Write all text values in clean, conversational prose. No brackets, no code syntax. Write like a sports analyst breaking down a matchup.
 
 Return ONLY valid JSON (no markdown):
 {
-  "categories": [{ "name": "Total Points", "my_proj": 350, "opp_proj": 330, "winner": "me", "confidence": "high", "note": "A readable sentence about the points projection" }],
-  "projected_wins": 350, "projected_losses": 330, "projected_ties": 0,
+  "categories": [{ "name": "Category Name (e.g. HR or Total Points)", "my_proj": "value", "opp_proj": "value", "winner": "me", "confidence": "high", "note": "A readable sentence about this category projection" }],
+  "projected_wins": 5, "projected_losses": 4, "projected_ties": 1,
   "overall_confidence": "medium",
-  "lineup_recommendations": "Write specific actionable moves in conversational prose to maximize points",
+  "lineup_recommendations": "Write specific actionable moves in conversational prose",
   "key_matchups": "Describe the 2-3 swing categories and how to win them in plain English",
   "summary": "A clear, readable summary of the matchup projection"
 }`,
@@ -549,7 +549,7 @@ router.post('/audit', async (req, res) => {
   const vorByPlayer = roster.map(p => ({
     name: p.player_name || p.name,
     position: String(p.position || '').split('/')[0].toUpperCase(),
-    vor: brain.calculateVOR(p.stats || {}, p.position, leagueSize),
+    vor: brain.calculateVOR(p.stats || {}, p.position, leagueSize, settings?.scoring_type),
     scarcity: brain.getPositionalScarcity(p.position, leagueSize).tier,
   })).sort((a, b) => b.vor - a.vor);
 
