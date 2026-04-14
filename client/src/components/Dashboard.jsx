@@ -6,10 +6,19 @@ import LastUpdated from './shared/LastUpdated'
 export default function Dashboard({ leagueSettings }) {
   const [leagues, setLeagues] = useState([])
   const [loading, setLoading] = useState(true)
-  const [selectedLeague, setSelectedLeague] = useState('')
-  const [cachedAt, setCachedAt] = useState(null)
   const [fromCache, setFromCache] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [selectedLeague, setSelectedLeague] = useState('')
+  const [cachedAt, setCachedAt] = useState(null)
+
+  const formatScoringType = (type) => {
+    if (!type) return 'Rotisserie';
+    const t = String(type).toLowerCase();
+    if (t.includes('headpoint')) return 'Head-to-Head (Points)';
+    if (t.includes('head')) return 'Head-to-Head (Categories)';
+    if (t === 'roto') return 'Rotisserie';
+    return type;
+  }
 
   useEffect(() => {
     fetchLeagues()
@@ -114,7 +123,7 @@ export default function Dashboard({ leagueSettings }) {
                 <div>
                   <div style={{ fontWeight: 600 }}>{league.name || 'League'}</div>
                   <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                    {league.num_teams} teams • {league.scoring_type} • {league.draft_status}
+                    {league.num_teams} teams • {formatScoringType(league.scoring_type)} • {league.draft_status}
                   </div>
                 </div>
                 {league.league_key === selectedLeague && (
