@@ -667,7 +667,7 @@ Use the VOR totals AND qualitative roster assessment together to assign the grad
 
 IMPORTANT FORMATTING RULES:
 - Write all text in clean, conversational prose.
-- Inside strengths, weaknesses, and moves strings, you MUST format player names with explicitly bolded mathematical metric badges. Example: "**Julio Rodriguez** `[VOR: 85]`"
+- Inside strengths, weaknesses, and moves strings, you MUST format player names with explicitly bolded mathematical metric badges. Example: "**Julio Rodriguez** [VOR: 85]"
 - Write strengths/weaknesses as readable sentences a fantasy manager would enjoy reading.
 - For moves, write "action" as a clear headline (e.g. "Trade Contreras and Jansen for a young starter") and "reasoning" as a persuasive paragraph.
 - The championshipPath should read like a coach's motivational game plan, not a numbered list.
