@@ -157,11 +157,15 @@ router.get('/league/:leagueKey/myroster', requireAuth, async (req, res) => {
         const probablePitchers = await mlbStats.getLiveProbablePitchers();
         if (probablePitchers.length > 0) {
           players.forEach(p => {
-            if (p.position && (p.position.includes('SP') || p.position.includes('P'))) {
+            // Only strictly override Starting Pitchers (SP). Relief pitchers don't get 'probable' tags from MLB.
+            if (p.position === 'SP' || String(p.position).includes('SP/')) {
               const normName = (p.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
               if (probablePitchers.includes(normName)) {
                 // Force AI to see them as actively starting today
                 p.is_starting = 'Yes';
+              } else {
+                // If they are an SP and MLB says they are NOT pitching today, strip the stale Yahoo 'Yes' tag.
+                p.is_starting = 'No';
               }
             }
           });

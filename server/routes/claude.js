@@ -629,14 +629,26 @@ router.post('/audit', async (req, res) => {
   }
 
   try {
+    // Separate Active Roster from IL so AI doesn't evaluate injured pitching/hitting as core strength
+    const activeRosterPrint = roster
+      .filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
+      .map(p => `${p.player_name||p.name} | ${p.position} | ${p.team}`).join('\n');
+
+    const ilRosterPrint = roster
+      .filter(p => p.status && (String(p.status).toUpperCase().includes('IL') || ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) !== -1))
+      .map(p => `${p.player_name||p.name} | ${p.position} | ${p.team} | Status: ${p.status}`).join('\n');
+
     const text = await callClaude([{
       role: 'user',
       content: `${leagueCtx}
 
 === FULL TEAM AUDIT REQUEST ===
 
-ROSTER (${roster.length} players):
-${roster.map(p => `${p.player_name||p.name} | ${p.position} | ${p.team}`).join('\n')}
+ACTIVE ROSTER (Core Starting Power):
+${activeRosterPrint || 'None'}
+
+INJURED \& SUSPENDED LIST (Stash Assets ONLY):
+${ilRosterPrint || 'None'}
 
 VOR RANKINGS (Value Over Replacement, 0-100):
 ${vorByPlayer.map(p => `${p.name} (${p.position}): ${p.vor}/100 [${p.scarcity}]`).join('\n')}
