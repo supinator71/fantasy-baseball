@@ -11,11 +11,13 @@ import StartSit from './components/StartSit/StartSit'
 import TradeAnalyzer from './components/TradeAnalyzer/TradeAnalyzer'
 import Standings from './components/Standings/Standings'
 import MatchupPredictor from './components/MatchupPredictor/MatchupPredictor'
-import LeagueSetup from './components/Layout/LeagueSetup'
+import Baseball101 from './components/shared/Baseball101'
 import TeamAudit from './components/TeamAudit/TeamAudit'
 import TradeFinder from './components/TradeFinder/TradeFinder'
 import GamePlan from './components/GamePlan/GamePlan'
 import PlayerTrends from './components/PlayerTrends/PlayerTrends'
+
+import './index.css'
 
 export default function App() {
   const [authStatus, setAuthStatus] = useState({ authenticated: false, loading: true })
@@ -90,7 +92,8 @@ export default function App() {
                 <Route path="/trade"     element={<TradeAnalyzer leagueSettings={leagueSettings} />} />
                 <Route path="/standings" element={<Standings leagueSettings={leagueSettings} />} />
                 <Route path="/matchup"   element={<MatchupPredictor leagueSettings={leagueSettings} />} />
-                <Route path="/trends"    element={<PlayerTrendsPage />} />
+                <Route path="/trends"    element={<PlayerTrends />} />
+                <Route path="/baseball101" element={<Baseball101 />} />
                 <Route path="/audit"      element={<TeamAudit leagueSettings={leagueSettings} />} />
                 <Route path="/tradefinder" element={<TradeFinder leagueSettings={leagueSettings} />} />
                 <Route path="/gameplan"   element={<GamePlan leagueSettings={leagueSettings} />} />
@@ -115,6 +118,7 @@ function Sidebar({ authenticated, isOpen, onClose }) {
     { to: '/audit',     label: 'Roster Checkup',    icon: '🏅' },
     { to: '/tradefinder', label: 'Trade Finder',    icon: '🔀' },
     { to: '/gameplan',  label: 'Weekly Game Plan',  icon: '🗓️' },
+    { to: '/baseball101', label: 'Baseball 101',    icon: '🎓' },
   ]
 
   return (
