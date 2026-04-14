@@ -135,7 +135,7 @@ export default function WaiverWire({ leagueSettings }) {
             {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
           </select>
           <button className="btn btn-primary" onClick={getAiRecommendations} disabled={aiLoading || available.length === 0}>
-            {aiLoading ? 'Analyzing...' : '🤖 AI Advice'}
+            {aiLoading ? '⟳ Analyzing...' : '⚡ AI Advice'}
           </button>
         </div>
       </div>
@@ -143,7 +143,7 @@ export default function WaiverWire({ leagueSettings }) {
       {aiRec && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h3 style={{ color: '#007a7a' }}>🤖 Waiver Wire Recommendations</h3>
+            <h3 style={{ color: '#00a86b' }}>⚡ Waiver Wire Recommendations</h3>
             <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setAiRec('')}>Dismiss</button>
           </div>
           <div className="ai-response">{aiRec}</div>

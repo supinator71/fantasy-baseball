@@ -295,7 +295,7 @@ export default function MatchupPredictor({ leagueSettings }) {
           {!prediction && (
             <button className="btn btn-primary" onClick={getPrediction} disabled={aiLoading}
               style={{ width: '100%', padding: '14px', fontSize: 15, marginBottom: 16 }}>
-              {aiLoading ? '🤖 Analyzing matchup...' : '🤖 Predict Outcome & Optimize Lineup'}
+              {aiLoading ? '⟳ Analyzing matchup...' : '⚡ Predict Outcome & Optimize Lineup'}
             </button>
           )}
         </>
@@ -406,7 +406,7 @@ export default function MatchupPredictor({ leagueSettings }) {
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-primary" onClick={getPrediction} disabled={aiLoading}>
-              {aiLoading ? '🤖 Re-analyzing...' : '↻ Regenerate Prediction'}
+              {aiLoading ? '⟳ Re-analyzing...' : '↻ Regenerate Prediction'}
             </button>
             <button className="btn btn-ghost" onClick={() => setPrediction(null)}>Clear</button>
           </div>

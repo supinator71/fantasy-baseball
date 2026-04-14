@@ -70,12 +70,12 @@ export default function TradeAnalyzer({ leagueSettings }) {
 
       <button className="btn btn-primary" onClick={analyze} disabled={loading}
         style={{ padding: '12px 24px', fontSize: 15, marginBottom: 16 }}>
-        {loading ? '🤖 Analyzing Trade...' : '🤖 Analyze Trade'}
+        {loading ? '⟳ Analyzing Trade...' : '⚡ Analyze Trade'}
       </button>
 
       {result && (
         <div className="card">
-          <h3 style={{ color: '#007a7a', marginBottom: 12 }}>Trade Analysis</h3>
+          <h3 style={{ color: '#00a86b', marginBottom: 12 }}>⚡ Trade Analysis</h3>
           <div className="ai-response">{result}</div>
         </div>
       )}

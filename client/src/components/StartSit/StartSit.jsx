@@ -77,7 +77,7 @@ export default function StartSit({ leagueSettings }) {
             </div>
             <button className="btn btn-primary" onClick={analyzeDailyLineup} disabled={loading}
               style={{ padding: '12px 24px', fontSize: 15, background: 'linear-gradient(135deg, #00a86b 0%, #007a7a 100%)' }}>
-              {loading ? '🤖 Auto-generating Today\'s Lineup...' : '🤖 Optimize Today\'s Lineup'}
+              {loading ? '⟳ Auto-generating Today\'s Lineup...' : '⚡ Optimize Today\'s Lineup'}
             </button>
           </div>
           

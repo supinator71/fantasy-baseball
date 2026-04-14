@@ -12,11 +12,11 @@
   --secondary-hover: #002354;
   
   /* Glass / Depth Elements */
-  --bg-app: #020613;       /* Very deep navy/black */
-  --bg-card: rgba(0, 35, 85, 0.2);
-  --bg-card-hover: rgba(0, 45, 105, 0.3);
-  --border: rgba(255, 255, 255, 0.12);
-  --border-glow: rgba(192, 17, 31, 0.4);
+  --bg-app: #030712;       /* Very deep space black */
+  --bg-card: rgba(10, 25, 60, 0.4);
+  --bg-card-hover: rgba(15, 35, 80, 0.5);
+  --border: rgba(100, 150, 255, 0.15);
+  --border-glow: rgba(0, 200, 255, 0.5);
   
   /* Alerts */
   --success: #10b981;
@@ -27,8 +27,8 @@
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   
-  --font-heading: 'Outfit', sans-serif;
-  --font-body: 'Inter', -apple-system, sans-serif;
+  --font-heading: 'Rajdhani', sans-serif;
+  --font-body: 'Space Grotesk', -apple-system, sans-serif;
 }
 
 body {
@@ -38,8 +38,8 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   background-image: 
-    radial-gradient(circle at 100% 0%, rgba(0, 50, 120, 0.3), transparent 50%),
-    radial-gradient(circle at 0% 100%, rgba(192, 17, 31, 0.15), transparent 50%);
+    radial-gradient(circle at 100% 0%, rgba(0, 150, 255, 0.15), transparent 50%),
+    radial-gradient(circle at 0% 100%, rgba(192, 17, 31, 0.1), transparent 50%);
   background-attachment: fixed;
 }
 

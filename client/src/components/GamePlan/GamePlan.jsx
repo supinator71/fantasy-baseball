@@ -112,8 +112,8 @@ export default function GamePlan({ leagueSettings }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600 }}>Ready to plan (roster: {roster.length} players)</h3>
             <button className="btn btn-primary" onClick={generatePlan} disabled={loading}
-              style={{ padding: '10px 24px', fontSize: 14 }}>
-              {loading ? '🤖 Building plan...' : '📅 Generate Weekly Game Plan'}
+              style={{ padding: '12px 24px', fontSize: 15, background: 'linear-gradient(135deg, #003278 0%, #001f4c 100%)', whiteSpace: 'nowrap' }}>
+              {loading ? '⟳ Building plan...' : '📅 Generate Weekly Game Plan'}
             </button>
           </div>
           <p style={{ color: '#7aafc4', fontSize: 13, margin: 0 }}>
@@ -266,7 +266,7 @@ export default function GamePlan({ leagueSettings }) {
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-primary" onClick={generatePlan} disabled={loading}>
-              {loading ? '🤖 Re-analyzing...' : '↻ Regenerate Plan'}
+              {loading ? '⟳ Re-analyzing...' : '↻ Regenerate Plan'}
             </button>
             <button className="btn btn-ghost" onClick={() => setPlan(null)}>Clear</button>
           </div>

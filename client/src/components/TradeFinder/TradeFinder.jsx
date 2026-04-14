@@ -87,7 +87,7 @@ export default function TradeFinder({ leagueSettings }) {
             <h3 style={{ fontSize: 16, fontWeight: 600 }}>Your Roster ({roster.length} players)</h3>
             <button className="btn btn-primary" onClick={findTrades} disabled={loading}
               style={{ padding: '10px 24px', fontSize: 14 }}>
-              {loading ? '🤖 Finding trades...' : '🤝 Find Trade Opportunities'}
+              {loading ? '⟳ Finding trades...' : '⚡ Find Trade Opportunities'}
             </button>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -107,7 +107,7 @@ export default function TradeFinder({ leagueSettings }) {
 
       {loading && (
         <div className="card" style={{ textAlign: 'center', padding: 48 }}>
-          <div style={{ fontSize: 42, marginBottom: 12 }}>🤝</div>
+          <div style={{ fontSize: 42, marginBottom: 12 }}>⚡</div>
           <div className="loading">Scanning league rosters and analyzing compatibility...</div>
         </div>
       )}
@@ -160,7 +160,7 @@ export default function TradeFinder({ leagueSettings }) {
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-primary" onClick={findTrades} disabled={loading}>
-              {loading ? '🤖 Re-analyzing...' : '↻ Regenerate'}
+              {loading ? '⟳ Re-analyzing...' : '↻ Regenerate'}
             </button>
             <button className="btn btn-ghost" onClick={() => setResult(null)}>Clear</button>
           </div>

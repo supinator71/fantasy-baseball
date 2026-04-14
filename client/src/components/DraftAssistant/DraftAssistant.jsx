@@ -387,7 +387,7 @@ export default function DraftAssistant({ leagueSettings }) {
           <p style={{ color: '#7aafc4' }}>Smart Score · Scarcity analysis · AI recommendations</p>
         </div>
         <button className="btn btn-primary" onClick={getAiRecommendation} disabled={aiLoading}>
-          {aiLoading ? 'Thinking...' : '🤖 AI Pick'}
+          {aiLoading ? '⟳ Thinking...' : '⚡ AI Pick'}
         </button>
       </div>
 
@@ -506,14 +506,10 @@ export default function DraftAssistant({ leagueSettings }) {
 
       {/* AI Recommendation */}
       {(aiRec || aiLoading) && (
-        <div className="card" style={{
-          marginBottom: 16,
-          border: myPick ? '1px solid #00a86b' : '1px solid #1e3d5c',
-          background: myPick ? 'linear-gradient(135deg, #002a1a 0%, #0c2c56 100%)' : undefined,
-        }}>
+        <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h3 style={{ color: '#007a7a' }}>🤖 AI Recommendation — Round {currentRound}</h3>
-            {aiRec && <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setAiRec('')}>Dismiss</button>}
+            <h3 style={{ color: '#00a86b' }}>⚡ AI Recommendation — Round {currentRound}</h3>
+            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setAiRec(null)}>Dismiss</button>
           </div>
           {aiLoading
             ? <div style={{ color: '#7aafc4', fontSize: 14 }}>Analyzing scarcity, tier breaks, and your roster needs...</div>

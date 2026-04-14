@@ -164,7 +164,7 @@ export default function TeamAudit({ leagueSettings }) {
             <h3 style={{ fontSize: 16, fontWeight: 600 }}>Roster ({roster.length} players)</h3>
             <button className="btn btn-primary" onClick={runAudit} disabled={loading}
               style={{ padding: '10px 24px', fontSize: 14 }}>
-              {loading ? '🤖 Analyzing...' : '🤖 Run Full Audit'}
+              {loading ? '⟳ Analyzing...' : '⚡ Run Full Audit'}
             </button>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -185,7 +185,13 @@ export default function TeamAudit({ leagueSettings }) {
 
       {loading && (
         <div className="card" style={{ textAlign: 'center', padding: 48 }}>
-          <div style={{ fontSize: 42, marginBottom: 12 }}>🤖</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+            <img 
+              src="/cyborg_analyst.png" 
+              alt="Cyborg Baseball Analyst" 
+              style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border-glow)', boxShadow: '0 0 24px rgba(0, 200, 255, 0.25)' }} 
+            />
+          </div>
           <div className="loading">Running deep roster analysis...</div>
           <p style={{ color: '#7aafc4', fontSize: 13, marginTop: 8 }}>Calculating VOR, positional scarcity, category profile...</p>
         </div>
@@ -319,7 +325,7 @@ export default function TeamAudit({ leagueSettings }) {
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-primary" onClick={runAudit} disabled={loading}>
-              {loading ? '🤖 Re-analyzing...' : '↻ Re-run Audit'}
+              {loading ? '⟳ Re-analyzing...' : '↻ Re-run Audit'}
             </button>
             <button className="btn btn-ghost" onClick={() => setAudit(null)}>Clear</button>
           </div>
