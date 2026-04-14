@@ -88,8 +88,10 @@ export default function MatchupPredictor({ leagueSettings }) {
 
   const formatCategory = (name) => {
     const map = {
-      '7': 'R', '8': 'H', '9': 'BB (Hitter)', '10': 'K (Hitter)', '11': 'TB', '12': 'HR', '13': 'RBI', '14': 'SF', '16': 'SB', '3': 'AVG', '4': 'OBP', '5': 'SLG', '55': 'OPS',
-      '26': 'ERA', '27': 'WHIP', '28': 'W', '29': 'L', '30': 'CG', '31': 'SHO', '32': 'SV', '33': 'K', '34': 'HLD', '42': 'BB (Pitcher)', '50': 'IP', '60': 'QS'
+      '0': 'GP', '1': 'R', '2': 'H', '3': 'AVG', '4': 'OBP', '5': 'SLG', '6': 'AB', 
+      '7': 'R', '8': 'H', '9': '1B', '10': '2B', '11': '3B', '12': 'HR', '13': 'RBI', '14': 'SH', '15': 'SF', '16': 'SB', '17': 'CS', '18': 'BB', '19': 'IBB', '20': 'HBP', '21': 'K', '22': 'GIDP', '23': 'CYC', '24': 'TB',
+      '26': 'ERA', '27': 'WHIP', '28': 'W', '29': 'L', '30': 'CG', '31': 'SHO', '32': 'SV', '33': 'OUT', '34': 'H', '35': 'TBF', '36': 'R', '37': 'ER', '38': 'HR', '39': 'BB', '40': 'IBB', '41': 'HBP', '42': 'K', '43': 'WP', '44': 'BLK', '45': 'SB', '46': 'CS', '47': 'PKO', '48': 'GIDP', '50': 'IP',
+      '54': 'OPS', '55': 'OPS', '60': 'H/AB', '61': 'XBH', '65': 'NSB', '83': 'QS', '84': 'BSV', '85': 'HLD'
     }
     return map[String(name).trim()] || name;
   }
@@ -218,6 +220,19 @@ export default function MatchupPredictor({ leagueSettings }) {
                 )}
               </tbody>
             </table>
+            {matchup.stats?.length > 0 && (
+              <div style={{ padding: '12px 16px', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid #1e3d5c', fontSize: 11, color: '#7aafc4', lineHeight: 1.6 }}>
+                <strong style={{ color: '#4aafdb' }}>Key:</strong>{' '}
+                {Array.from(new Set(matchup.stats.map(s => formatCategory(s.name)))).map(abbv => {
+                  const fullNames = {
+                    'GP': 'Games Played', 'R': 'Runs', 'H': 'Hits', '1B': 'Singles', '2B': 'Doubles', '3B': 'Triples', 'HR': 'Home Runs', 'RBI': 'Runs Batted In', 'SB': 'Stolen Bases', 'BB': 'Walks', 'K': 'Strikeouts',
+                    'AVG': 'Batting Avg', 'OBP': 'On-Base %', 'SLG': 'Slugging %', 'OPS': 'On-Base + Slugging', 'TB': 'Total Bases', 'XBH': 'Extra Base Hits', 'NSB': 'Net Stolen Bases',
+                    'W': 'Wins', 'L': 'Losses', 'SV': 'Saves', 'ERA': 'Earned Run Avg', 'WHIP': 'Walks+Hits/Inning', 'IP': 'Innings Pitched', 'QS': 'Quality Starts', 'HLD': 'Holds', 'BSV': 'Blown Saves', 'OUT': 'Outs', 'CG': 'Complete Games', 'SHO': 'Shutouts'
+                  };
+                  return fullNames[abbv] ? `${abbv} = ${fullNames[abbv]}` : null;
+                }).filter(Boolean).join(' • ')}
+              </div>
+            )}
           </div>
 
           {/* AI Predict button */}
