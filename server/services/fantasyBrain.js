@@ -180,17 +180,17 @@ function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType =
     let playerPts = 0
     if (!isPitcher) {
       const hits = getStat('H', '4', '8')
-      const doubles = getStat('2B', '5', '9')
-      const triples = getStat('3B', '6', '10')
-      const hrs = getStat('HR', '7', '11', '12')
-      const singles = getStat('1B', '4', '8') - doubles - triples - hrs || 0
+      const doubles = getStat('2B', '10', '5', '9')
+      const triples = getStat('3B', '11', '6', '10')
+      const hrs = getStat('HR', '12', '7', '11')
+      const singles = getStat('1B', '9', '4', '8') - doubles - triples - hrs || 0
       
       playerPts += (getStat('R', '7', '60') * HITTING_WEIGHTS.R)
       playerPts += (Math.max(0, singles) * HITTING_WEIGHTS['1B'])
       playerPts += (doubles * HITTING_WEIGHTS['2B'])
       playerPts += (triples * HITTING_WEIGHTS['3B'])
       playerPts += (hrs * HITTING_WEIGHTS.HR)
-      playerPts += (getStat('RBI', '8', '12', '13') * HITTING_WEIGHTS.RBI)
+      playerPts += (getStat('RBI', '13', '8', '12') * HITTING_WEIGHTS.RBI)
       playerPts += (getStat('SB', '16', '23') * HITTING_WEIGHTS.SB)
       playerPts += (getStat('BB', '18', '26') * HITTING_WEIGHTS.BB)
       playerPts += (getStat('HBP', '20', '51') * HITTING_WEIGHTS.HBP)
@@ -209,7 +209,8 @@ function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType =
     }
     const rawScore = playerPts
     if (rawScore <= 0) return 0
-    return Math.round(Math.min(100, Math.max(0, (rawScore - 250) / 5)))
+    // Removed the rigid "- 250" baseline subtraction because it mathematically zeroes out all players in the first month of the season
+    return Math.round(Math.min(100, Math.max(0, rawScore / 5)))
   } 
   else {
     // CATEGORIES / ROTO — Use Standings Gain Points (SGP) Evaluation
@@ -217,15 +218,15 @@ function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType =
     
     if (!isPitcher) {
       sgpTotal += (getStat('R', '7', '60') / SGP_DENOMINATORS.R);
-      sgpTotal += (getStat('HR', '7', '11', '12') / SGP_DENOMINATORS.HR);
-      sgpTotal += (getStat('RBI', '8', '12', '13') / SGP_DENOMINATORS.RBI);
+      sgpTotal += (getStat('HR', '12', '7', '11') / SGP_DENOMINATORS.HR);
+      sgpTotal += (getStat('RBI', '13', '8', '12') / SGP_DENOMINATORS.RBI);
       sgpTotal += (getStat('SB', '16', '23') / SGP_DENOMINATORS.SB);
       
       const ab = getStat('AB', '2', '5');
       const avg = getStat('AVG', '3', '4');
       if (ab > 0) {
         // Impact on team AVG: typical denominator is around ~12 for SGP impact
-        sgpTotal += ((avg - SGP_DENOMINATORS.AVG_BASELINE) * ab) / 15;
+        sgpTotal += ((avg - SGP_DENOMINATORS.AVG_BASELINE) * Math.min(ab, 150)) / 15;
       }
     } else {
       sgpTotal += (getStat('W', '28') / SGP_DENOMINATORS.W);
@@ -237,15 +238,14 @@ function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType =
       const whip = getStat('WHIP', '27') || SGP_DENOMINATORS.WHIP_BASELINE;
       if (ip > 0) {
         // Ratio impacts: lower ERA/WHIP over more innings generates positive SGP
-        sgpTotal += ((SGP_DENOMINATORS.ERA_BASELINE - era) * ip) / 20;
-        sgpTotal += ((SGP_DENOMINATORS.WHIP_BASELINE - whip) * ip) / 5;
+        sgpTotal += ((SGP_DENOMINATORS.ERA_BASELINE - era) * Math.min(ip, 50)) / 20;
+        sgpTotal += ((SGP_DENOMINATORS.WHIP_BASELINE - whip) * Math.min(ip, 50)) / 5;
       }
     }
     
-    // Normalize SGP total to the familiar 0-100 VOR scale for legacy compatibility
-    // A replacement level player is around 0 SGP. An elite player is ~15+ SGP.
-    if (sgpTotal <= -5) return 0;
-    return Math.round(Math.min(100, Math.max(0, (sgpTotal + 2) * 5)));
+    // Normalize SGP total to the familiar 0-100 VOR scale
+    if (sgpTotal <= -10) return 0;
+    return Math.round(Math.min(100, Math.max(0, (sgpTotal + 5) * 4)));
   }
 }
 

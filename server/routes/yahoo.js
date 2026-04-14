@@ -536,37 +536,41 @@ router.get('/league/:leagueKey/matchup', requireAuth, async (req, res) => {
 
 // ── Trends ────────────────────────────────────────────────────────────────────
 function calculateTrend(seasonStats, recentStats, position) {
-  const hasRecent = Object.values(recentStats || {}).some(v => parseFloat(v) > 0)
   const hasSeason = Object.values(seasonStats || {}).some(v => parseFloat(v) > 0)
-  
-  if (!hasRecent) {
-    return hasSeason ? 'cold' : 'neutral'
-  }
+  if (!hasSeason) return 'neutral'
 
   const isPitcher = /SP|RP|P/.test(String(position))
-  let delta = 0
-  let components = 0
+  let score = 0;
 
   if (isPitcher) {
-    const sERA = parseFloat(seasonStats?.['26']); const rERA = parseFloat(recentStats?.['26'])
-    const sWHIP = parseFloat(seasonStats?.['27']); const rWHIP = parseFloat(recentStats?.['27'])
-    if (rERA && sERA && sERA > 0) { delta += (sERA - rERA) / sERA * 100; components++ }
-    if (rWHIP && sWHIP && sWHIP > 0) { delta += (sWHIP - rWHIP) / sWHIP * 100; components++ }
+    const era = parseFloat(seasonStats?.['26']); 
+    const whip = parseFloat(seasonStats?.['27']);
+    if (era && era > 0) {
+      if (era < 3.00) score += 15;
+      else if (era < 3.50) score += 5;
+      else if (era > 4.50) score -= 10;
+    }
+    if (whip && whip > 0) {
+      if (whip < 1.10) score += 15;
+      else if (whip > 1.40) score -= 10;
+    }
   } else {
-    const sAVG = parseFloat(seasonStats?.['3']); const rAVG = parseFloat(recentStats?.['3'])
-    const sHR = parseFloat(seasonStats?.['7']);  const rHR = parseFloat(recentStats?.['7'])
-    const sRBI = parseFloat(seasonStats?.['12']); const rRBI = parseFloat(recentStats?.['12'])
-    if (rAVG && sAVG && sAVG > 0) { delta += (rAVG - sAVG) / sAVG * 100 * 1.5; components += 1.5 }
-    if (rHR !== undefined && sHR !== undefined && sHR >= 0) { delta += (rHR - sHR) / Math.max(sHR, 1) * 50; components++ }
-    if (rRBI !== undefined && sRBI !== undefined && sRBI >= 0) { delta += (rRBI - sRBI) / Math.max(sRBI, 1) * 25; components++ }
+    const avg = parseFloat(seasonStats?.['3']); 
+    const hr = parseFloat(seasonStats?.['7']);
+    if (avg && avg > 0) {
+      if (avg >= 0.280) score += 15;
+      else if (avg >= 0.260) score += 5;
+      else if (avg <= 0.230) score -= 10;
+    }
+    // High HR accrual automatically pushes a player into rising/hot
+    if (hr >= 4) score += 10; 
+    else if (hr >= 2) score += 5;
   }
 
-  if (components === 0) return 'neutral'
-  const score = delta / components
-  if (score > 20) return 'hot'
-  if (score > 7)  return 'rising'
-  if (score >= -7) return 'neutral'
-  return 'cold'
+  if (score >= 15) return 'hot'
+  if (score > 0) return 'rising'
+  if (score < 0) return 'cold'
+  return 'neutral'
 }
 
 function trendDisplayStats(recentStats, seasonStats, position) {
