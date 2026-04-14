@@ -758,6 +758,15 @@ router.post('/gameplan', rateLimiter('gameplan'), async (req, res) => {
   const activeRoster       = my_roster.filter(p => !isUnavailable(p));
   const unavailablePlayers = my_roster.filter(p => isUnavailable(p));
 
+  // ── Flag DTD/Questionable (stay in roster but need caution callout) ────────
+  const DTD_STATUSES = ['DTD', 'Q', 'QUESTIONABLE', 'D2D', 'DAY-TO-DAY'];
+  function isDTD(p) {
+    if (!p.status) return false;
+    const s = String(p.status).toUpperCase().trim();
+    return DTD_STATUSES.some(x => s.includes(x));
+  }
+  const dtdPlayers = activeRoster.filter(p => isDTD(p));
+
   // fantasyBrain: lineup optimization on ACTIVE players only
   const weekSchedule = {};
   activeRoster.forEach(p => {
@@ -775,6 +784,11 @@ router.post('/gameplan', rateLimiter('gameplan'), async (req, res) => {
     ? `\n⚠️ UNAVAILABLE — DO NOT START OR RECOMMEND (IL/Suspended/Out): ${unavailablePlayers.map(p => `${p.player_name || p.name} [${p.status}]`).join(', ')}\nThese players are physically unavailable this week. Exclude them from every lineup slot, streaming suggestion, and key decision recommendation.`
     : '';
 
+  // Build DTD/questionable section for the prompt
+  const dtdStr = dtdPlayers.length > 0
+    ? `\n🟡 DAY-TO-DAY / QUESTIONABLE (start/sit risk this week): ${dtdPlayers.map(p => `${p.player_name || p.name} [${p.status}]`).join(', ')}\nThese players are uncertain for game-day availability. Flag them as risks in key decisions and note backup plan if they can't go.`
+    : '';
+
   try {
     const text = await callClaude([{
       role: 'user',
@@ -783,7 +797,7 @@ router.post('/gameplan', rateLimiter('gameplan'), async (req, res) => {
 === WEEKLY GAME PLAN — Week ${week_number || 'current'} ===
 
 DATA ACCURACY NOTE: This roster is pulled directly from the Yahoo Fantasy API for the 2026 season. All player team assignments are correct. Do not question any team assignments — analyze as given.
-${unavailableStr}
+${unavailableStr}${dtdStr}
 
 ACTIVE ROSTER (${activeRoster.length} available): ${activeRoster.map(p => `${p.player_name||p.name} (${p.position}, ${p.team})`).join(', ')}
 
