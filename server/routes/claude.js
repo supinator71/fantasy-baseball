@@ -411,7 +411,6 @@ router.post('/waiver', async (req, res) => {
 My roster: ${(my_roster||[]).map(p => `${p.player_name||p.name} (${p.position})`).join(', ')}
 My Positional Needs (Voids): ${myAnalysis.voids.join(', ') || 'None'}
 My Positional Surpluses: ${myAnalysis.surpluses.map(s => `${s.position} (${s.count})`).join(', ') || 'None'}
-Drop candidates: ${(drop_candidates||[]).map(p => `${p.player_name||p.name}`).join(', ') || 'none specified'}
 
 Waiver targets (pre-scored by priority engine):
 ${scored.slice(0, 12).map(p =>
