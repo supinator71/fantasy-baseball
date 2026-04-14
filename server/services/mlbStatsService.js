@@ -223,10 +223,49 @@ async function getMultiSeasonStats(playerName, seasons = [2023, 2024, 2025]) {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PROBABLE PITCHERS — get today's live scheduled starters
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function getLiveProbablePitchers() {
+  const key = 'live_probable_pitchers';
+  const cached = getCached(key);
+  if (cached) return cached;
+
+  try {
+    const { data } = await axios.get(`${BASE_URL}/schedule`, {
+      params: { sportId: 1, hydrate: 'probablePitcher' },
+      timeout: 8000
+    });
+
+    const pitchers = new Set();
+    const games = data.dates?.[0]?.games || [];
+    
+    games.forEach(g => {
+      if (g.teams?.away?.probablePitcher?.fullName) {
+        pitchers.add(g.teams.away.probablePitcher.fullName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+      }
+      if (g.teams?.home?.probablePitcher?.fullName) {
+        pitchers.add(g.teams.home.probablePitcher.fullName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+      }
+    });
+
+    const result = Array.from(pitchers);
+    // Cache for 60 minutes since probable pitchers rarely change rapidly on game day
+    cache.set(key, { data: result, ts: Date.now() });
+    
+    return result;
+  } catch (err) {
+    console.error(`[MLB Stats] Failed to fetch probable pitchers:`, err.message);
+    return [];
+  }
+}
+
 module.exports = {
   searchPlayer,
   getPlayerStats,
   getPlayerSeasonStats,
   getBulkPlayerStats,
   getMultiSeasonStats,
+  getLiveProbablePitchers,
 };

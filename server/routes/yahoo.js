@@ -3,6 +3,7 @@ const router = express.Router();
 const yahoo = require('../services/yahooService');
 const cache = require('../services/cache');
 const db = require('../db/database');
+const mlbStats = require('../services/mlbStatsService');
 
 // TTLs (ms)
 const TTL = {
@@ -150,6 +151,25 @@ router.get('/league/:leagueKey/myroster', requireAuth, async (req, res) => {
       }
       if (!playerKeys.length) return { players: [], teamKey: myTeamKey }
       const players = await yahoo.getBatchPlayerStats(leagueKey, playerKeys, null)
+
+      // MLB Stats API Override for Probable Pitchers
+      try {
+        const probablePitchers = await mlbStats.getLiveProbablePitchers();
+        if (probablePitchers.length > 0) {
+          players.forEach(p => {
+            if (p.position && (p.position.includes('SP') || p.position.includes('P'))) {
+              const normName = (p.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              if (probablePitchers.includes(normName)) {
+                // Force AI to see them as actively starting today
+                p.is_starting = 'Yes';
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error('[Yahoo Roster] Failed to override probable pitchers:', err.message);
+      }
+
       return { players, teamKey: myTeamKey }
     })
     res.json(result)
