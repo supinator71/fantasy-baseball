@@ -203,8 +203,13 @@ function LoginPage() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', padding: 16 }}>
       <div className="card" style={{ maxWidth: 440, width: '100%', textAlign: 'center', padding: '40px 32px' }}>
-        <div style={{ fontSize: 72, marginBottom: 20, filter: 'drop-shadow(0 0 20px rgba(0,50,120,0.5))' }}>⚾</div>
-        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12, color: 'white' }}>Fantasy Baseball HQ</h1>
+        <img
+          src="/cyborg_batflip.png"
+          alt="Batflip HQ Mascot"
+          className="mascot-hero"
+          style={{ margin: '0 auto 20px', display: 'block' }}
+        />
+        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12, color: 'white' }}>Batflip <span style={{ color: 'var(--primary)' }}>HQ</span></h1>
         <p style={{ color: 'var(--text-muted)', marginBottom: 36, lineHeight: 1.6, fontSize: 15 }}>
           Your intelligent, extremely simple personal assistant for Yahoo Fantasy Baseball. Dominating your league has never been easier.
         </p>
