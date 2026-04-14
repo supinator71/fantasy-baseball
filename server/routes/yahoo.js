@@ -535,7 +535,7 @@ router.get('/league/:leagueKey/matchup', requireAuth, async (req, res) => {
 })
 
 // ── Trends ────────────────────────────────────────────────────────────────────
-function calculateTrend(seasonStats, recentStats, position) {
+function calculateTrend(seasonStats, recentStats, position, historicalStats = {}) {
   // If we lack recent stats, we cannot determine a recent momentum trend
   const hasRecent = Object.values(recentStats || {}).some(v => parseFloat(v) > 0)
   if (!hasRecent) return 'neutral'
@@ -544,6 +544,7 @@ function calculateTrend(seasonStats, recentStats, position) {
   let score = 0;
 
   if (isPitcher) {
+    const hERA = parseFloat(historicalStats?.['26']); // 2025 baseline
     const sERA = parseFloat(seasonStats?.['26']) || 4.00; 
     const rERA = parseFloat(recentStats?.['26']);
     
@@ -555,6 +556,12 @@ function calculateTrend(seasonStats, recentStats, position) {
       // Context of recent vs season average
       if (rERA <= sERA * 0.7) score += 10; // Pitching much better recently
       else if (rERA >= sERA * 1.3) score -= 10; // Pitching much worse
+
+      // 2025 Baseline Regression / Breakout check
+      if (!isNaN(hERA) && hERA > 0) {
+        if (sERA <= hERA - 1.00) score += 5; // Breaking out compared to last year
+        else if (sERA >= hERA + 1.00) score -= 15; // Massive regression from last year!
+      }
     }
     
     // Recent Counting stats (W, SV, Ks)
@@ -566,6 +573,7 @@ function calculateTrend(seasonStats, recentStats, position) {
     
   } else {
     // HITTERS
+    const hAVG = parseFloat(historicalStats?.['3']); // 2025 baseline
     const sAVG = parseFloat(seasonStats?.['3']) || 0.250;
     const rAVG = parseFloat(recentStats?.['3']);
     
@@ -577,6 +585,12 @@ function calculateTrend(seasonStats, recentStats, position) {
       // Context of recent vs season average
       if (rAVG >= sAVG + 0.050) score += 10;
       else if (rAVG <= sAVG - 0.050) score -= 10;
+
+      // 2025 Baseline Regression / Breakout check
+      if (!isNaN(hAVG) && hAVG > 0) {
+        if (sAVG >= hAVG + 0.030) score += 5; // Hitting much better than last year
+        else if (sAVG <= hAVG - 0.040) score -= 15; // Massive regression! Overrated.
+      }
     }
     
     // Recent Counting stats (HR:7, RBI:12, SB:16)
@@ -592,7 +606,7 @@ function calculateTrend(seasonStats, recentStats, position) {
     if (rSB >= 2) score += 5;
   }
 
-  // Final trend evaluation based strictly on recent performance contextualized against the season
+  // Final trend evaluation based strictly on recent performance contextualized against the season + 2025 baseline
   if (score >= 15) return 'hot';
   if (score > 0) return 'rising';
   if (score <= -10) return 'cold';
@@ -636,18 +650,22 @@ router.get('/league/:leagueKey/trends', requireAuth, async (req, res) => {
         }
       }
 
-      const [recentMine, seasonMine, faData] = await Promise.all([
+      const [recentMine, seasonMine, historicalMine, faData] = await Promise.all([
         playerKeys.length ? yahoo.getBatchPlayerStats(leagueKey, playerKeys, 'lastweek') : [],
         playerKeys.length ? yahoo.getBatchPlayerStats(leagueKey, playerKeys, null) : [],
+        playerKeys.length ? yahoo.getBatchPlayerStats(leagueKey, playerKeys, 'season;year=2025') : [],
         yahoo.getFreeAgentsTrending(leagueKey, 25)
       ])
 
       const seasonMap = {}
+      const historicalMap = {}
       seasonMine.forEach(p => { seasonMap[p.key] = p.stats })
+      historicalMine.forEach(p => { historicalMap[p.key] = p.stats })
 
       const myPlayers = recentMine.map(p => {
         const seasonStats = seasonMap[p.key] || {}
-        const trend = calculateTrend(seasonStats, p.stats, p.position)
+        const historicalStats = historicalMap[p.key] || {}
+        const trend = calculateTrend(seasonStats, p.stats, p.position, historicalStats)
         return { ...p, recentStats: p.stats, seasonStats, trend, displayStats: trendDisplayStats(p.stats, seasonStats, p.position) }
       }).sort((a, b) => {
         const order = { hot: 0, rising: 1, neutral: 2, cold: 3 }
@@ -656,7 +674,7 @@ router.get('/league/:leagueKey/trends', requireAuth, async (req, res) => {
 
       const freeAgents = faData.map(p => ({
         ...p,
-        trend: calculateTrend(p.seasonStats, p.recentStats, p.position),
+        trend: calculateTrend(p.seasonStats, p.recentStats, p.position, p.historicalStats),
         displayStats: trendDisplayStats(p.recentStats, p.seasonStats, p.position)
       })).filter(p => p.trend === 'hot' || p.trend === 'rising')
         .sort((a, b) => (a.trend === 'hot' ? -1 : 1))

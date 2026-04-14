@@ -261,15 +261,21 @@ async function getBatchPlayerStats(leagueKey, playerKeys, type) {
 }
 
 async function getFreeAgentsTrending(leagueKey, count = 25) {
-  const [recent, season] = await Promise.all([
+  const [recent, season, historical] = await Promise.all([
     yahooGet(`/league/${leagueKey}/players;status=FA;sort=AR;count=${count}/stats;type=lastweek`),
-    yahooGet(`/league/${leagueKey}/players;status=FA;sort=AR;count=${count}/stats`)
+    yahooGet(`/league/${leagueKey}/players;status=FA;sort=AR;count=${count}/stats`),
+    yahooGet(`/league/${leagueKey}/players;status=FA;sort=AR;count=${count}/stats;type=season;year=2025`)
   ]);
   const recentPlayers = parsePlayersStats(recent.fantasy_content?.league?.[1]?.players);
   const seasonPlayers = parsePlayersStats(season.fantasy_content?.league?.[1]?.players);
+  const historicalPlayers = parsePlayersStats(historical.fantasy_content?.league?.[1]?.players);
+  
   const seasonMap = {};
   seasonPlayers.forEach(p => { seasonMap[p.key] = p.stats; });
-  return recentPlayers.map(p => ({ ...p, recentStats: p.stats, seasonStats: seasonMap[p.key] || {} }));
+  const historicalMap = {};
+  historicalPlayers.forEach(p => { historicalMap[p.key] = p.stats; });
+
+  return recentPlayers.map(p => ({ ...p, recentStats: p.stats, seasonStats: seasonMap[p.key] || {}, historicalStats: historicalMap[p.key] || {} }));
 }
 
 async function getUserTeamKey(leagueKey) {
