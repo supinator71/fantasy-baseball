@@ -1,11 +1,69 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 
+function parseTeamInfo(teamData) {
+  if (!teamData) return null
+  const t = teamData.team || teamData
+  if (!t) return null
+
+  // t is usually an array like [{name, team_key, ...}, {team_standings: ...}, ...]
+  // But can also be a flat object
+  let info = {}
+  let standings = null
+
+  if (Array.isArray(t)) {
+    // First element is info (could be array of sub-objects or a single object)
+    if (Array.isArray(t[0])) {
+      info = Object.assign({}, ...t[0])
+    } else {
+      info = t[0] || {}
+    }
+    // Search remaining elements for team_standings
+    for (let i = 1; i < t.length; i++) {
+      if (t[i]?.team_standings) {
+        standings = t[i].team_standings
+        break
+      }
+    }
+  } else {
+    info = t
+    standings = t.team_standings
+  }
+
+  // Extract manager name
+  let manager = ''
+  const managers = info.managers
+  if (managers) {
+    if (Array.isArray(managers)) {
+      manager = managers[0]?.manager?.nickname || managers[0]?.nickname || ''
+    } else if (managers.manager) {
+      manager = managers.manager?.nickname || ''
+    }
+  }
+
+  const outcome = standings?.outcome_totals || {}
+  return {
+    name: info.name || 'Unknown Team',
+    team_key: info.team_key || '',
+    manager,
+    rank: parseInt(standings?.rank) || 99,
+    wins: parseInt(outcome.wins) || 0,
+    losses: parseInt(outcome.losses) || 0,
+    ties: parseInt(outcome.ties) || 0,
+    pct: parseFloat(outcome.percentage) || 0,
+    points_for: parseFloat(standings?.points_for) || 0,
+    points_against: parseFloat(standings?.points_against) || 0,
+    games_back: standings?.games_back || '-',
+    streak: standings?.streak?.value || ''
+  }
+}
+
 export default function Standings({ leagueSettings }) {
   const [standings, setStandings] = useState([])
   const [leagues, setLeagues] = useState([])
   const [selectedLeague, setSelectedLeague] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     axios.get('/api/yahoo/leagues').then(({ data }) => {
@@ -20,96 +78,180 @@ export default function Standings({ leagueSettings }) {
 
   async function fetchStandings() {
     setLoading(true)
+    setError('')
     try {
       const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/standings`)
       const teams = []
-      if (data) {
-        const count = data['@attributes']?.count || 0
-        for (let i = 0; i < count; i++) {
-          const t = data[i]?.team
-          if (t) teams.push({
-            name: t[0]?.name || 'Team',
-            manager: t[0]?.managers?.[0]?.manager?.nickname || '',
-            rank: t[2]?.team_standings?.rank || i + 1,
-            wins: t[2]?.team_standings?.outcome_totals?.wins || 0,
-            losses: t[2]?.team_standings?.outcome_totals?.losses || 0,
-            ties: t[2]?.team_standings?.outcome_totals?.ties || 0,
-            pct: t[2]?.team_standings?.outcome_totals?.percentage || '0',
-            points: t[2]?.team_standings?.points_for || 0
-          })
+
+      if (data && Array.isArray(data)) {
+        // data is an array of team objects from toArray()
+        for (const item of data) {
+          const parsed = parseTeamInfo(item)
+          if (parsed) teams.push(parsed)
         }
-        teams.sort((a, b) => a.rank - b.rank)
+      } else if (data && typeof data === 'object') {
+        // Fallback: data is an indexed object { "0": {...}, "1": {...}, count: N }
+        const count = parseInt(data['@attributes']?.count) || Object.keys(data).filter(k => /^\d+$/.test(k)).length
+        for (let i = 0; i < count; i++) {
+          const parsed = parseTeamInfo(data[i] || data[String(i)])
+          if (parsed) teams.push(parsed)
+        }
       }
+
+      teams.sort((a, b) => a.rank - b.rank)
       setStandings(teams)
-    } catch {
+      if (teams.length === 0) setError('No standings data available for this league yet.')
+    } catch (err) {
+      setError('Could not load standings. Make sure you are connected to Yahoo.')
       setStandings([])
     } finally {
       setLoading(false)
     }
   }
 
+  const numTeams = standings.length
+  const playoffCutoff = Math.ceil(numTeams / 2) // typically top half makes playoffs
+
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: 28, fontWeight: 700 }}>Standings</h1>
-          <p style={{ color: '#7aafc4' }}>Current league standings from Yahoo Fantasy</p>
+    <div className="standings-container animate-fade-in">
+      <header className="module-header">
+        <div className="header-text">
+          <h1 className="text-gradient">League Standings</h1>
+          <p className="text-muted">Live standings from your Yahoo Fantasy league</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>
-            {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
-          </select>
-          <button className="btn btn-primary" onClick={fetchStandings} disabled={loading}>Refresh</button>
+        <div className="header-actions">
+          <div className="input-group">
+            <label>League</label>
+            <select
+              value={selectedLeague}
+              onChange={e => setSelectedLeague(e.target.value)}
+              className="league-selector"
+            >
+              {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
+            </select>
+          </div>
+          <button className="btn btn-ghost" onClick={fetchStandings} disabled={loading}>
+            {loading ? '⟳ Refreshing...' : '⟳ Refresh'}
+          </button>
         </div>
-      </div>
+      </header>
 
-      <div className="card" style={{ padding: 0 }}>
-        {loading ? (
-          <div className="loading">Loading standings...</div>
-        ) : (
-          <table>
-            <thead>
-              <tr><th>Rank</th><th>Team</th><th>Manager</th><th>W</th><th>L</th><th>T</th><th>Pct</th></tr>
-            </thead>
-            <tbody>
-              {standings.map((team, i) => (
-                <tr key={i} style={team.rank <= 4 ? { background: 'rgba(0, 168, 107, 0.05)' } : {}}>
-                  <td data-label="Rank">
-                    <span style={{
-                      display: 'inline-block', width: 28, height: 28, borderRadius: '50%',
-                      background: team.rank === 1 ? '#f59e0b' : team.rank <= 4 ? '#0c2c56' : '#122840',
-                      color: team.rank === 1 ? '#000' : '#e2e8f0',
-                      textAlign: 'center', lineHeight: '28px', fontSize: 13, fontWeight: 700
-                    }}>{team.rank}</span>
-                  </td>
-                  <td data-label="Team" style={{ fontWeight: 600 }}>{team.name}</td>
-                  <td data-label="Manager" style={{ color: '#7aafc4' }}>{team.manager}</td>
-                  <td data-label="W" style={{ color: '#00a86b' }}>{team.wins}</td>
-                  <td data-label="L" style={{ color: '#ef4444' }}>{team.losses}</td>
-                  <td data-label="T" style={{ color: '#7aafc4' }}>{team.ties}</td>
-                  <td data-label="Pct">{(+team.pct * 100).toFixed(1)}%</td>
+      {error && (
+        <div className="alert alert-warning" style={{ marginBottom: 24 }}>
+          <span>⚠️</span>
+          <span>{error}</span>
+        </div>
+      )}
+
+      {loading && (
+        <div className="loading-state card">
+          <div className="spinner"></div>
+          <p>Loading standings...</p>
+        </div>
+      )}
+
+      {!loading && standings.length > 0 && (
+        <>
+          {/* Standings Legend */}
+          <div className="standings-legend">
+            <span className="legend-item">
+              <span className="legend-dot gold"></span> 1st Place
+            </span>
+            <span className="legend-item">
+              <span className="legend-dot playoff"></span> Playoff Position (Top {playoffCutoff})
+            </span>
+          </div>
+
+          {/* Desktop Table */}
+          <div className="card standings-card">
+            <table className="standings-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 60 }}>Rank</th>
+                  <th>Team</th>
+                  <th>Manager</th>
+                  <th style={{ textAlign: 'center' }}>W</th>
+                  <th style={{ textAlign: 'center' }}>L</th>
+                  <th style={{ textAlign: 'center' }}>T</th>
+                  <th style={{ textAlign: 'center' }}>Win %</th>
+                  <th style={{ textAlign: 'right' }}>GB</th>
                 </tr>
-              ))}
-              {standings.length === 0 && !loading && (
-                <tr><td colSpan={7} style={{ textAlign: 'center', color: '#7aafc4', padding: 32 }}>
-                  No standings data. Select a league above.
-                </td></tr>
-              )}
-            </tbody>
-          </table>
-        )}
-      </div>
+              </thead>
+              <tbody>
+                {standings.map((team, i) => {
+                  const isFirst = team.rank === 1
+                  const isPlayoff = team.rank <= playoffCutoff
+                  const isLast = team.rank === numTeams
 
-      {standings.length > 0 && (
-        <div style={{ marginTop: 12, display: 'flex', gap: 16, fontSize: 12, color: '#4a7a94' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: '#f59e0b' }}></span>
-            1st place
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: '#0c2c56' }}></span>
-            Playoff position
-          </span>
+                  return (
+                    <tr key={i} className={`standings-row ${isPlayoff ? 'playoff' : ''} ${isFirst ? 'first-place' : ''} ${isLast ? 'last-place' : ''}`}>
+                      <td data-label="Rank">
+                        <div className={`rank-badge ${isFirst ? 'gold' : isPlayoff ? 'playoff' : 'standard'}`}>
+                          {team.rank}
+                        </div>
+                      </td>
+                      <td data-label="Team">
+                        <span className="team-name">{team.name}</span>
+                      </td>
+                      <td data-label="Manager">
+                        <span className="manager-name">{team.manager}</span>
+                      </td>
+                      <td data-label="W" style={{ textAlign: 'center' }}>
+                        <span className="wins-value">{team.wins}</span>
+                      </td>
+                      <td data-label="L" style={{ textAlign: 'center' }}>
+                        <span className="losses-value">{team.losses}</span>
+                      </td>
+                      <td data-label="T" style={{ textAlign: 'center' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>{team.ties}</span>
+                      </td>
+                      <td data-label="Win %" style={{ textAlign: 'center' }}>
+                        <div className="pct-cell">
+                          <span className="pct-value">{(team.pct * 100).toFixed(1)}%</span>
+                          <div className="pct-bar">
+                            <div
+                              className="pct-fill"
+                              style={{
+                                width: `${team.pct * 100}%`,
+                                background: isFirst
+                                  ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                                  : isPlayoff
+                                  ? 'linear-gradient(90deg, var(--secondary), #0066ff)'
+                                  : 'rgba(255,255,255,0.15)'
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td data-label="GB" style={{ textAlign: 'right' }}>
+                        <span style={{ color: team.games_back === '-' ? 'var(--text-muted)' : 'var(--text-main)', fontWeight: 600 }}>
+                          {team.games_back}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+
+                {/* Playoff cutoff line */}
+                {standings.length > playoffCutoff && (
+                  <tr className="playoff-cutoff-row">
+                    <td colSpan={8}>
+                      <div className="playoff-cutoff-line">
+                        <span>━━ Playoff Cutoff ━━</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {!loading && !error && standings.length === 0 && (
+        <div className="empty-state-placeholder card" style={{ padding: '48px 24px', textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🏆</div>
+          <p className="text-muted">Select a league above to view standings.</p>
         </div>
       )}
     </div>

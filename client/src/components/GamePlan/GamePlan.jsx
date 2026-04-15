@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+const DAY_EMOJI = {
+  monday: '🟢', tuesday: '🔵', wednesday: '🟣',
+  thursday: '🟠', friday: '🔴', saturday: '🟡', sunday: '⚪'
+}
 
 function ProjectionBadge({ projection }) {
   if (!projection) return null
@@ -13,7 +17,7 @@ function ProjectionBadge({ projection }) {
       <div className="scoreboard-content">
         {projection.myProjected && (
           <div className="stat-group">
-            <span className="stat-label">Proj. My Points</span>
+            <span className="stat-label">My Projected</span>
             <span className="stat-value text-success">{projection.myProjected}</span>
           </div>
         )}
@@ -89,16 +93,16 @@ export default function GamePlan({ leagueSettings }) {
   }
 
   return (
-    <div className="game-plan-container animate-fade-in">
-      {/* Strategic Header */}
+    <div className="gameplan-page animate-fade-in">
+      {/* Header */}
       <header className="module-header">
         <div className="header-text">
           <h1 className="text-gradient">Weekly Game Planner</h1>
-          <p className="text-muted">AI-optimized strategy for current matchup, daily moves, and category swinging.</p>
+          <p className="text-muted">AI-optimized strategy for your current matchup</p>
         </div>
         <div className="header-actions">
           <div className="input-group">
-            <label>Current League</label>
+            <label>League</label>
             <select 
               value={selectedLeague} 
               onChange={e => setSelectedLeague(e.target.value)}
@@ -110,13 +114,15 @@ export default function GamePlan({ leagueSettings }) {
         </div>
       </header>
 
+      {/* Error */}
       {error && (
-        <div className="alert alert-danger mb-24">
-          <span className="alert-icon">⚠️</span>
-          <div className="alert-body">{error}</div>
+        <div className="alert alert-danger" style={{ marginBottom: 24 }}>
+          <span>⚠️</span>
+          <span>{error}</span>
         </div>
       )}
 
+      {/* Loading roster */}
       {rosterLoading && (
         <div className="loading-state card">
           <div className="spinner"></div>
@@ -124,51 +130,55 @@ export default function GamePlan({ leagueSettings }) {
         </div>
       )}
 
-      {/* Action Card: No Plan Yet */}
+      {/* CTA: Generate Plan */}
       {!rosterLoading && roster.length > 0 && !plan && !loading && (
-        <section className="action-card glass-card">
-          <div className="action-visual">📅</div>
-          <div className="action-content">
-            <h3>Ready for Week Analysis</h3>
-            <p>Your roster has {roster.length} active players. It's time to build a strategy.</p>
-            <button className="btn btn-primary btn-large btn-glow" onClick={generatePlan} disabled={loading}>
-              {loading ? 'Analyzing...' : 'Generate Weekly Strategy'}
+        <section className="gameplan-cta card">
+          <div className="gameplan-cta-inner">
+            <div className="gameplan-cta-icon">📅</div>
+            <div className="gameplan-cta-text">
+              <h3>Ready for Week Analysis</h3>
+              <p className="text-muted">
+                Your roster has <strong>{roster.length}</strong> active players. Generate a full AI strategy breakdown.
+              </p>
+            </div>
+            <button className="btn btn-primary btn-large" onClick={generatePlan} disabled={loading}>
+              Generate Weekly Strategy
             </button>
           </div>
         </section>
       )}
 
-      {/* Building State */}
+      {/* Loading AI */}
       {loading && (
-        <section className="loading-state-full card mb-24">
+        <section className="card gameplan-loading">
           <div className="ai-processing-visual">
             <div className="orbit-ring"></div>
             <div className="center-node">🤖</div>
           </div>
           <h3>Constructing Game Plan</h3>
-          <p className="text-muted">Simulating weekly matchups, checking streaming availability, and weighting category needs...</p>
+          <p className="text-muted">Simulating matchups, checking streaming options, and weighting category needs...</p>
         </section>
       )}
 
-      {/* Plan Results Dashboard */}
+      {/* Results */}
       {plan && (
-        <div className="strategic-dashboard animate-slide-up">
+        <div className="gameplan-results animate-slide-up">
           
-          {/* Top Level Intel */}
-          <div className="dash-row top-intel">
+          {/* Top Row: Projection + Swing Categories */}
+          <div className="gameplan-top-row">
             {plan.weeklyProjection && (
-              <div className="card scoreboard-card">
-                <h4 className="card-label">Strategic Outlook</h4>
+              <div className="card gameplan-section">
+                <h4 className="section-title">📊 Strategic Outlook</h4>
                 <ProjectionBadge projection={plan.weeklyProjection} />
               </div>
             )}
 
             {plan.swingCategories?.length > 0 && (
-              <div className="card categories-card">
-                <h4 className="card-label">🎯 High-Impact Swing Categories</h4>
+              <div className="card gameplan-section">
+                <h4 className="section-title">🎯 Swing Categories</h4>
                 <div className="target-capsules">
                   {plan.swingCategories.map((cat, i) => (
-                    <div key={i} className="cat-target pulse-soft">{cat}</div>
+                    <div key={i} className="cat-target">{cat}</div>
                   ))}
                 </div>
                 <p className="tiny-advice">{plan.catAnalysis?.advice || 'Focus strategy here for maximum impact.'}</p>
@@ -176,20 +186,16 @@ export default function GamePlan({ leagueSettings }) {
             )}
           </div>
 
-          {/* Tactics Grid */}
-          <div className="tactics-grid">
-            {/* Optimal Lineup Column */}
+          {/* Middle Row: Optimal Lineup + Streaming Targets */}
+          <div className="gameplan-columns">
             {plan.optimalLineup?.length > 0 && (
-              <div className="card col-card lineup-col">
-                <header className="card-header-compact">
-                  <span className="icon">⚡</span>
-                  <h4>Optimal Lineup</h4>
-                </header>
+              <div className="card gameplan-section">
+                <h4 className="section-title">⚡ Optimal Lineup</h4>
                 <div className="tactical-list">
                   {plan.optimalLineup.map((p, i) => (
                     <div key={i} className="tactical-item">
                       <div className="item-meta">
-                        <span className={`pos-badge pos-${String(p.position || '').toLowerCase()}`}>{p.position}</span>
+                        <span className="pos-pill">{p.position || '??'}</span>
                         <span className="item-name">{p.player}</span>
                       </div>
                       <p className="item-logic">{p.reason}</p>
@@ -199,18 +205,14 @@ export default function GamePlan({ leagueSettings }) {
               </div>
             )}
 
-            {/* Streaming Targets Column */}
             {plan.streamingTargets?.length > 0 && (
-              <div className="card col-card streaming-col">
-                <header className="card-header-compact text-accent">
-                  <span className="icon">🔥</span>
-                  <h4>Stream Targets</h4>
-                </header>
+              <div className="card gameplan-section">
+                <h4 className="section-title">🔥 Stream Targets</h4>
                 <div className="tactical-list">
                   {plan.streamingTargets.map((p, i) => (
                     <div key={i} className="tactical-item highlight-hover">
                       <div className="item-meta">
-                        <span className={`pos-badge pos-${String(p.position || '').toLowerCase()}`}>{p.position}</span>
+                        <span className="pos-pill accent">{p.position || '??'}</span>
                         <span className="item-name">{p.player}</span>
                       </div>
                       <p className="item-logic">{p.reason}</p>
@@ -221,15 +223,11 @@ export default function GamePlan({ leagueSettings }) {
             )}
           </div>
 
-          {/* Strategic Narrative & Daily Timeline */}
-          <div className="dash-row bottom-intel">
-            {/* Key Decisions */}
+          {/* Bottom Row: Key Decisions + Daily Timeline */}
+          <div className="gameplan-columns">
             {plan.keyDecisions?.length > 0 && (
-              <div className="card col-card decision-log">
-                <header className="card-header-main mb-16">
-                  <div className="icon-wrap">🧠</div>
-                  <h4>Master Strategy Decisions</h4>
-                </header>
+              <div className="card gameplan-section">
+                <h4 className="section-title">🧠 Key Decisions</h4>
                 <div className="decision-stack">
                   {plan.keyDecisions.map((d, i) => (
                     <div key={i} className="decision-node">
@@ -244,17 +242,16 @@ export default function GamePlan({ leagueSettings }) {
               </div>
             )}
 
-            {/* Daily Timeline */}
             {plan.dailyMoves && Object.keys(plan.dailyMoves).length > 0 && (
-              <div className="card col-card timeline-col">
-                <header className="card-header-main mb-16">
-                  <div className="icon-wrap">📅</div>
-                  <h4>Tactical Timeline</h4>
-                </header>
+              <div className="card gameplan-section">
+                <h4 className="section-title">📅 Daily Playbook</h4>
                 <div className="timeline-stack">
                   {DAY_ORDER.filter(day => plan.dailyMoves[day]).map(day => (
                     <div key={day} className="timeline-event">
-                      <div className="event-day">{day.charAt(0).toUpperCase() + day.slice(1)}</div>
+                      <div className="event-day">
+                        <span className="day-emoji">{DAY_EMOJI[day]}</span>
+                        {day.charAt(0).toUpperCase() + day.slice(1)}
+                      </div>
                       <div className="event-content">{plan.dailyMoves[day]}</div>
                     </div>
                   ))}
@@ -263,31 +260,31 @@ export default function GamePlan({ leagueSettings }) {
             )}
           </div>
 
-          {/* Raw Fallback if needed */}
+          {/* Raw Fallback */}
           {plan.rawPlan && (
-            <div className="card mb-24 glass-card">
-              <h4 className="card-label mb-12">Detailed Briefing</h4>
-              <div className="ai-response-prose text-sm">{plan.rawPlan}</div>
+            <div className="card gameplan-section">
+              <h4 className="section-title">📝 Full Briefing</h4>
+              <div className="ai-response-prose">{plan.rawPlan}</div>
             </div>
           )}
 
-          {/* Footer Actions */}
-          <footer className="plan-footer">
-            <button className="btn btn-secondary" onClick={generatePlan} disabled={loading}>
+          {/* Footer */}
+          <div className="gameplan-footer">
+            <button className="btn btn-ghost" onClick={generatePlan} disabled={loading}>
               {loading ? 'Recalculating...' : '↻ Refresh Analysis'}
             </button>
             <button className="btn btn-ghost" onClick={() => setPlan(null)}>Reset View</button>
-          </footer>
+          </div>
         </div>
       )}
 
+      {/* Empty State */}
       {!rosterLoading && !roster.length && !error && !loading && (
-        <div className="empty-state-placeholder card py-48">
-          <div className="icon-large mb-16">📂</div>
-          <p className="text-muted">Select a league from the menu above to initiate a weekly tactical scan.</p>
+        <div className="card" style={{ padding: '48px 24px', textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>📂</div>
+          <p className="text-muted">Select a league to generate a weekly tactical game plan.</p>
         </div>
       )}
     </div>
   )
 }
-
