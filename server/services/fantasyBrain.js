@@ -1,7 +1,85 @@
 /**
  * fantasyBrain.js — Expert fantasy baseball logic engine
  * Pure computation — no Claude calls. Feeds structured intelligence into AI prompts.
+ *
+ * Three scoring formats are handled distinctly:
+ *   ROTO          — Season-long category accumulation. Protect ratios, accumulate counting stats.
+ *   H2H_CAT       — Weekly head-to-head category matchups. Win 6+ of 10 cats to win.
+ *   H2H_POINTS    — Weekly total points. Maximize volume (ABs, IP, 2-start SPs).
  */
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CANONICAL FORMAT DETECTOR — One function, used everywhere
+// Yahoo sends: 'head', 'headpoint', 'headone', 'roto', etc.
+// ─────────────────────────────────────────────────────────────────────────────
+const FORMAT = { ROTO: 'ROTO', H2H_CAT: 'H2H_CAT', H2H_POINTS: 'H2H_POINTS' }
+
+function detectFormat(scoringType) {
+  const raw = String(scoringType || '').toLowerCase().trim()
+  if (raw.includes('headpoint') || raw.includes('head_point') || raw === 'h2h_points' || raw === 'points') return FORMAT.H2H_POINTS
+  if (raw.includes('head') || raw === 'h2h' || raw === 'h2h_cat' || raw === 'h2h_categories') return FORMAT.H2H_CAT
+  return FORMAT.ROTO  // default: roto / everything else
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARED POINTS CALCULATOR — Single source of truth for raw-points math
+// Used by: calculateVOR (Points mode), analyzeCategories, profilePointsContribution
+// ─────────────────────────────────────────────────────────────────────────────
+const HITTING_PTS = { R: 1.9, '1B': 2.6, '2B': 5.2, '3B': 7.8, HR: 10.4, RBI: 1.9, SB: 4.2, BB: 2.6, HBP: 2.6 }
+const PITCHING_PTS = { W: 8, SV: 8, OUT: 1, HA: -1.3, ER: -3, BBA: -1.3, HBPA: -1.3, K: 3 }
+
+/**
+ * Compute raw fantasy points for a player. Works with both Yahoo stat-ID keys
+ * and human-readable stat names.
+ * @param {Object} stats - player's stats object
+ * @param {boolean} isPitcher - true if SP/RP
+ * @param {Object} [statMapping] - optional league-specific stat ID mapping
+ * @returns {number} raw season fantasy points
+ */
+function computePlayerPoints(stats = {}, isPitcher = false, statMapping = null) {
+  // Helper: look up a stat by name, then by Yahoo numeric IDs
+  const get = (name, ...ids) => {
+    if (statMapping && statMapping[name]) {
+      const v = stats[statMapping[name]]
+      if (v !== undefined && v !== '-' && v !== '') return parseFloat(v) || 0
+    }
+    if (stats[name] !== undefined && stats[name] !== '-' && stats[name] !== '') return parseFloat(stats[name]) || 0
+    for (const id of ids) {
+      if (stats[id] !== undefined && stats[id] !== '-' && stats[id] !== '') return parseFloat(stats[id]) || 0
+    }
+    return 0
+  }
+
+  let pts = 0
+  if (!isPitcher) {
+    const hits = get('H', '4')
+    const doubles = get('2B', '5', '10')
+    const triples = get('3B', '6', '11')
+    const hrs = get('HR', '12')
+    const singles = get('1B', '9') || Math.max(0, hits - doubles - triples - hrs)
+    pts += get('R', '7', '60')   * HITTING_PTS.R
+    pts += singles               * HITTING_PTS['1B']
+    pts += doubles               * HITTING_PTS['2B']
+    pts += triples               * HITTING_PTS['3B']
+    pts += hrs                   * HITTING_PTS.HR
+    pts += get('RBI', '13')      * HITTING_PTS.RBI
+    pts += get('SB', '16', '23') * HITTING_PTS.SB
+    pts += get('BB', '18', '26') * HITTING_PTS.BB
+    pts += get('HBP', '20', '51')* HITTING_PTS.HBP
+  } else {
+    const ip = get('IP', '50')
+    const outs = Math.floor(ip) * 3 + Math.round((ip % 1) * 10)
+    pts += get('W', '28')        * PITCHING_PTS.W
+    pts += get('SV', '32')       * PITCHING_PTS.SV
+    pts += outs                  * PITCHING_PTS.OUT
+    pts += get('HA', '43')       * PITCHING_PTS.HA
+    pts += get('ER', '47')       * PITCHING_PTS.ER
+    pts += get('BBA', '46')      * PITCHING_PTS.BBA
+    pts += get('HBPA', '57')     * PITCHING_PTS.HBPA
+    pts += get('K', '42')        * PITCHING_PTS.K
+  }
+  return pts
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // A) POSITIONAL VALUE TIERS
@@ -90,68 +168,77 @@ function getPositionalScarcity(position, leagueSize = 12) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// B) POINTS STRATEGY ENGINE
+// B) CATEGORY / POINTS STRATEGY ENGINE — now 3-format aware
 // ─────────────────────────────────────────────────────────────────────────────
 
-function analyzeCategories(myStats = {}, leagueStandings = [], scoringType = 'Points') {
-  const result = { topPerformers: [], weaknesses: [], advice: '' }
+const DEFAULT_CATS = ['R', 'HR', 'RBI', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP']
 
-  if (!leagueStandings || leagueStandings.length === 0) {
-    result.advice = 'No league standings provided — focus on maximizing total output.'
-    return result
-  }
+/**
+ * @param {Object} myStats - aggregated team stats
+ * @param {Array}  leagueStandings - opponent or league data
+ * @param {string} scoringType - raw Yahoo scoring_type string
+ * @param {Array}  [leagueStatCategories] - actual stat category names from league settings
+ */
+function analyzeCategories(myStats = {}, leagueStandings = [], scoringType = 'Points', leagueStatCategories = null) {
+  const result = { topPerformers: [], weaknesses: [], advice: '', format: '' }
+  const fmt = detectFormat(scoringType)
+  result.format = fmt
 
-  const format = String(scoringType).toLowerCase();
-  const isPoints = format.includes('point') || format === 'points';
+  // Use actual league categories if provided, otherwise defaults
+  const cats = (leagueStatCategories && leagueStatCategories.length > 0)
+    ? leagueStatCategories
+    : DEFAULT_CATS
 
-  if (isPoints) {
-    // Calculate generic team points based on Yahoo settings
-    const calcTeamPts = (s) => {
-      let hittingPts = (parseFloat(s.R||0) * 1.9) + (parseFloat(s['1B']||s.H||0) * 2.6) + (parseFloat(s['2B']||0) * 5.2) + (parseFloat(s['3B']||0) * 7.8) + (parseFloat(s.HR||0) * 10.4) + (parseFloat(s.RBI||0) * 1.9) + (parseFloat(s.SB||0) * 4.2) + (parseFloat(s.BB||0) * 2.6) + (parseFloat(s.HBP||0) * 2.6)
-      let pitchingPts = (parseFloat(s.W||0) * 8) + (parseFloat(s.SV||0) * 8) + ((parseFloat(s.IP||0)*3) * 1) + (parseFloat(s.HA||s.H||0) * -1.3) + (parseFloat(s.ER||0) * -3) + (parseFloat(s.BBA||s.BB||0) * -1.3) + (parseFloat(s.HBPA||s.HBP||0) * -1.3) + (parseFloat(s.K||0) * 3)
-      return hittingPts + pitchingPts
-    }
-
-    const myPts = calcTeamPts(myStats)
-    const oppStats = leagueStandings[0]?.stats || leagueStandings[0] || {}
-    const oppPts = calcTeamPts(oppStats)
+  if (fmt === FORMAT.H2H_POINTS) {
+    // ── H2H POINTS: volume is everything ─────────────────────────────
+    const myPts = computePlayerPoints(myStats, false) + computePlayerPoints(myStats, true)
+    const oppRaw = leagueStandings[0]?.stats || leagueStandings[0] || {}
+    const oppPts = computePlayerPoints(oppRaw, false) + computePlayerPoints(oppRaw, true)
 
     if (myPts > 0 || oppPts > 0) {
       const margin = myPts - oppPts
-      result.advice = `H2H Points focus: Maximize volume (2-start SPs, 7-game hitters). Projected margin: ${margin > 0 ? '+' : ''}${margin.toFixed(1)} pts against opponent.`
+      result.advice = `H2H POINTS: Maximize volume — 2-start SPs are gold, 7-game hitters are mandatory starts. Projected margin: ${margin > 0 ? '+' : ''}${margin.toFixed(1)} pts. Never punt categories — every point counts. Avoid negative-point risks (high ER/Hits allowed pitchers).`
     } else {
-      result.advice = 'Points focus: Optimize weekly lineup for maximum plate appearances and SP innings. Avoid negative points (high ER/Hits allowed).'
+      result.advice = 'H2H POINTS: Maximize plate appearances and SP innings. Start every eligible player. Do NOT leave lineup slots empty. Bench only IL players.'
     }
-  } else {
-    // ROTO / CATEGORIES FOCUS
-    const cats = ['R', 'HR', 'RBI', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
-    cats.forEach(c => {
-      const myVal = parseFloat(myStats[c] || 0);
-      const oppStats = leagueStandings[0]?.stats || leagueStandings[0] || {};
-      const oppVal = parseFloat(oppStats[c] || 0);
-      if (myVal > oppVal) result.topPerformers.push(c);
-      else if (oppVal > myVal) result.weaknesses.push(c);
-    });
+    return result
+  }
 
-    if (format === 'roto') {
-      result.advice = `Roto Strategy: Protect your ratios (ERA/WHIP/AVG) while streaming for volume voids like ${result.weaknesses.slice(0, 2).join('/') || 'SB/Saves'}.`;
-    } else {
-      result.advice = `H2H Category Strategy: You must win 6 categories to guarantee a victory. Focus your waiver wire adds purely on winning the swing categories: ${result.weaknesses.slice(0, 2).join(' and ') || 'Runs and Ks'}.`;
-    }
+  // ── ROTO or H2H CATEGORIES: need per-category analysis ─────────────
+  const oppRaw = leagueStandings[0]?.stats || leagueStandings[0] || {}
+  const inverseCats = ['ERA', 'WHIP', 'BB9', 'BBA', 'L'] // lower = better
+
+  cats.forEach(c => {
+    const catName = String(c).toUpperCase().trim()
+    const myVal = parseFloat(myStats[catName] || myStats[c] || 0)
+    const oppVal = parseFloat(oppRaw[catName] || oppRaw[c] || 0)
+    const isInverse = inverseCats.includes(catName)
+
+    if (myVal === 0 && oppVal === 0) return
+    const iWin = isInverse ? myVal < oppVal : myVal > oppVal
+    if (iWin) result.topPerformers.push(catName)
+    else if (myVal !== oppVal) result.weaknesses.push(catName)
+  })
+
+  if (fmt === FORMAT.ROTO) {
+    result.advice = `ROTO: This is a marathon, not a sprint. Protect ratios (ERA/WHIP/AVG) all season — one bad streamer can damage months of work. Stream counting stats (${result.weaknesses.slice(0, 2).join('/') || 'SB/Saves'}) only with safe-floor pitchers. Never punt a category entirely.`
+  } else {
+    // H2H_CAT
+    const totalCats = cats.length || 10
+    const winTarget = Math.ceil(totalCats / 2) + 1
+    result.advice = `H2H CATEGORIES (${totalCats} cats): You need to win ${winTarget}+ categories this week. Swing categories: ${result.weaknesses.slice(0, 3).join(', ') || 'TBD'}. Target waiver adds and streaming specifically aimed at flipping those weak cats. Safe to punt 1-2 hopeless cats and load up on the rest.`
   }
 
   return result
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// C) VALUE OVER REPLACEMENT (VOR) CALCULATOR - CUSTOM POINTS FORMAT
+// C) VALUE OVER REPLACEMENT (VOR) CALCULATOR — Unified, 3-format aware
+// Uses shared computePlayerPoints() for Points mode. SGP for Categories/Roto.
+// Both outputs are normalized to the same 0-150+ scale.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Stat weights for Yahoo Head-to-Head Points League
-const HITTING_WEIGHTS = { R: 1.9, '1B': 2.6, '2B': 5.2, '3B': 7.8, HR: 10.4, RBI: 1.9, SB: 4.2, BB: 2.6, HBP: 2.6 }
-const PITCHING_WEIGHTS = { W: 8, SV: 8, OUT: 1, H: -1.3, ER: -3, BB: -1.3, HBP: -1.3, K: 3 }
-
-// Standings Gain Points (SGP) rough denominators for 12-team 5x5 Roto/Categories
+// SGP denominators for 12-team 5x5 Roto/Categories
 const SGP_DENOMINATORS = {
   HR: 6.5, R: 25, RBI: 25, SB: 6, AVG_BASELINE: 0.252,
   W: 5.5, SV: 6.5, K: 40, ERA_BASELINE: 4.00, WHIP_BASELINE: 1.30
@@ -162,99 +249,62 @@ function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType =
 
   const pos = String(position || '').split('/')[0].split(',')[0].trim().toUpperCase()
   const isPitcher = pos === 'SP' || pos === 'RP' || pos === 'P'
-  
-  const format = String(scoringType).toLowerCase();
-  const isPoints = format.includes('point') || format === 'points';
+  const fmt = detectFormat(scoringType)
 
-  // Helper macro to fetch stats securely avoiding collisions
+  if (fmt === FORMAT.H2H_POINTS) {
+    // ── H2H POINTS: raw fantasy points / normalizer ────────────────────
+    const rawPts = computePlayerPoints(playerStats, isPitcher, statMapping)
+    if (rawPts <= 0) return 0
+    return Math.round(Math.max(0, rawPts / 5))
+  }
+
+  // ── ROTO or H2H CATEGORIES: SGP-based VOR ────────────────────────────
+  // Helper macro to fetch stats securely
   const getStat = (statName, ...fallbackKeys) => {
-    // 1. Prioritize explicit league mapping if it exists
     if (statMapping && statMapping[statName]) {
-      const explicitId = statMapping[statName];
-      if (playerStats[explicitId] !== undefined && playerStats[explicitId] !== '-' && playerStats[explicitId] !== '') {
-        return parseFloat(playerStats[explicitId]) || 0;
-      }
+      const v = playerStats[statMapping[statName]]
+      if (v !== undefined && v !== '-' && v !== '') return parseFloat(v) || 0
     }
-    // 2. Fall back to generic ID guessing
+    if (playerStats[statName] !== undefined && playerStats[statName] !== '-' && playerStats[statName] !== '') return parseFloat(playerStats[statName]) || 0
     for (const k of fallbackKeys) {
-      if (playerStats[k] !== undefined && playerStats[k] !== '-' && playerStats[k] !== '') {
-        return parseFloat(playerStats[k]) || 0;
-      }
+      if (playerStats[k] !== undefined && playerStats[k] !== '-' && playerStats[k] !== '') return parseFloat(playerStats[k]) || 0
     }
-    return 0;
+    return 0
   }
 
-  if (isPoints) {
-    let playerPts = 0
-    if (!isPitcher) {
-      const hits = getStat('H', '4')
-      const doubles = getStat('2B', '5', '10')
-      const triples = getStat('3B', '6', '11')
-      const hrs = getStat('HR', '12')
-      const singles = getStat('1B', '9') || (hits - doubles - triples - hrs) || 0
-      
-      playerPts += (getStat('R', '7', '60') * HITTING_WEIGHTS.R)
-      playerPts += (Math.max(0, singles) * HITTING_WEIGHTS['1B'])
-      playerPts += (doubles * HITTING_WEIGHTS['2B'])
-      playerPts += (triples * HITTING_WEIGHTS['3B'])
-      playerPts += (hrs * HITTING_WEIGHTS.HR)
-      playerPts += (getStat('RBI', '13') * HITTING_WEIGHTS.RBI)
-      playerPts += (getStat('SB', '16', '23') * HITTING_WEIGHTS.SB)
-      playerPts += (getStat('BB', '18', '26') * HITTING_WEIGHTS.BB)
-      playerPts += (getStat('HBP', '20', '51') * HITTING_WEIGHTS.HBP)
-    } else {
-      const ip = getStat('IP', '50')
-      const outs = Math.floor(ip) * 3 + Math.round((ip % 1) * 10)
-
-      playerPts += (getStat('W', '28') * PITCHING_WEIGHTS.W)
-      playerPts += (getStat('SV', '32') * PITCHING_WEIGHTS.SV)
-      playerPts += (outs * PITCHING_WEIGHTS.OUT)
-      playerPts += (getStat('HA', '43') * PITCHING_WEIGHTS.H)
-      playerPts += (getStat('ER', '47') * PITCHING_WEIGHTS.ER)
-      playerPts += (getStat('BBA', '46') * PITCHING_WEIGHTS.BB)
-      playerPts += (getStat('HBPA', '57') * PITCHING_WEIGHTS.HBP)
-      playerPts += (getStat('K', '42') * PITCHING_WEIGHTS.K)
+  let sgpTotal = 0
+  if (!isPitcher) {
+    sgpTotal += getStat('R', '7', '60')   / SGP_DENOMINATORS.R
+    sgpTotal += getStat('HR', '12')        / SGP_DENOMINATORS.HR
+    sgpTotal += getStat('RBI', '13')       / SGP_DENOMINATORS.RBI
+    sgpTotal += getStat('SB', '16', '23')  / SGP_DENOMINATORS.SB
+    const ab = getStat('AB', '2', '5')
+    const avg = getStat('AVG', '3')
+    if (ab > 0) {
+      sgpTotal += ((avg - SGP_DENOMINATORS.AVG_BASELINE) * Math.min(ab, 150)) / 15
     }
-    const rawScore = playerPts
-    if (rawScore <= 0) return 0
-    // Removed specific Math.min(100) cap to ensure hyper-elite players evaluate proportionally in Trade algorithms
-    return Math.round(Math.max(0, rawScore / 5))
-  } 
-  else {
-    // CATEGORIES / ROTO — Use Standings Gain Points (SGP) Evaluation
-    let sgpTotal = 0;
-    
-    if (!isPitcher) {
-      sgpTotal += (getStat('R', '7', '60') / SGP_DENOMINATORS.R);
-      sgpTotal += (getStat('HR', '12') / SGP_DENOMINATORS.HR);
-      sgpTotal += (getStat('RBI', '13') / SGP_DENOMINATORS.RBI);
-      sgpTotal += (getStat('SB', '16', '23') / SGP_DENOMINATORS.SB);
-      
-      const ab = getStat('AB', '2', '5');
-      const avg = getStat('AVG', '3');
-      if (ab > 0) {
-        // Impact on team AVG: typical denominator is around ~12 for SGP impact
-        sgpTotal += ((avg - SGP_DENOMINATORS.AVG_BASELINE) * Math.min(ab, 150)) / 15;
-      }
-    } else {
-      sgpTotal += (getStat('W', '28') / SGP_DENOMINATORS.W);
-      sgpTotal += (getStat('SV', '32') / SGP_DENOMINATORS.SV);
-      sgpTotal += (getStat('K', '42') / SGP_DENOMINATORS.K);
-      
-      const ip = getStat('IP', '50');
-      const era = getStat('ERA', '26') || SGP_DENOMINATORS.ERA_BASELINE;
-      const whip = getStat('WHIP', '27') || SGP_DENOMINATORS.WHIP_BASELINE;
-      if (ip > 0) {
-        // Ratio impacts: lower ERA/WHIP over more innings generates positive SGP
-        sgpTotal += ((SGP_DENOMINATORS.ERA_BASELINE - era) * Math.min(ip, 50)) / 20;
-        sgpTotal += ((SGP_DENOMINATORS.WHIP_BASELINE - whip) * Math.min(ip, 50)) / 5;
-      }
+  } else {
+    sgpTotal += getStat('W', '28')  / SGP_DENOMINATORS.W
+    sgpTotal += getStat('SV', '32') / SGP_DENOMINATORS.SV
+    sgpTotal += getStat('K', '42')  / SGP_DENOMINATORS.K
+    const ip = getStat('IP', '50')
+    const era = getStat('ERA', '26') || SGP_DENOMINATORS.ERA_BASELINE
+    const whip = getStat('WHIP', '27') || SGP_DENOMINATORS.WHIP_BASELINE
+    if (ip > 0) {
+      sgpTotal += ((SGP_DENOMINATORS.ERA_BASELINE - era) * Math.min(ip, 50)) / 20
+      sgpTotal += ((SGP_DENOMINATORS.WHIP_BASELINE - whip) * Math.min(ip, 50)) / 5
     }
-    
-    // Normalize SGP total to the familiar VOR scale (uncapped)
-    if (sgpTotal <= -10) return 0;
-    return Math.round(Math.max(0, (sgpTotal + 5) * 4));
   }
+
+  // H2H_CAT gets a schedule-volume bonus — more games = more chances to win counting cats
+  if (fmt === FORMAT.H2H_CAT && !isPitcher) {
+    sgpTotal *= 1.1  // slight volume premium for H2H weekly matchups
+  }
+
+  // Normalize SGP to the same VOR scale as Points mode (~0-150+)
+  // SGP of 10 ≈ elite player → VOR ~80. SGP of 5 ≈ solid → VOR ~50.
+  if (sgpTotal <= -10) return 0
+  return Math.round(Math.max(0, (sgpTotal + 2) * 7))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -295,9 +345,8 @@ const BALLPARK_FACTORS = {
 
 function streamingValue(pitcher = {}, opposingTeamStats = {}, scoringType = 'Points') {
   let score = 50  // neutral baseline
-  
-  const format = String(scoringType).toLowerCase();
-  const isPoints = format.includes('point') || format === 'points';
+  const fmt = detectFormat(scoringType)
+  const isPoints = fmt === FORMAT.H2H_POINTS;
 
   // Opponent offensive quality
   const oppWOBA = parseFloat(opposingTeamStats.wOBA || opposingTeamStats.avg || 0.315)
@@ -333,30 +382,41 @@ function streamingValue(pitcher = {}, opposingTeamStats = {}, scoringType = 'Poi
     if (avgIP >= 6.0) score += 15
     else if (avgIP >= 5.5) score += 8
     else if (avgIP < 4.5) score -= 15
+  } else if (fmt === FORMAT.H2H_CAT) {
+    // H2H CATEGORIES: Ratios matter per-week but you can afford a gamble.
+    // A streamer who wins you W and K cats but hurts ERA is still worth considering.
+    const pitcherERA = parseFloat(pitcher.era || 4.00)
+    const pitcherWHIP = parseFloat(pitcher.whip || 1.30)
+    if (pitcherERA > 4.50) score -= 15;
+    else if (pitcherERA < 3.20) score += 8;
+    if (pitcherWHIP > 1.40) score -= 10;
+    else if (pitcherWHIP < 1.15) score += 8;
+    // In H2H cats, streaming a 2-start SP for W and K categories is very valuable
+    const avgIP = parseFloat(pitcher.ip_per_start || pitcher.avg_ip || 5.0)
+    if (avgIP >= 6.0) score += 10;
   } else {
-    // ROTO / CATEGORIES FORMAT: Ratios (ERA/WHIP) can destroy a week. 
-    // High K opponents are nice, but not worth a blow-up.
+    // ROTO: Ratios are SACRED. One bad streamer ruins months of ERA/WHIP work.
     const pitcherERA = parseFloat(pitcher.era || 4.00)
     const pitcherWHIP = parseFloat(pitcher.whip || 1.30)
     
-    // Severely penalize high-ratio pitchers
-    if (pitcherERA > 4.50) score -= 20;
-    else if (pitcherERA > 4.00) score -= 10;
+    // Severely penalize high-ratio pitchers — ROTO cannot recover from ratio damage
+    if (pitcherERA > 4.50) score -= 25;
+    else if (pitcherERA > 4.00) score -= 15;
     else if (pitcherERA < 3.20) score += 10;
 
-    if (pitcherWHIP > 1.40) score -= 15;
+    if (pitcherWHIP > 1.40) score -= 20;
     else if (pitcherWHIP < 1.15) score += 10;
     
     // Opponent team OBP heavily impacts WHIP ratio
     const oppOBP = parseFloat(opposingTeamStats.obp || 0.320)
-    if (oppOBP > 0.335) score -= 12; // Very risky for WHIP
+    if (oppOBP > 0.335) score -= 15; // Very risky for WHIP
     else if (oppOBP < 0.300) score += 8;
   }
 
   return {
     score: Math.min(100, Math.max(0, Math.round(score))),
     grade: score >= 75 ? 'Elite stream' : score >= 60 ? 'Good stream' : score >= 45 ? 'Neutral' : score >= 30 ? 'Risky' : 'Avoid',
-    factors: { oppWOBA, kPer9, parkFactor, format: isPoints ? 'Points-focused' : 'Ratio-focused' }
+    factors: { oppWOBA, kPer9, parkFactor, format: fmt }
   }
 }
 
@@ -554,10 +614,12 @@ function scoreWaiverTarget(player = {}, myRoster = [], leagueSettings = {}, cate
 // G) WEEKLY LINEUP OPTIMIZATION
 // ─────────────────────────────────────────────────────────────────────────────
 
-function optimizeLineup(roster = [], weekSchedule = {}, scoringType = 'Roto') {
+function optimizeLineup(roster = [], weekSchedule = {}, scoringType = 'Roto', leagueSize = 12) {
   if (!roster || roster.length === 0) {
     return { starters: [], bench: [], reasoning: 'No roster provided.' }
   }
+
+  const fmt = detectFormat(scoringType)
 
   const recommendations = roster.map(player => {
     const team = String(player.team || '').toUpperCase()
@@ -571,19 +633,35 @@ function optimizeLineup(roster = [], weekSchedule = {}, scoringType = 'Roto') {
     const recentERA = parseFloat(player.recentStats?.['26'] || player.recent_era || 0)
     const seasonERA = parseFloat(player.seasonStats?.['26'] || player.season_era || 4.0)
 
-    let startScore = weekGames * 10  // volume is king
+    // ── Base: VOR (player quality) + Volume (games this week) ──────────
+    const vor = calculateVOR(player.stats || {}, pos, leagueSize, scoringType)
+    let startScore = vor * 0.5 + weekGames * 8  // VOR is the floor, volume scales it
 
+    // ── Format-specific adjustments ───────────────────────────────────
+    if (fmt === FORMAT.H2H_POINTS) {
+      // Points: volume is king. 7-game players always start.
+      startScore += weekGames * 4  // extra volume weight
+      if (isPitcher && weekGames >= 7) startScore += 15  // likely 2-start SP = massive points
+    } else if (fmt === FORMAT.ROTO) {
+      // Roto: protect ratios. Penalize high-ERA pitchers more heavily.
+      if (isPitcher && recentERA > 5.0) startScore -= 20  // ratio damage lasts all season
+    } else {
+      // H2H_CAT: balanced — both volume and ratios matter per week
+      if (isPitcher && recentERA > 0 && recentERA < 3.50) startScore += 10  // ratio helper
+    }
+
+    // Streak adjustments
     if (!isPitcher) {
       if (recentAVG > 0 && seasonAVG > 0) {
         startScore += ((recentAVG - seasonAVG) / seasonAVG) * 30
       }
     } else {
       if (recentERA > 0 && seasonERA > 0) {
-        startScore += ((seasonERA - recentERA) / seasonERA) * 25  // lower ERA = better
+        startScore += ((seasonERA - recentERA) / seasonERA) * 25
       }
     }
 
-    // Injury/rest risk — penalize players with recent IL stints (flag only)
+    // Injury/rest risk
     const onIL = player.injury_status === 'IL' || player.status === 'IL'
     if (onIL) startScore -= 50
 
@@ -594,9 +672,10 @@ function optimizeLineup(roster = [], weekSchedule = {}, scoringType = 'Roto') {
       position: player.position,
       team: player.team,
       weekGames,
+      vor,
       startScore: Math.round(startScore),
       confidence,
-      reasoning: `${weekGames} games this week. ` +
+      reasoning: `VOR ${vor}, ${weekGames} games. ` +
         (!isPitcher && recentAVG > 0 ? `Hitting ${recentAVG.toFixed(3)} recently (${recentAVG > seasonAVG ? 'hot' : 'cold'}). ` : '') +
         (isPitcher && recentERA > 0 ? `ERA ${recentERA.toFixed(2)} recently. ` : '') +
         (onIL ? 'ON IL — do not start.' : '')
@@ -604,12 +683,15 @@ function optimizeLineup(roster = [], weekSchedule = {}, scoringType = 'Roto') {
   })
 
   const sorted = recommendations.sort((a, b) => b.startScore - a.startScore)
+  const formatNote = fmt === FORMAT.H2H_POINTS ? 'VOR + volume (points mode — maximize ABs/IP)'
+    : fmt === FORMAT.ROTO ? 'VOR + volume (roto — ratio-protected)'
+    : 'VOR + volume (H2H cats — balanced)'
 
   return {
     starters: sorted.filter(p => p.startScore >= 45 && !p.reasoning.includes('ON IL')).slice(0, 14),
     bench: sorted.filter(p => p.startScore < 45 || p.reasoning.includes('ON IL')),
     streamingTargets: sorted.filter(p => p.weekGames >= 7).slice(0, 3),
-    reasoning: `Ranked ${roster.length} players by expected weekly value. Volume (games played) weighted most heavily.`,
+    reasoning: `Ranked ${roster.length} players by ${formatNote}.`,
   }
 }
 
@@ -1036,58 +1118,24 @@ function ageCurveAnalysis(age, position, playerProfile = {}) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// L) POINTS CONTRIBUTION PROFILER
+// L) POINTS CONTRIBUTION PROFILER — Now uses shared computePlayerPoints()
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Target points per game to evaluate a player
 const POINTS_TARGETS = {
-  hitter: 3.5, // 3.5 pts per game is solid, 5+ is elite
-  pitcher: 15, // 15 pts per start is solid, 25+ is elite
+  hitter: 3.5,
+  pitcher: 15,
 }
 
 function profilePointsContribution(playerStats = {}, type = 'hitter') {
-  let totalPts = 0
   let games = parseFloat(playerStats.gamesPlayed || playerStats.G || playerStats.GS || 0)
-  if (games === 0) games = 1 
+  if (games === 0) games = 1
 
-  let ptsPerGame = 0
-  let isElite = false
-
-  if (type === 'hitter') {
-    const hits = parseFloat(playerStats.H || 0)
-    const doubles = parseFloat(playerStats['2B'] || 0)
-    const triples = parseFloat(playerStats['3B'] || 0)
-    const hrs = parseFloat(playerStats.HR || 0)
-    const singles = parseFloat(playerStats['1B'] || hits - doubles - triples - hrs || 0)
-
-    totalPts += (parseFloat(playerStats.R || 0) * 1.9)
-    totalPts += (singles * 2.6)
-    totalPts += (doubles * 5.2)
-    totalPts += (triples * 7.8)
-    totalPts += (hrs * 10.4)
-    totalPts += (parseFloat(playerStats.RBI || 0) * 1.9)
-    totalPts += (parseFloat(playerStats.SB || 0) * 4.2)
-    totalPts += (parseFloat(playerStats.BB || 0) * 2.6)
-    totalPts += (parseFloat(playerStats.HBP || 0) * 2.6)
-    
-    ptsPerGame = totalPts / games
-    isElite = ptsPerGame >= 4.5
-  } else {
-    const ip = parseFloat(playerStats.IP || 0)
-    const outs = Math.floor(ip) * 3 + Math.round((ip % 1) * 10)
-
-    totalPts += (parseFloat(playerStats.W || 0) * 8)
-    totalPts += (parseFloat(playerStats.SV || 0) * 8)
-    totalPts += (outs * 1)
-    totalPts += (parseFloat(playerStats.HA || playerStats.H || 0) * -1.3)
-    totalPts += (parseFloat(playerStats.ER || 0) * -3)
-    totalPts += (parseFloat(playerStats.BBA || playerStats.BB || 0) * -1.3)
-    totalPts += (parseFloat(playerStats.HBPA || playerStats.HBP || 0) * -1.3)
-    totalPts += (parseFloat(playerStats.K || 0) * 3)
-
-    ptsPerGame = totalPts / games
-    isElite = ptsPerGame >= 20 || (playerStats.SV && totalPts > 150)
-  }
+  const isPitcher = type !== 'hitter'
+  const totalPts = computePlayerPoints(playerStats, isPitcher)
+  const ptsPerGame = totalPts / games
+  const isElite = isPitcher
+    ? (ptsPerGame >= 20 || (playerStats.SV && totalPts > 150))
+    : (ptsPerGame >= 4.5)
 
   const overallGrade = isElite ? 'A' : (ptsPerGame >= POINTS_TARGETS[type] ? 'B' : (ptsPerGame >= POINTS_TARGETS[type]*0.7 ? 'C' : 'D'))
 
@@ -1124,7 +1172,7 @@ function generatePlayerIntelligence(playerData = {}) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// O) UNIFIED ROSTER DIAGNOSIS
+// O) UNIFIED ROSTER DIAGNOSIS — 3-format aware
 // Single source of truth for every AI endpoint. Call once per request, inject
 // the promptBlock into every Claude call. No more inconsistent analyses.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1132,12 +1180,14 @@ function generatePlayerIntelligence(playerData = {}) {
 /**
  * Builds a complete roster diagnosis that every AI endpoint can consume.
  * @param {Array} roster - Full roster from Yahoo API (including IL/DTD players)
- * @param {Object} leagueCtx - { num_teams, scoring_type, roster_slots, current_week, ... }
+ * @param {Object} leagueCtx - { num_teams, scoring_type, roster_slots, stat_categories, current_week, ... }
  * @returns {Object} Unified diagnosis with promptBlock for Claude injection
  */
 function buildRosterDiagnosis(roster = [], leagueCtx = {}) {
   const leagueSize = leagueCtx.num_teams || 12;
   const scoringType = leagueCtx.scoring_type || 'Points';
+  const fmt = detectFormat(scoringType);
+  const leagueStatCats = Array.isArray(leagueCtx.stat_categories) ? leagueCtx.stat_categories : null;
 
   // ── 1. Three-tier player status split ──────────────────────────────────
   const IL_STATUSES = ['IL', 'IL10', 'IL15', 'IL60', 'DL', 'DL10', 'DL15', 'DL60', 'O', 'OUT', 'SUSPENDED', 'NA'];
@@ -1158,7 +1208,7 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}) {
   // ── 2. Positional analysis (voids, surpluses, sell/buy) ────────────────
   const rosterAnalysis = analyzeRosterStrengths(activeRoster, { num_teams: leagueSize, scoring_type: scoringType });
 
-  // ── 3. Category-level analysis ─────────────────────────────────────────
+  // ── 3. Category-level analysis — uses actual league stat categories ────
   const teamStats = {};
   activeRoster.forEach(p => {
     const stats = p.stats || {};
@@ -1166,7 +1216,7 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}) {
       teamStats[k] = (teamStats[k] || 0) + (parseFloat(v) || 0);
     });
   });
-  const catAnalysis = analyzeCategories(teamStats, [], scoringType);
+  const catAnalysis = analyzeCategories(teamStats, [], scoringType, leagueStatCats);
 
   const pitchingCats = ['W', 'SV', 'K', 'ERA', 'WHIP'];
   const hittingCats = ['R', 'HR', 'RBI', 'SB', 'AVG'];
@@ -1195,7 +1245,21 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}) {
 
   // ── 5. Build the canonical prompt block ────────────────────────────────
   // This EXACT string gets injected into every Claude call. Keep it compact.
-  let promptBlock = `\n=== ROSTER DIAGNOSIS ===\n`;
+  const formatLabel = fmt === FORMAT.H2H_POINTS ? 'H2H Points'
+    : fmt === FORMAT.H2H_CAT ? 'H2H Categories'
+    : 'Rotisserie (Roto)'
+  let promptBlock = `\n=== ROSTER DIAGNOSIS (${formatLabel}, ${leagueSize}-team) ===\n`;
+
+  // Format-specific strategic framing — Claude MUST know the format to give right advice
+  if (fmt === FORMAT.H2H_POINTS) {
+    promptBlock += `🎯 FORMAT: H2H POINTS — Maximize raw point output each week. Volume (ABs, IP) is everything. 2-start SPs are king. Never leave a roster spot empty. Do NOT give category-balancing advice.\n`;
+  } else if (fmt === FORMAT.H2H_CAT) {
+    promptBlock += `🎯 FORMAT: H2H CATEGORIES — Win ${Math.ceil((leagueStatCats?.length || 10) / 2) + 1}+ of ${leagueStatCats?.length || 10} categories weekly. Target swing categories. Safe to punt 1-2 hopeless cats and load up on the rest.\n`;
+    if (leagueStatCats) promptBlock += `League cats: ${leagueStatCats.join(', ')}\n`;
+  } else {
+    promptBlock += `🎯 FORMAT: ROTO — Season-long category accumulation across all teams. Protect ratios (ERA/WHIP/AVG) at all costs. Never stream high-risk pitchers. Balance all categories — punting is risky.\n`;
+    if (leagueStatCats) promptBlock += `League cats: ${leagueStatCats.join(', ')}\n`;
+  }
 
   // Unavailable players
   if (unavailablePlayers.length > 0) {
@@ -1260,6 +1324,15 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 module.exports = {
+  // Format detection
+  FORMAT,
+  detectFormat,
+
+  // Shared points calculator
+  computePlayerPoints,
+  HITTING_PTS,
+  PITCHING_PTS,
+
   // A) Positional scarcity
   getPositionalScarcity,
   POSITIONAL_DATA,
