@@ -104,13 +104,14 @@ export default function WaiverWire({ leagueSettings }) {
   }
 
   const renderStats = (p) => {
-    const isPitcher = p.position.includes('P')
-    const hasStats = p.stats && Object.values(p.stats).some(v => v !== '-' && v !== '-/-' && v !== undefined)
-    
+    const pos = String(p.position || '')
+    const isPitcher = pos.includes('P')
+    const hasStats = p.stats && Object.values(p.stats).some(v => v !== '-' && v !== '-/-' && v !== undefined && v !== null)
+
     if (!hasStats) {
       return <span style={{ fontSize: 13, color: '#5a6a72', fontStyle: 'italic' }}>Preseason — no stats yet</span>
     }
-    
+
     if (isPitcher) {
       return (
         <span style={{ fontSize: 13, color: '#a0aab2' }}>
@@ -172,10 +173,10 @@ export default function WaiverWire({ leagueSettings }) {
               <tr><th>Player</th><th>Position</th><th>Team</th><th>Trend</th><th>Projected Stats</th></tr>
             </thead>
             <tbody>
-              {available.filter(p => posFilter === 'ALL' || p.position.includes(posFilter)).map((p, i) => (
+              {available.filter(p => posFilter === 'ALL' || String(p.position || '').includes(posFilter)).map((p, i) => (
                 <tr key={i}>
                   <td data-label="Player" style={{ fontWeight: 500 }}>{p.name}</td>
-                  <td data-label="Position"><span className={`badge badge-${p.position.split(',')[0].toLowerCase().trim()}`}>{p.position}</span></td>
+                  <td data-label="Position"><span className={`badge badge-${String(p.position || '').split(',')[0].toLowerCase().trim() || 'util'}`}>{p.position || '?'}</span></td>
                   <td data-label="Team" style={{ color: '#7aafc4' }}>{p.team}</td>
                   <td data-label="Trend" style={{ textAlign: 'right' }}>
                     {(() => {

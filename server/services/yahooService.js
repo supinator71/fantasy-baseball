@@ -196,8 +196,22 @@ async function getScoreboard(leagueKey) {
 async function getPlayers(leagueKey, status = 'A', start = 0) {
   const data = await yahooGet(`/league/${leagueKey}/players;status=${status};sort=AR;start=${start};count=25/stats`);
   const leagueObj = data.fantasy_content?.league;
-  const rawPlayers = leagueObj?.[1]?.players || leagueObj?.[0]?.players || {};
-  return parsePlayersStats(rawPlayers);
+
+  // Yahoo returns league as array [meta, data], object {0:meta,1:data}, or flat object
+  const rawPlayers =
+    leagueObj?.[1]?.players ||
+    leagueObj?.[0]?.players ||
+    leagueObj?.players ||
+    {};
+
+  const count = rawPlayers?.['@attributes']?.count ?? rawPlayers?.count ?? '?';
+  const leagueType = Array.isArray(leagueObj) ? 'array' : typeof leagueObj;
+  const leagueKeys = Object.keys(leagueObj || {}).slice(0, 8).join(',');
+  console.log(`[Yahoo/getPlayers] league=${leagueKey} status=${status} rawCount=${count} leagueType=${leagueType} leagueKeys=[${leagueKeys}]`);
+
+  const parsed = parsePlayersStats(rawPlayers);
+  console.log(`[Yahoo/getPlayers] → parsed ${parsed.length} players`);
+  return parsed;
 }
 
 async function getDraftResults(leagueKey) {
@@ -218,7 +232,16 @@ async function getPlayerStats(leagueKey, playerKey) {
 
 function parsePlayersStats(raw) {
   if (!raw) return [];
-  const count = raw['@attributes']?.count || raw.count || raw?.length || 0;
+
+  // parseInt handles Yahoo returning count as a string like "25"
+  let count = parseInt(raw['@attributes']?.count ?? raw.count ?? 0, 10);
+
+  // Fallback: if count is 0 but numeric keys exist, count them directly
+  // (Yahoo occasionally returns count=0 for the first week of the season)
+  if (!count) {
+    count = Object.keys(raw).filter(k => /^\d+$/.test(k)).length;
+  }
+
   const result = [];
   for (let i = 0; i < count; i++) {
     const rawItem = raw[i] || raw[String(i)];
@@ -232,17 +255,25 @@ function parsePlayersStats(raw) {
     if (Array.isArray(p)) {
       statsObj = p.find(item => item && (item.player_stats || item.player_season_stats || item.player_points));
     }
-    
+
     const statsArr = statsObj?.player_stats?.stats || statsObj?.player_season_stats?.stats || [];
     const stats = {};
     for (const s of statsArr) {
       const stat = s.stat || {};
       if (stat.stat_id !== undefined) stats[String(stat.stat_id)] = stat.value;
     }
+
+    // eligible_positions.position can be an array — flatten to comma string
+    let pos = info.display_position || '';
+    if (!pos) {
+      const ep = info.eligible_positions?.position;
+      pos = Array.isArray(ep) ? ep.join(',') : (ep || '');
+    }
+
     result.push({
       key: info.player_key,
       name: info.full_name || info.name?.full || 'Unknown',
-      position: info.display_position || info.eligible_positions?.position || '',
+      position: String(pos),
       team: info.editorial_team_abbr || '',
       status: info.status || '',
       is_starting: String(info.starting_status?.is_starting) === '1' ? 'Yes' : (String(info.starting_status?.is_starting) === '0' ? 'No' : 'Unknown'),

@@ -288,9 +288,13 @@ router.get('/league/:leagueKey/players', requireAuth, async (req, res) => {
   try {
     const data = await withCache(res, `players:${leagueKey}:${status}:${start}`, TTL.PLAYERS, force,
       () => yahoo.getPlayers(leagueKey, status, start))
-      
-    res.json(data)
+
+    if (!Array.isArray(data) || data.length === 0) {
+      console.warn(`[Yahoo/players] WARNING: returned ${Array.isArray(data) ? 0 : typeof data} players for ${leagueKey}. Sending empty array.`)
+    }
+    res.json(Array.isArray(data) ? data : [])
   } catch (err) {
+    console.error('[Yahoo/players] ERROR:', err.message, err.stack?.split('\n')[1])
     res.status(500).json({ error: err.message })
   }
 })
