@@ -545,9 +545,21 @@ tr:hover td {
     left: auto !important;
     right: -10vw !important;    /* Stick them on the right edge */
   }
-  .mural-container img:nth-child(even) {
+  
+  .mural-container img:nth-child(n+3) {
+    display: none !important;   /* Only show 2 cards on mobile / tablet to prevent stacking */
+  }
+
+  .mural-container img:nth-child(1) {
+    top: 5% !important;
     right: auto !important;
-    left: -10vw !important;     /* Stick evens on the left edge */
+    left: -10vw !important;
+  }
+  
+  .mural-container img:nth-child(2) {
+    top: 60% !important;
+    left: auto !important;
+    right: -10vw !important;
   }
 }
 
