@@ -274,6 +274,15 @@ function parsePlayersStats(raw) {
       pos = Array.isArray(ep) ? ep.join(',') : (ep || '');
     }
 
+    // Workaround for Yahoo Spring Training "TBD" placeholder
+    if (pos === 'TBD' || pos === 'IL') {
+      if (stats['26'] !== undefined || stats['28'] !== undefined || stats['42'] !== undefined) {
+        pos = 'P';
+      } else if (stats['60'] !== undefined || stats['7'] !== undefined) {
+        pos = 'UTIL';
+      }
+    }
+
     result.push({
       key: info.player_key,
       name: info.full_name || info.name?.full || 'Unknown',
