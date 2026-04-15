@@ -41,7 +41,7 @@ export default function TradeAnalyzer({ leagueSettings }) {
 
   return (
     <div>
-      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Trade Analyzer</h1>
+      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>⇌ Trade Analyzer</h1>
       <p style={{ color: '#7aafc4', marginBottom: 24 }}>Evaluate any trade with AI-powered fairness analysis</p>
 
       <div className="grid-2" style={{ marginBottom: 16 }}>

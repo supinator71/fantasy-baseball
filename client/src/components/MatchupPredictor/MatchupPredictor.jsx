@@ -162,7 +162,7 @@ export default function MatchupPredictor({ leagueSettings }) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 700 }}>Matchup Predictor</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 700 }}>⚔️ Matchup Predictor</h1>
           <p style={{ color: '#7aafc4' }}>
             {matchup ? `Week ${matchup.week} — live stats & AI projection` : 'Current week projections and lineup optimization'}
           </p>

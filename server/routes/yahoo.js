@@ -21,15 +21,19 @@ const TTL = {
 }
 
 function requireAuth(req, res, next) {
-  const row = db.prepare('SELECT * FROM tokens WHERE id = 1').get();
+  const guid = req.session?.yahoo_guid;
+  if (!guid) return res.status(401).json({ error: 'Not authenticated. Please login with Yahoo.' });
+  const row = db.getToken(guid);
   if (!row) return res.status(401).json({ error: 'Not authenticated. Please login with Yahoo.' });
   next();
 }
 
 // Wrap fetch with cache; sets X-Cache-* headers on res
-async function withCache(res, key, ttlMs, force, fn) {
+async function withCache(req, res, key, ttlMs, force, fn) {
+  const userPrefix = req.session?.yahoo_guid || 'global';
+  const scopedKey = `${userPrefix}:${key}`;
   if (!force) {
-    const entry = cache.get(key)
+    const entry = cache.get(scopedKey)
     if (entry) {
       res.set('X-Cache-Hit', 'true')
       res.set('X-Cache-Updated', entry.cachedAt)
@@ -38,7 +42,7 @@ async function withCache(res, key, ttlMs, force, fn) {
   }
   const data = await fn()
   const cachedAt = new Date().toISOString()
-  cache.set(key, data, ttlMs)
+  cache.set(scopedKey, data, ttlMs)
   res.set('X-Cache-Hit', 'false')
   res.set('X-Cache-Updated', cachedAt)
   return data
@@ -56,7 +60,7 @@ router.post('/cache/clear', (req, res) => {
 router.get('/leagues', requireAuth, async (req, res) => {
   const force = req.query.force === 'true'
   try {
-    const data = await withCache(res, 'leagues', TTL.LEAGUES, force, () => yahoo.getLeagues())
+    const data = await withCache(req, res, 'leagues', TTL.LEAGUES, force, () => yahoo.getLeagues(req))
     res.json(data)
   } catch (err) {
     console.error('Error in /leagues endpoint:', err.message, err.response?.data || '');
@@ -68,8 +72,8 @@ router.get('/league/:leagueKey', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
   const force = req.query.force === 'true'
   try {
-    const data = await withCache(res, `league:${leagueKey}`, TTL.LEAGUE, force,
-      () => yahoo.getLeague(leagueKey))
+    const data = await withCache(req, res, `league:${leagueKey}`, TTL.LEAGUE, force,
+      () => yahoo.getLeague(req, leagueKey))
       
     // Parse the data for the LeagueSetup frontend component
     const settingsArr = data?.[1]?.settings?.[0];
@@ -120,10 +124,10 @@ router.get('/league/:leagueKey/roster', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
   const force = req.query.force === 'true'
   try {
-    const data = await withCache(res, `roster:${leagueKey}:mine`, TTL.ROSTER, force, async () => {
-      const myTeamKey = await yahoo.getUserTeamKey(leagueKey);
+    const data = await withCache(req, res, `roster:${leagueKey}:mine`, TTL.ROSTER, force, async () => {
+      const myTeamKey = await yahoo.getUserTeamKey(req, leagueKey);
       if (!myTeamKey) throw new Error('Could not find your team in this league.');
-      return yahoo.getRoster(leagueKey, myTeamKey);
+      return yahoo.getRoster(req, leagueKey, myTeamKey);
     })
     res.json(data)
   } catch (err) {
@@ -136,10 +140,10 @@ router.get('/league/:leagueKey/myroster', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
   const force = req.query.force === 'true'
   try {
-    const result = await withCache(res, `myroster:${leagueKey}`, TTL.ROSTER, force, async () => {
-      const myTeamKey = await yahoo.getUserTeamKey(leagueKey)
+    const result = await withCache(req, res, `myroster:${leagueKey}`, TTL.ROSTER, force, async () => {
+      const myTeamKey = await yahoo.getUserTeamKey(req, leagueKey)
       if (!myTeamKey) return { players: [], teamKey: null }
-      const rosterData = await yahoo.getRoster(leagueKey, myTeamKey)
+      const rosterData = await yahoo.getRoster(req, leagueKey, myTeamKey)
       const playerKeys = []
       for (const rosterItem of (rosterData || [])) {
         const p = rosterItem?.player
@@ -150,7 +154,7 @@ router.get('/league/:leagueKey/myroster', requireAuth, async (req, res) => {
         }
       }
       if (!playerKeys.length) return { players: [], teamKey: myTeamKey }
-      const players = await yahoo.getBatchPlayerStats(leagueKey, playerKeys, null)
+      const players = await yahoo.getBatchPlayerStats(req, leagueKey, playerKeys, null)
 
       // MLB Stats API Override for Probable Pitchers
       try {
@@ -187,8 +191,8 @@ router.get('/league/:leagueKey/team/:teamKey/rosterstats', requireAuth, async (r
   const { leagueKey, teamKey } = req.params
   const force = req.query.force === 'true'
   try {
-    const result = await withCache(res, `rosterstats:${leagueKey}:${teamKey}`, TTL.ROSTER, force, async () => {
-      const rosterData = await yahoo.getRoster(leagueKey, teamKey)
+    const result = await withCache(req, res, `rosterstats:${leagueKey}:${teamKey}`, TTL.ROSTER, force, async () => {
+      const rosterData = await yahoo.getRoster(req, leagueKey, teamKey)
       const playerKeys = []
       for (const rosterItem of (rosterData || [])) {
         const p = rosterItem?.player
@@ -199,7 +203,7 @@ router.get('/league/:leagueKey/team/:teamKey/rosterstats', requireAuth, async (r
         }
       }
       if (!playerKeys.length) return { players: [], teamKey }
-      const players = await yahoo.getBatchPlayerStats(leagueKey, playerKeys, null)
+      const players = await yahoo.getBatchPlayerStats(req, leagueKey, playerKeys, null)
       return { players, teamKey }
     })
     res.json(result)
@@ -213,9 +217,9 @@ router.get('/league/:leagueKey/allrosters', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
   const force = req.query.force === 'true'
   try {
-    const result = await withCache(res, `allrosters:${leagueKey}`, TTL.ROSTER, force, async () => {
-      const standings = await yahoo.getStandings(leagueKey)
-      const myTeamKey = await yahoo.getUserTeamKey(leagueKey)
+    const result = await withCache(req, res, `allrosters:${leagueKey}`, TTL.ROSTER, force, async () => {
+      const standings = await yahoo.getStandings(req, leagueKey)
+      const myTeamKey = await yahoo.getUserTeamKey(req, leagueKey)
       const allRosters = []
       const promises = []
       
@@ -230,7 +234,7 @@ router.get('/league/:leagueKey/allrosters', requireAuth, async (req, res) => {
         if (!teamKey || teamKey === myTeamKey) continue
         
         promises.push(
-          yahoo.getRoster(leagueKey, teamKey).then(rosterData => {
+          yahoo.getRoster(req, leagueKey, teamKey).then(rosterData => {
             const playerList = []
             for (const rosterItem of (rosterData || [])) {
               const p = rosterItem?.player
@@ -261,8 +265,8 @@ router.get('/league/:leagueKey/standings', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
   const force = req.query.force === 'true'
   try {
-    const data = await withCache(res, `standings:${leagueKey}`, TTL.STANDINGS, force,
-      () => yahoo.getStandings(leagueKey))
+    const data = await withCache(req, res, `standings:${leagueKey}`, TTL.STANDINGS, force,
+      () => yahoo.getStandings(req, leagueKey))
     res.json(data)
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -273,8 +277,8 @@ router.get('/league/:leagueKey/scoreboard', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
   const force = req.query.force === 'true'
   try {
-    const data = await withCache(res, `scoreboard:${leagueKey}`, TTL.SCOREBOARD, force,
-      () => yahoo.getScoreboard(leagueKey))
+    const data = await withCache(req, res, `scoreboard:${leagueKey}`, TTL.SCOREBOARD, force,
+      () => yahoo.getScoreboard(req, leagueKey))
     res.json(data)
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -286,8 +290,8 @@ router.get('/league/:leagueKey/players', requireAuth, async (req, res) => {
   const { status = 'A', start = 0 } = req.query
   const force = req.query.force === 'true'
   try {
-    const data = await withCache(res, `players:${leagueKey}:${status}:${start}`, TTL.PLAYERS, force,
-      () => yahoo.getPlayers(leagueKey, status, start))
+    const data = await withCache(req, res, `players:${leagueKey}:${status}:${start}`, TTL.PLAYERS, force,
+      () => yahoo.getPlayers(req, leagueKey, status, start))
 
     if (!Array.isArray(data) || data.length === 0) {
       console.warn(`[Yahoo/players] WARNING: returned ${Array.isArray(data) ? 0 : typeof data} players for ${leagueKey}. Sending empty array.`)
@@ -303,8 +307,8 @@ router.get('/league/:leagueKey/draft', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
   const force = req.query.force === 'true'
   try {
-    const data = await withCache(res, `draft:${leagueKey}`, TTL.DRAFT, force,
-      () => yahoo.getDraftResults(leagueKey))
+    const data = await withCache(req, res, `draft:${leagueKey}`, TTL.DRAFT, force,
+      () => yahoo.getDraftResults(req, leagueKey))
     res.json(data)
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -315,8 +319,8 @@ router.get('/league/:leagueKey/transactions', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
   const force = req.query.force === 'true'
   try {
-    const data = await withCache(res, `txns:${leagueKey}`, TTL.TXNS, force,
-      () => yahoo.getTransactions(leagueKey))
+    const data = await withCache(req, res, `txns:${leagueKey}`, TTL.TXNS, force,
+      () => yahoo.getTransactions(req, leagueKey))
     res.json(data)
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -327,8 +331,8 @@ router.get('/league/:leagueKey/player/:playerKey/stats', requireAuth, async (req
   const { leagueKey, playerKey } = req.params
   const force = req.query.force === 'true'
   try {
-    const data = await withCache(res, `playerstats:${leagueKey}:${playerKey}`, TTL.STATS, force,
-      () => yahoo.getPlayerStats(leagueKey, playerKey))
+    const data = await withCache(req, res, `playerstats:${leagueKey}:${playerKey}`, TTL.STATS, force,
+      () => yahoo.getPlayerStats(req, leagueKey, playerKey))
     res.json(data)
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -348,10 +352,10 @@ router.get('/league/:leagueKey/matchup', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
   const force = req.query.force === 'true'
   try {
-    const result = await withCache(res, `matchup:${leagueKey}`, TTL.MATCHUP, force, async () => {
+    const result = await withCache(req, res, `matchup:${leagueKey}`, TTL.MATCHUP, force, async () => {
       const [matchups, myTeamKey] = await Promise.all([
-        yahoo.getScoreboard(leagueKey),
-        yahoo.getUserTeamKey(leagueKey)
+        yahoo.getScoreboard(req, leagueKey),
+        yahoo.getUserTeamKey(req, leagueKey)
       ])
 
       if (!matchups) throw new Error('No matchup data available')
@@ -643,11 +647,11 @@ router.get('/league/:leagueKey/trends', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
   const force = req.query.force === 'true'
   try {
-    const result = await withCache(res, `trends:${leagueKey}`, TTL.TRENDS, force, async () => {
-      const myTeamKey = await yahoo.getUserTeamKey(leagueKey)
+    const result = await withCache(req, res, `trends:${leagueKey}`, TTL.TRENDS, force, async () => {
+      const myTeamKey = await yahoo.getUserTeamKey(req, leagueKey)
       if (!myTeamKey) return { myPlayers: [], freeAgents: [] }
 
-      const rosterData = await yahoo.getRoster(leagueKey, myTeamKey)
+      const rosterData = await yahoo.getRoster(req, leagueKey, myTeamKey)
       const playerKeys = []
       for (const rosterItem of (rosterData || [])) {
         const p = rosterItem?.player
@@ -659,10 +663,10 @@ router.get('/league/:leagueKey/trends', requireAuth, async (req, res) => {
       }
 
       const [recentMine, seasonMine, historicalMine, faData] = await Promise.all([
-        playerKeys.length ? yahoo.getBatchPlayerStats(leagueKey, playerKeys, 'lastweek') : [],
-        playerKeys.length ? yahoo.getBatchPlayerStats(leagueKey, playerKeys, null) : [],
-        playerKeys.length ? yahoo.getBatchPlayerStats(leagueKey, playerKeys, 'season;year=2025') : [],
-        yahoo.getFreeAgentsTrending(leagueKey, 25)
+        playerKeys.length ? yahoo.getBatchPlayerStats(req, leagueKey, playerKeys, 'lastweek') : [],
+        playerKeys.length ? yahoo.getBatchPlayerStats(req, leagueKey, playerKeys, null) : [],
+        playerKeys.length ? yahoo.getBatchPlayerStats(req, leagueKey, playerKeys, 'season;year=2025') : [],
+        yahoo.getFreeAgentsTrending(req, leagueKey, 25)
       ])
 
       const seasonMap = {}

@@ -4,7 +4,7 @@ const db = require('../db/database');
 
 const YAHOO_API_BASE = 'https://fantasysports.yahooapis.com/fantasy/v2';
 
-async function forceRefreshToken(refresh_token) {
+async function forceRefreshToken(req, refresh_token) {
   try {
     const credentials = Buffer.from(
       `${process.env.YAHOO_CLIENT_ID}:${process.env.YAHOO_CLIENT_SECRET}`
@@ -17,35 +17,38 @@ async function forceRefreshToken(refresh_token) {
 
     const { access_token, refresh_token: new_refresh_token, expires_in } = response.data;
     const expiresAt = Date.now() + expires_in * 1000;
-    
-    db.prepare('UPDATE tokens SET access_token = ?, refresh_token = ?, expires_at = ? WHERE id = 1')
-      .run(access_token, new_refresh_token, expiresAt);
+    const guid = req?.session?.yahoo_guid;
+    if (guid) db.setToken(guid, { access_token, refresh_token: new_refresh_token, expires_at: expiresAt });
       
     return access_token;
   } catch (err) {
     console.error('[Yahoo OAuth] Refresh permanently failed. Wiping dead token.');
-    db.prepare('DELETE FROM tokens WHERE id = 1').run();
+    const guid = req?.session?.yahoo_guid;
+    if (guid) db.deleteToken(guid);
     const error = new Error('auth_revoked');
     error.status = 401;
     throw error;
   }
 }
 
-async function getAccessToken() {
-  const row = db.prepare('SELECT * FROM tokens WHERE id = 1').get();
+async function getAccessToken(req) {
+  const guid = req?.session?.yahoo_guid;
+  if (!guid) throw new Error('Not authenticated (missing session guid)');
+  
+  const row = db.getToken(guid);
   if (!row) throw new Error('Not authenticated with Yahoo');
 
   // Auto-refresh if naturally expired
   if (Date.now() > row.expires_at - 60000) {
     console.log('[Yahoo OAuth] Token naturally expired, auto-refreshing...');
-    return await forceRefreshToken(row.refresh_token);
+    return await forceRefreshToken(req, row.refresh_token);
   }
 
   return row.access_token;
 }
 
-async function yahooGet(endpoint) {
-  let token = await getAccessToken();
+async function yahooGet(req, endpoint) {
+  let token = await getAccessToken(req);
   
   try {
     const response = await axios.get(`${YAHOO_API_BASE}${endpoint}?format=json`, {
@@ -55,11 +58,12 @@ async function yahooGet(endpoint) {
   } catch (err) {
     if (err.response && err.response.status === 401) {
       console.log('[Yahoo OAuth] Yahoo rejected unexpired token! Forcing aggressive retry...');
-      const row = db.prepare('SELECT refresh_token FROM tokens WHERE id = 1').get();
+      const guid = req?.session?.yahoo_guid;
+      const row = db.getToken(guid);
       if (!row) throw err;
       
       // Force refresh right now
-      token = await forceRefreshToken(row.refresh_token);
+      token = await forceRefreshToken(req, row.refresh_token);
       
       // Retry the exact same request seamlessly
       const retryResponse = await axios.get(`${YAHOO_API_BASE}${endpoint}?format=json`, {
@@ -94,7 +98,7 @@ function toArray(obj) {
 }
 
 async function getLeagues() {
-  const data = await yahooGet('/users;use_login=1/games;game_keys=mlb/leagues');
+  const data = await yahooGet(req, '/users;use_login=1/games;game_keys=mlb/leagues');
   
   // The JSON structure can vary slightly depending on whether you have 1 or multiple leagues
   const leagues = data?.fantasy_content?.users?.['0']?.user?.[1]?.games?.['0']?.game?.[1]?.leagues;
@@ -104,12 +108,12 @@ async function getLeagues() {
 }
 
 async function getLeague(leagueKey) {
-  const data = await yahooGet(`/league/${leagueKey}/settings`);
+  const data = await yahooGet(req, `/league/${leagueKey}/settings`);
   return data.fantasy_content?.league;
 }
 
 async function getRoster(leagueKey, teamKey) {
-  const data = await yahooGet(`/team/${teamKey}/roster/players`);
+  const data = await yahooGet(req, `/team/${teamKey}/roster/players`);
   const team = data.fantasy_content?.team;
   
   // Yahoo puts roster data in different spots depending on response format
@@ -157,13 +161,13 @@ async function getRoster(leagueKey, teamKey) {
 }
 
 async function getStandings(leagueKey) {
-  const data = await yahooGet(`/league/${leagueKey}/standings`);
+  const data = await yahooGet(req, `/league/${leagueKey}/standings`);
   const teams = data.fantasy_content?.league?.[1]?.standings?.[1]?.teams || data.fantasy_content?.league?.[1]?.standings?.[0]?.teams;
   return toArray(teams);
 }
 
 async function getScoreboard(leagueKey) {
-  const data = await yahooGet(`/league/${leagueKey}/scoreboard`);
+  const data = await yahooGet(req, `/league/${leagueKey}/scoreboard`);
   const league = data.fantasy_content?.league;
   
   let matchups = null;
@@ -194,7 +198,7 @@ async function getScoreboard(leagueKey) {
 }
 
 async function getPlayers(leagueKey, status = 'A', start = 0) {
-  const data = await yahooGet(`/league/${leagueKey}/players;status=${status};sort=AR;start=${start};count=25/stats`);
+  const data = await yahooGet(req, `/league/${leagueKey}/players;status=${status};sort=AR;start=${start};count=25/stats`);
   const leagueObj = data.fantasy_content?.league;
 
   // Yahoo returns league as array [meta, data], object {0:meta,1:data}, or flat object
@@ -215,18 +219,18 @@ async function getPlayers(leagueKey, status = 'A', start = 0) {
 }
 
 async function getDraftResults(leagueKey) {
-  const data = await yahooGet(`/league/${leagueKey}/draftresults`);
+  const data = await yahooGet(req, `/league/${leagueKey}/draftresults`);
   return data.fantasy_content?.league?.[1]?.draft_results;
 }
 
 async function getTransactions(leagueKey) {
-  const data = await yahooGet(`/league/${leagueKey}/transactions;type=waiver`);
+  const data = await yahooGet(req, `/league/${leagueKey}/transactions;type=waiver`);
   const txns = data.fantasy_content?.league?.[1]?.transactions;
   return toArray(txns);
 }
 
 async function getPlayerStats(leagueKey, playerKey) {
-  const data = await yahooGet(`/league/${leagueKey}/players;player_keys=${playerKey}/stats`);
+  const data = await yahooGet(req, `/league/${leagueKey}/players;player_keys=${playerKey}/stats`);
   return data.fantasy_content?.league?.[1]?.players?.[0]?.player;
 }
 
@@ -287,15 +291,15 @@ async function getBatchPlayerStats(leagueKey, playerKeys, type) {
   if (!playerKeys || !playerKeys.length) return [];
   const batch = playerKeys.slice(0, 25).join(',');
   const typeParam = type ? `;type=${type}` : '';
-  const data = await yahooGet(`/league/${leagueKey}/players;player_keys=${batch}/stats${typeParam}`);
+  const data = await yahooGet(req, `/league/${leagueKey}/players;player_keys=${batch}/stats${typeParam}`);
   return parsePlayersStats(data.fantasy_content?.league?.[1]?.players);
 }
 
 async function getFreeAgentsTrending(leagueKey, count = 25) {
   const [recent, season, historical] = await Promise.all([
-    yahooGet(`/league/${leagueKey}/players;status=FA;sort=AR;count=${count}/stats;type=lastweek`),
-    yahooGet(`/league/${leagueKey}/players;status=FA;sort=AR;count=${count}/stats`),
-    yahooGet(`/league/${leagueKey}/players;status=FA;sort=AR;count=${count}/stats;type=season;year=2025`)
+    yahooGet(req, `/league/${leagueKey}/players;status=FA;sort=AR;count=${count}/stats;type=lastweek`),
+    yahooGet(req, `/league/${leagueKey}/players;status=FA;sort=AR;count=${count}/stats`),
+    yahooGet(req, `/league/${leagueKey}/players;status=FA;sort=AR;count=${count}/stats;type=season;year=2025`)
   ]);
   const recentPlayers = parsePlayersStats(recent.fantasy_content?.league?.[1]?.players);
   const seasonPlayers = parsePlayersStats(season.fantasy_content?.league?.[1]?.players);
@@ -311,7 +315,7 @@ async function getFreeAgentsTrending(leagueKey, count = 25) {
 
 async function getUserTeamKey(leagueKey) {
   try {
-    const data = await yahooGet(`/users;use_login=1/games;game_keys=mlb/leagues;league_keys=${leagueKey}/teams`);
+    const data = await yahooGet(req, `/users;use_login=1/games;game_keys=mlb/leagues;league_keys=${leagueKey}/teams`);
     
     // Convert unpredictable structure into an array
     const gamesObj = data?.fantasy_content?.users?.['0']?.user?.[1]?.games;

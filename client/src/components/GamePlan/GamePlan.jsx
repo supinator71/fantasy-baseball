@@ -62,6 +62,7 @@ export default function GamePlan({ leagueSettings }) {
 
   async function loadRoster() {
     setRosterLoading(true)
+    setRoster([])
     setPlan(null)
     setMatchup(null)
     setError('')
@@ -130,7 +131,7 @@ export default function GamePlan({ leagueSettings }) {
       {/* Header */}
       <header className="module-header">
         <div className="header-text">
-          <h1 className="text-gradient">Weekly Game Planner</h1>
+          <h1 className="text-gradient">▦ Weekly Game Planner</h1>
           <p className="text-muted">AI-optimized strategy for your current matchup</p>
         </div>
         <div className="header-actions">
@@ -239,11 +240,11 @@ export default function GamePlan({ leagueSettings }) {
               </div>
             )}
 
-            {plan.streamingTargets?.length > 0 && (
+            {plan.volumePlays?.length > 0 && (
               <div className="card gameplan-section">
-                <h4 className="section-title">🔥 Stream Targets</h4>
+                <h4 className="section-title">🔥 Extra Volume (7-Game Week)</h4>
                 <div className="tactical-list">
-                  {plan.streamingTargets.map((p, i) => (
+                  {plan.volumePlays.map((p, i) => (
                     <div key={i} className="tactical-item highlight-hover">
                       <div className="item-meta">
                         <span className="pos-pill accent">{p.position || '??'}</span>

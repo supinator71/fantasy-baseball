@@ -1,4 +1,4 @@
-# ⚾ Fantasy Baseball HQ - Project Architecture & Details
+# ⚾ Goin' Yard HQ - Project Architecture & Details
 
 This document serves as the master record for the Fantasy Baseball SaaS application, preserving the critical information regarding the mathematical evaluation logic, our dynamic UI, and backend architecture.
 
@@ -21,7 +21,7 @@ The app is powered by an autonomous, multi-format evaluation engine built seamle
 
 ## 3. Recommended Branding & Domains
 To give the app a premium, standalone feel, the following domain options were researched and confirmed officially available to attach to the Railway deployment.
-- **batflip.app** (The undisputed top choice for a punchy, modern baseball app)
+- **goinyard.app** (The undisputed top choice for a punchy, modern baseball app)
 - **pennantpush.com**
 - **fantasyhq.app**
 - *Action item: Register via Namecheap or Porkbun to secure cheap long-term renewal rates without hosting baggage.*

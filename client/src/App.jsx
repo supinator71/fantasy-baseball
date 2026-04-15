@@ -77,7 +77,7 @@ export default function App() {
   }
 
   if (authStatus.loading) {
-    return <div className="loading" style={{ height: '100vh', fontSize: 18 }}>⚾ Loading Batflip HQ...</div>
+    return <div className="loading" style={{ height: '100vh', fontSize: 18 }}>⚾ Loading Goin' Yard HQ...</div>
   }
 
   return (
@@ -103,7 +103,7 @@ export default function App() {
             <button className="hamburger-btn" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
               ☰
             </button>
-            <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.02em', fontFamily: 'var(--font-heading)' }}>⚾ Batflip HQ</span>
+            <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.02em', fontFamily: 'var(--font-heading)' }}>⚾ Goin' Yard HQ</span>
           </div>
 
           <main className="main-content">
@@ -152,7 +152,7 @@ function Sidebar({ authenticated, isOpen, onClose }) {
   return (
     <nav className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div style={{ padding: '0 16px 20px', borderBottom: '1px solid var(--border)', marginBottom: 8 }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em', textShadow: '0 2px 10px rgba(0,0,0,0.5)', fontFamily: 'var(--font-heading)' }}>⚾ Batflip <span style={{ color: 'var(--primary)' }}>HQ</span></div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em', textShadow: '0 2px 10px rgba(0,0,0,0.5)', fontFamily: 'var(--font-heading)' }}>⚾ Goin' Yard <span style={{ color: 'var(--primary)' }}>HQ</span></div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Fantasy Intelligence</div>
       </div>
 
@@ -169,7 +169,7 @@ function Sidebar({ authenticated, isOpen, onClose }) {
             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             fontFamily: 'var(--font-heading)',
           })}>
-          <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
+          <span style={{ fontSize: 26, width: 36, textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
         </NavLink>
       ))}
@@ -214,11 +214,11 @@ function LoginPage() {
       <div className="card" style={{ maxWidth: 440, width: '100%', textAlign: 'center', padding: '40px 32px' }}>
         <img
           src="/cyborg_batflip.png"
-          alt="Batflip HQ Mascot"
+          alt="Goin' Yard HQ Mascot"
           className="mascot-hero"
           style={{ margin: '0 auto 20px', display: 'block' }}
         />
-        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12, color: 'white' }}>Batflip <span style={{ color: 'var(--primary)' }}>HQ</span></h1>
+        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12, color: 'white' }}>Goin' Yard <span style={{ color: 'var(--primary)' }}>HQ</span></h1>
         <p style={{ color: 'var(--text-muted)', marginBottom: 36, lineHeight: 1.6, fontSize: 15 }}>
           Your intelligent, extremely simple personal assistant for Yahoo Fantasy Baseball. Dominating your league has never been easier.
         </p>
@@ -250,7 +250,7 @@ function PlayerTrendsPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Player Trends</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>📈 Player Trends</h1>
           <p style={{ color: '#7aafc4', fontSize: 14 }}>Hot streaks, rising stars, and cold spells on your roster</p>
         </div>
         {leagues.length > 0 && (

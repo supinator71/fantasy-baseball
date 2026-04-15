@@ -78,9 +78,12 @@ router.get('/callback', async (req, res) => {
     req.session.tokens = { access_token, refresh_token, expires_at: expiresAt };
     req.session.yahoo_guid = yahooGuid;
 
-    // Store in DB for persistence
-    db.prepare(`INSERT OR REPLACE INTO tokens (id, access_token, refresh_token, expires_at)
-      VALUES (1, ?, ?, ?)`).run(access_token, refresh_token, expiresAt);
+    // Store in DB for persistence keyed by user GUID
+    if (yahooGuid) {
+      db.setToken(yahooGuid, { access_token, refresh_token, expires_at: expiresAt });
+    } else {
+      console.error('[Auth] Failed to get yahooGuid. Token not saved to DB!');
+    }
 
     res.redirect('/?auth=success');
   } catch (err) {
@@ -92,8 +95,11 @@ router.get('/callback', async (req, res) => {
 // Refresh access token
 router.post('/refresh', async (req, res) => {
   try {
-    const row = db.prepare('SELECT * FROM tokens WHERE id = 1').get();
-    if (!row) return res.status(401).json({ error: 'Not authenticated' });
+    const guid = req.session?.yahoo_guid;
+    if (!guid) return res.status(401).json({ error: 'Not authenticated (missing session guid)' });
+    
+    const row = db.getToken(guid);
+    if (!row) return res.status(401).json({ error: 'Not authenticated (missing db token)' });
 
     const credentials = Buffer.from(
       `${process.env.YAHOO_CLIENT_ID}:${process.env.YAHOO_CLIENT_SECRET}`
@@ -116,8 +122,7 @@ router.post('/refresh', async (req, res) => {
     const expiresAt = Date.now() + expires_in * 1000;
 
     req.session.tokens = { access_token, refresh_token, expires_at: expiresAt };
-    db.prepare(`UPDATE tokens SET access_token = ?, refresh_token = ?, expires_at = ? WHERE id = 1`)
-      .run(access_token, refresh_token, expiresAt);
+    db.setToken(req.session.yahoo_guid, { access_token, refresh_token, expires_at: expiresAt });
 
     res.json({ success: true });
   } catch (err) {
@@ -127,8 +132,8 @@ router.post('/refresh', async (req, res) => {
 
 // Check auth status
 router.get('/status', (req, res) => {
-  const row = db.prepare('SELECT * FROM tokens WHERE id = 1').get();
   const yahooGuid = req.session?.yahoo_guid || null;
+  const row = db.getToken(yahooGuid);
   const subscription = yahooGuid ? db.getSubscription(yahooGuid) : null;
   const aiUsage = yahooGuid ? db.getAiUsage(yahooGuid) : { count: 0 };
   
@@ -143,8 +148,9 @@ router.get('/status', (req, res) => {
 
 // Logout
 router.post('/logout', (req, res) => {
+  const guid = req.session?.yahoo_guid;
+  if (guid) db.deleteToken(guid);
   req.session.destroy();
-  db.prepare('DELETE FROM tokens WHERE id = 1').run();
   res.json({ success: true });
 });
 

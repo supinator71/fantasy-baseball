@@ -690,7 +690,7 @@ function optimizeLineup(roster = [], weekSchedule = {}, scoringType = 'Roto', le
   return {
     starters: sorted.filter(p => p.startScore >= 45 && !p.reasoning.includes('ON IL')).slice(0, 14),
     bench: sorted.filter(p => p.startScore < 45 || p.reasoning.includes('ON IL')),
-    streamingTargets: sorted.filter(p => p.weekGames >= 7).slice(0, 3),
+    volumePlays: sorted.filter(p => p.weekGames >= 7).slice(0, 3),
     reasoning: `Ranked ${roster.length} players by ${formatNote}.`,
   }
 }

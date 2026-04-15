@@ -26,7 +26,7 @@ export default function UpgradePage({ subscription, onUpgradeComplete }) {
   return (
     <div className="upgrade-page">
       <div className="upgrade-header">
-        <h1>⚾ Upgrade to Batflip Pro</h1>
+        <h1>⚾ Upgrade to Goin' Yard Pro</h1>
         <p className="upgrade-subtitle">
           Unlock the full power of your AI fantasy baseball brain
         </p>

@@ -116,7 +116,7 @@ export default function Standings({ leagueSettings }) {
     <div className="standings-container animate-fade-in">
       <header className="module-header">
         <div className="header-text">
-          <h1 className="text-gradient">League Standings</h1>
+          <h1 className="text-gradient">◎ League Standings</h1>
           <p className="text-muted">Live standings from your Yahoo Fantasy league</p>
         </div>
         <div className="header-actions">

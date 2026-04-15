@@ -186,7 +186,7 @@ for (const fmt of FORMATS) {
 
   console.log(`\n  [${fmt.label}] Top starter: ${topStarter?.player_name} (VOR:${topStarter?.vor}, score:${topStarter?.startScore})`);
   console.log(`    Reasoning: "${lineup.reasoning}"`);
-  console.log(`    Starters: ${lineup.starters.length}, Bench: ${lineup.bench.length}, Streaming: ${lineup.streamingTargets.length}`);
+  console.log(`    Starters: ${lineup.starters.length}, Bench: ${lineup.bench.length}, Streaming: ${lineup.volumePlays.length}`);
 
   assert(lineup.starters.length > 0, `${fmt.label}: Has starters`, `${lineup.starters.length}`);
   assert(topStarter?.vor > 0, `${fmt.label}: Top starter has VOR`, `${topStarter?.vor}`);

@@ -49,7 +49,10 @@ export default function Dashboard({ leagueSettings }) {
   }
 
   return (
-    <div>
+    <div style={{ position: 'relative' }}>
+      {/* Background Graphic Scatter */}
+      <img src="/card-pitcher.png" alt="" style={{ position: 'absolute', top: -50, right: -80, width: 350, opacity: 0.4, transform: 'rotate(15deg)', pointerEvents: 'none', zIndex: -1 }} />
+      <img src="/card-hitter.png" alt="" style={{ position: 'absolute', top: 600, left: -60, width: 320, opacity: 0.4, transform: 'rotate(-25deg)', pointerEvents: 'none', zIndex: -1 }} />
       {/* Hero Banner */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 20, marginBottom: 28,
@@ -66,7 +69,7 @@ export default function Dashboard({ leagueSettings }) {
         }} />
         <img
           src="/cyborg_batflip.png"
-          alt="Batflip.app Mascot"
+          alt="Goin' Yard Mascot"
           className="mascot-hero"
         />
         <div style={{ minWidth: 0, flex: 1 }}>
@@ -74,10 +77,10 @@ export default function Dashboard({ leagueSettings }) {
             ⚡ AI-Powered Fantasy Intelligence
           </div>
           <h1 style={{ fontSize: 'clamp(22px, 6vw, 34px)', fontWeight: 800, marginBottom: 4, letterSpacing: -1, lineHeight: 1.1 }}>
-            Batflip <span style={{ color: 'var(--primary)' }}>Intelligence</span> HQ
+            Goin' Yard <span style={{ color: 'var(--primary)' }}>Intelligence</span> HQ
           </h1>
           <p style={{ color: '#7aafc4', fontSize: 14, margin: 0, lineHeight: 1.4 }}>
-            Welcome back to <strong style={{ color: '#f8fafc' }}>batflip.app</strong> — your automated fantasy analytics command center.
+            Welcome back to <strong style={{ color: '#f8fafc' }}>goinyard.app</strong> — your automated fantasy analytics command center.
           </p>
         </div>
       </div>

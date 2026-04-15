@@ -49,8 +49,7 @@ export default function TeamAudit({ leagueSettings }) {
 
   useEffect(() => {
     if (selectedLeague) {
-      loadTeams()
-      loadRoster()
+      loadData()
     }
   }, [selectedLeague])
 
@@ -60,36 +59,43 @@ export default function TeamAudit({ leagueSettings }) {
     }
   }, [selectedTeam])
 
-  async function loadTeams() {
-    try {
-      const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/standings`)
-      const parsedTeams = (data || []).map(t => {
-        const teamObj = t?.team
-        const info = Array.isArray(teamObj) ? (Array.isArray(teamObj[0]) ? Object.assign({}, ...teamObj[0]) : teamObj[0]) : teamObj
-        return {
-          team_key: info?.team_key,
-          name: info?.name
-        }
-      }).filter(t => t.team_key)
-      setTeams(parsedTeams)
-    } catch (err) {
-      console.error('Failed to load teams', err)
-    }
-  }
-
-  async function loadRoster() {
+  async function loadData() {
     setRosterLoading(true)
+    setRoster([])
     setAudit(null)
     setError('')
+    setTeams([])
+    
     try {
-      const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/myroster`)
-      setRoster(data.players || [])
-      if (data.teamKey) {
-        setSelectedTeam(data.teamKey)
-        setCurrentLoadedTeam(data.teamKey)
+      const [teamsRes, rosterRes] = await Promise.allSettled([
+        axios.get(`/api/yahoo/league/${selectedLeague}/standings`),
+        axios.get(`/api/yahoo/league/${selectedLeague}/myroster`)
+      ])
+
+      // Parse teams
+      if (teamsRes.status === 'fulfilled' && teamsRes.value.data) {
+        const parsedTeams = (teamsRes.value.data || []).map(t => {
+          const teamObj = t?.team
+          const info = Array.isArray(teamObj) ? (Array.isArray(teamObj[0]) ? Object.assign({}, ...teamObj[0]) : teamObj[0]) : teamObj
+          return { team_key: info?.team_key, name: info?.name }
+        }).filter(t => t.team_key)
+        setTeams(parsedTeams)
       }
+
+      // Parse roster
+      if (rosterRes.status === 'fulfilled' && rosterRes.value.data) {
+        setRoster(rosterRes.value.data.players || [])
+        if (rosterRes.value.data.teamKey) {
+          setSelectedTeam(rosterRes.value.data.teamKey)
+          setCurrentLoadedTeam(rosterRes.value.data.teamKey)
+        }
+      } else {
+        setError('Could not load roster. Make sure your league is configured.')
+      }
+
     } catch (err) {
-      setError('Could not load roster. Make sure your league is configured.')
+      console.error('Data load error:', err)
+      setError('Initial data load failed.')
     } finally {
       setRosterLoading(false)
     }
@@ -97,6 +103,7 @@ export default function TeamAudit({ leagueSettings }) {
 
   async function loadSpecificTeamRoster(teamKey) {
     setRosterLoading(true)
+    setRoster([])
     setAudit(null)
     setError('')
     try {
@@ -134,7 +141,7 @@ export default function TeamAudit({ leagueSettings }) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 700 }}>Team Audit</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 700 }}>▣ Team Audit</h1>
           <p style={{ color: '#7aafc4' }}>AI-powered roster analysis — grades, VOR rankings, and actionable moves</p>
         </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>

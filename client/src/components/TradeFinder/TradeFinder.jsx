@@ -65,7 +65,7 @@ export default function TradeFinder({ leagueSettings }) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 700 }}>Trade Finder</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 700 }}>◆ Trade Finder</h1>
           <p style={{ color: '#7aafc4' }}>AI identifies your surpluses and voids, then generates trade proposals with pitch language</p>
         </div>
         <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>

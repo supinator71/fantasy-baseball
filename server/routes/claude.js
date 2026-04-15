@@ -45,7 +45,7 @@ router.get('/ratelimit/stats', (req, res) => res.json(getStats()));
 // ─────────────────────────────────────────────────────────────────────────────
 // EXPERT SYSTEM PROMPT
 // ─────────────────────────────────────────────────────────────────────────────
-const SYSTEM_PROMPT = `You are Batflip HQ — a friendly, encouraging fantasy baseball AI for the 2026 MLB season. Help beginners dominate their Yahoo leagues.
+const SYSTEM_PROMPT = `You are Goin' Yard HQ — a friendly, encouraging fantasy baseball AI for the 2026 MLB season. Help beginners dominate their Yahoo leagues.
 
 RULES:
 1. ALL data is from LIVE Yahoo API for 2026. Trust it completely. Never question player teams or positions.
@@ -172,7 +172,7 @@ router.post('/startsit', rateLimiter('startsit'), async (req, res) => {
   const diagnosis = brain.buildRosterDiagnosis(players || [], settings || {});
 
   // fantasyBrain: streaming value + platoon for each player
-  const enriched = (players || []).map(p => {
+  const enriched = diagnosis.activeRoster.map(p => {
     const pos = String(p.position || '').split('/')[0].toUpperCase();
     const vor = brain.calculateVOR(p.stats || {}, pos, leagueSize, settings?.scoring_type);
     const platoon = brain.platoonAdvantage(p.bats || p.hand, p.pitcher_hand || 'R');
@@ -186,19 +186,18 @@ router.post('/startsit', rateLimiter('startsit'), async (req, res) => {
   let liveMatchups = '';
   let breakingNews = '';
   try {
-    liveMatchups = await mlbStats.getUpcomingSchedule();
-    if (liveMatchups) {
-      liveMatchups = `\n\n=== TODAY'S LIVE MLB MATCHUPS ===\n${liveMatchups}`;
-    }
+    const playerNames = diagnosis.activeRoster.map(p => p.name || p.player_name).filter(Boolean);
+    
+    const [scheduleStr, newsStr, bulkData] = await Promise.all([
+      mlbStats.getUpcomingSchedule(),
+      mlbStats.getBreakingNews(),
+      playerNames.length > 0 ? mlbStats.getBulkPlayerStats(playerNames, 2025) : Promise.resolve({})
+    ]);
 
-    breakingNews = await mlbStats.getBreakingNews();
-    if (breakingNews) {
-      breakingNews = `\n\n=== BREAKING MLB MEDICAL/ROSTER NEWS ===\n${breakingNews}`;
-    }
+    if (scheduleStr) liveMatchups = `\n\n=== TODAY'S LIVE MLB MATCHUPS ===\n${scheduleStr}`;
+    if (newsStr) breakingNews = `\n\n=== BREAKING MLB MEDICAL/ROSTER NEWS ===\n${newsStr}`;
 
-    const playerNames = (players || []).map(p => p.name || p.player_name).filter(Boolean);
-    if (playerNames.length > 0) {
-      const bulkData = await mlbStats.getBulkPlayerStats(playerNames, 2025);
+    if (playerNames.length > 0 && bulkData) {
       const intelLines = [];
       for (const [name, data] of Object.entries(bulkData)) {
         const intel = brain.generatePlayerIntelligence(data);
@@ -251,7 +250,7 @@ router.post('/trade', rateLimiter('trade'), async (req, res) => {
 
   // fantasyBrain: trade fairness engine
   const evaluation = brain.evaluateTrade(
-    giving || [], receiving || [], my_roster || [],
+    giving || [], receiving || [], diagnosis.activeRoster,
     { num_teams: settings?.num_teams || 12, scoring_type: settings?.scoring_type }
   );
 
@@ -301,26 +300,27 @@ router.post('/waiver', rateLimiter('waiver'), async (req, res) => {
     .filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
     .map(p => ({
     ...p,
-    waiverScore: brain.scoreWaiverTarget(p, my_roster || [], settings || {}, diagnosis.categoryNeeds),
+    waiverScore: brain.scoreWaiverTarget(p, diagnosis.activeRoster, settings || {}, diagnosis.categoryNeeds),
   })).sort((a, b) => b.waiverScore.score - a.waiverScore.score);
 
   // Fetch real 2025 stats and breaking news for top waiver targets (non-blocking)
   let historicalIntel = '';
   let breakingNews = '';
   try {
-    breakingNews = await mlbStats.getBreakingNews();
-    if (breakingNews) {
-      breakingNews = `\n=== BREAKING MLB MEDICAL/ROSTER NEWS ===\n${breakingNews}\n`;
-    }
     const topNames = scored.slice(0, 8).map(p => p.player_name || p.name).filter(Boolean);
-    if (topNames.length > 0) {
-      const bulkData = await mlbStats.getBulkPlayerStats(topNames, 2025);
+    
+    const [newsStr, bulkData] = await Promise.all([
+      mlbStats.getBreakingNews(),
+      topNames.length > 0 ? mlbStats.getBulkPlayerStats(topNames, 2025) : Promise.resolve({})
+    ]);
+
+    if (newsStr) breakingNews = `\n=== BREAKING MLB MEDICAL/ROSTER NEWS ===\n${newsStr}\n`;
+    
+    if (topNames.length > 0 && bulkData) {
       const intelLines = [];
       for (const [name, data] of Object.entries(bulkData)) {
         const intel = brain.generatePlayerIntelligence(data);
-        if (intel) {
-          intelLines.push(`${name}: ${intel.summary}`);
-        }
+        if (intel) intelLines.push(`${name}: ${intel.summary}`);
       }
       if (intelLines.length > 0) {
         historicalIntel = `\n\n=== 2025 MLB STATS INTELLIGENCE ===\n${intelLines.join('\n')}`;
@@ -684,7 +684,7 @@ DATA ACCURACY NOTE: This roster is pulled directly from the Yahoo Fantasy API fo
 
 LINEUP OPTIMIZER RESULTS (active players only):
 Top starters: ${lineupOpt.starters.slice(0, 10).map(p => `${p.player_name} — ${p.weekGames} games, confidence: ${p.confidence}`).join('\n')}
-Streaming targets (7-game teams): ${lineupOpt.streamingTargets.map(p => p.player_name).join(', ') || 'None'}
+Volume Plays (7-game teams): ${lineupOpt.volumePlays?.map(p => p.player_name).join(', ') || 'None'}
 
 POINTS ANALYSIS: ${matchupAnalysis ? matchupAnalysis.advice : diagnosis.catAnalysis.advice}
 
@@ -695,7 +695,7 @@ YOU HAVE EVERYTHING YOU NEED. Do NOT ask for more data. Analyze this roster and 
 Return ONLY valid JSON:
 {
   "optimalLineup": [{ "player": "name", "position": "SP", "reason": "A clear sentence explaining why they should start" }],
-  "streamingTargets": [{ "player": "name", "position": "SP", "reason": "A clear sentence about the streaming opportunity" }],
+  "volumePlays": [{ "player": "name", "position": "SP", "reason": "A clear sentence about why they should get extra volume starts" }],
   "swingCategories": ["Total Points"],
   "dailyMoves": {
     "monday": "A clear sentence about what to do Monday",

@@ -59,7 +59,7 @@ export default function StartSit({ leagueSettings }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 700 }}>Daily Start/Sit</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 700 }}>⚡ Daily Start/Sit</h1>
           <p style={{ color: '#7aafc4' }}>AI-powered daily lineup optimizer</p>
         </div>
         <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>

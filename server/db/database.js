@@ -5,7 +5,7 @@ const DB_DIR = path.join(__dirname);
 const DB_FILE = path.join(DB_DIR, 'data.json');
 
 const DEFAULT_DATA = {
-  tokens: null,
+  tokens: {},            // map: { [yahoo_guid]: { access_token, refresh_token, expires_at } }
   league_settings: {},   // map: { [league_key]: settingsObj }
   draft_board: [],
   my_roster: [],
@@ -33,23 +33,8 @@ const db = {
     return {
       run(...args) {
         const data = load();
-        // Tokens
-        if (query.includes('INSERT OR REPLACE INTO tokens')) {
-          data.tokens = { access_token: args[0], refresh_token: args[1], expires_at: args[2], id: 1 };
-          save(data);
-        } else if (query.includes('UPDATE tokens SET access_token')) {
-          if (data.tokens) {
-            data.tokens.access_token = args[0];
-            data.tokens.refresh_token = args[1];
-            data.tokens.expires_at = args[2];
-          }
-          save(data);
-        } else if (query.includes('DELETE FROM tokens')) {
-          data.tokens = null;
-          save(data);
-        }
         // League settings — stored per league_key
-        else if (query.includes('INSERT OR REPLACE INTO league_settings')) {
+        if (query.includes('INSERT OR REPLACE INTO league_settings')) {
           if (!data.league_settings || typeof data.league_settings !== 'object' || Array.isArray(data.league_settings)) {
             data.league_settings = {};
           }
@@ -83,7 +68,6 @@ const db = {
       },
       get(...args) {
         const data = load();
-        if (query.includes('FROM tokens')) return data.tokens;
         if (query.includes('FROM league_settings')) {
           // Support lookup by league_key arg, or fall back to most recently updated
           const map = data.league_settings;
@@ -128,6 +112,44 @@ const db = {
   exec() {},
 
   // ── Subscription helpers ─────────────────────────────────────────────
+  async getAccessToken(req) {
+    const guid = req?.session?.yahoo_guid;
+    if (!guid) throw new Error('Not authenticated (missing session guid)');
+    
+    const row = db.getToken(guid);
+    if (!row) throw new Error('Not authenticated with Yahoo');
+
+    // Auto-refresh if naturally expired
+    if (Date.now() > row.expires_at - 60000) {
+      console.log('[Yahoo OAuth] Token naturally expired, auto-refreshing...');
+      return await forceRefreshToken(req, row.refresh_token);
+    }
+    return row.access_token;
+  },
+
+  getToken(yahooGuid) {
+    if (!yahooGuid) return null;
+    const data = load();
+    return data.tokens ? data.tokens[yahooGuid] : null;
+  },
+
+  setToken(yahooGuid, tokenData) {
+    if (!yahooGuid) return;
+    const data = load();
+    if (!data.tokens) data.tokens = {};
+    data.tokens[yahooGuid] = tokenData;
+    save(data);
+  },
+
+  deleteToken(yahooGuid) {
+    if (!yahooGuid) return;
+    const data = load();
+    if (data.tokens && data.tokens[yahooGuid]) {
+      delete data.tokens[yahooGuid];
+      save(data);
+    }
+  },
+
   getSubscription(yahooGuid) {
     const data = load();
     if (!data.subscriptions) data.subscriptions = {};
