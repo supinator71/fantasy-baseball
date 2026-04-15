@@ -97,6 +97,7 @@ async function callClaude(messages, maxTokens = 1800) {
   console.log('[Claude] Starting API call...', { messageCount: messages.length, maxTokens });
   const startTime = Date.now();
   
+  try {
     const lastContent = messages[messages.length - 1]?.content || '';
     const isJsonRequested = lastContent.includes('Return ONLY valid JSON');
     
