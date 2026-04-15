@@ -124,8 +124,13 @@ async function callClaude(messages, maxTokens = 1800) {
     const msg = await Promise.race([apiCall, timeoutPromise]);
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     
-    // Add the { back since we prefilled it ONLY for JSON endpoints
-    const responseText = isJsonRequested ? ('{' + msg.content[0].text) : msg.content[0].text;
+    // Ensure we don't accidentally double the opening brace if Claude also emitted one
+    let responseText = msg.content[0].text;
+    if (isJsonRequested) {
+      if (!responseText.trimStart().startsWith('{')) {
+        responseText = '{' + responseText;
+      }
+    }
     const u = msg.usage || {};
     console.log(`[Claude] ${elapsed}s | in:${u.input_tokens} cache_read:${u.cache_read_input_tokens||0} cache_write:${u.cache_creation_input_tokens||0} out:${u.output_tokens} | ${responseText.length} chars`);
     return responseText;
@@ -140,18 +145,49 @@ async function callClaude(messages, maxTokens = 1800) {
 function tryParseJSON(text) {
   if (!text) return null;
   
-  // 1: Direct Parse
+  // Custom depth-based JSON extractor to prevent greedy regex capturing trailing conversational `}` tokens
+  function extractJsonStr(str) {
+    let startIndex = str.indexOf('{');
+    if (startIndex === -1) return null;
+    
+    let depth = 0;
+    let inString = false;
+    let escapeNext = false;
+    
+    for (let i = startIndex; i < str.length; i++) {
+      const char = str[i];
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+      if (char === '\\') {
+        escapeNext = true;
+        continue;
+      }
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (!inString) {
+        if (char === '{') depth++;
+        else if (char === '}') {
+          depth--;
+          if (depth === 0) {
+            return str.substring(startIndex, i + 1);
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  // 1: Direct Parse clean markdown
   let cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
   try { return JSON.parse(cleaned); } catch {}
   
-  // 2: Extraction Parse
-  let match = cleaned.match(/\{[\s\S]*\}/);
-  if (!match) {
-    match = text.match(/\{[\s\S]*\}/); // try raw text
-    if (!match) return null;
-  }
-  
-  let jsonStr = match[0];
+  // 2: Robust Extraction (ignores trailing garbage that breaks greedy regex)
+  let jsonStr = extractJsonStr(cleaned) || extractJsonStr(text);
+  if (!jsonStr) return null;
   try { return JSON.parse(jsonStr); } catch (e) {
     console.error('[Claude] Standard JSON parse failed:', e.message);
   }
