@@ -599,3 +599,220 @@ tr:hover td {
   .mascot-header { width: 88px;  height: 88px; }
   .mascot-ai     { width: 96px;  height: 96px; }
 }
+
+/* ── Upgrade Page ──────────────────────────────────────────────────────── */
+.upgrade-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.upgrade-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.upgrade-header h1 {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  background: linear-gradient(135deg, #fff 30%, var(--accent, #00c8ff));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.upgrade-subtitle {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  margin-top: 8px;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.pricing-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 24px;
+  position: relative;
+  transition: transform 0.2s, border-color 0.3s;
+}
+
+.pricing-card:hover {
+  transform: translateY(-4px);
+}
+
+.pricing-card.recommended {
+  border-color: var(--accent, #00c8ff);
+  box-shadow: 0 0 30px rgba(0, 200, 255, 0.15);
+}
+
+.pricing-card.current {
+  border-color: var(--success);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+}
+
+.pricing-recommended {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #00c8ff, #0088ff);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 16px;
+  border-radius: 12px;
+  letter-spacing: 0.05em;
+}
+
+.pricing-badge {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.pricing-badge.pro { color: var(--accent, #00c8ff); }
+.pricing-badge.addon { color: var(--warning); }
+
+.pricing-price {
+  font-family: var(--font-heading);
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1;
+}
+
+.pricing-period {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: 4px;
+  margin-bottom: 20px;
+}
+
+.pricing-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+}
+
+.pricing-features li {
+  padding: 6px 0;
+  font-size: 14px;
+  color: var(--text-secondary, #cbd5e1);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.pricing-features li:last-child { border-bottom: none; }
+
+.pricing-cta {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, #00c8ff, #0066ff);
+  color: #fff;
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+
+.pricing-cta:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 200, 255, 0.3);
+}
+
+.pricing-cta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pricing-cta.addon {
+  background: linear-gradient(135deg, var(--warning), #e68a00);
+}
+
+.pricing-cta.compact {
+  width: auto;
+  padding: 10px 24px;
+  font-size: 14px;
+}
+
+.pricing-current-badge {
+  text-align: center;
+  padding: 12px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 12px;
+  color: var(--success);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.upgrade-footer {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* Compact upgrade prompt (shown in modals when free limit hit) */
+.upgrade-prompt {
+  text-align: center;
+  padding: 32px 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--accent, #00c8ff);
+  border-radius: 16px;
+  max-width: 400px;
+  margin: 20px auto;
+}
+
+.upgrade-prompt-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.upgrade-prompt h3 {
+  color: var(--text-main);
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.upgrade-prompt p {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+/* AI usage badge in sidebar */
+.ai-usage-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(0, 200, 255, 0.1);
+  border: 1px solid rgba(0, 200, 255, 0.2);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--accent, #00c8ff);
+  font-weight: 600;
+}
+
+.ai-usage-badge.warning {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: var(--warning);
+}
+
+.ai-usage-badge.exhausted {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--danger);
+}
+

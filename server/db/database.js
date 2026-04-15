@@ -9,7 +9,9 @@ const DEFAULT_DATA = {
   league_settings: {},   // map: { [league_key]: settingsObj }
   draft_board: [],
   my_roster: [],
-  notes: []
+  notes: [],
+  subscriptions: {},     // map: { [yahoo_guid]: { plan, season, max_leagues, ... } }
+  user_profiles: {}      // map: { [yahoo_guid]: { name, email, created_at } }
 };
 
 function load() {
@@ -123,7 +125,59 @@ const db = {
       return fn(...args);
     };
   },
-  exec() {}
+  exec() {},
+
+  // ── Subscription helpers ─────────────────────────────────────────────
+  getSubscription(yahooGuid) {
+    const data = load();
+    if (!data.subscriptions) data.subscriptions = {};
+    return data.subscriptions[yahooGuid] || null;
+  },
+
+  setSubscription(yahooGuid, sub) {
+    const data = load();
+    if (!data.subscriptions) data.subscriptions = {};
+    data.subscriptions[yahooGuid] = { ...sub, updated_at: Date.now() };
+    save(data);
+  },
+
+  setUserProfile(yahooGuid, profile) {
+    const data = load();
+    if (!data.user_profiles) data.user_profiles = {};
+    data.user_profiles[yahooGuid] = { ...profile, updated_at: Date.now() };
+    save(data);
+  },
+
+  getUserProfile(yahooGuid) {
+    const data = load();
+    return data.user_profiles?.[yahooGuid] || null;
+  },
+
+  // AI usage tracking for free tier (3 calls/day)
+  getAiUsage(yahooGuid) {
+    const data = load();
+    if (!data.ai_usage) data.ai_usage = {};
+    const usage = data.ai_usage[yahooGuid];
+    if (!usage) return { count: 0, date: null };
+    // Reset if it's a new day
+    const today = new Date().toISOString().slice(0, 10);
+    if (usage.date !== today) return { count: 0, date: today };
+    return usage;
+  },
+
+  incrementAiUsage(yahooGuid) {
+    const data = load();
+    if (!data.ai_usage) data.ai_usage = {};
+    const today = new Date().toISOString().slice(0, 10);
+    const current = data.ai_usage[yahooGuid];
+    if (!current || current.date !== today) {
+      data.ai_usage[yahooGuid] = { count: 1, date: today };
+    } else {
+      data.ai_usage[yahooGuid].count++;
+    }
+    save(data);
+    return data.ai_usage[yahooGuid];
+  }
 };
 
 module.exports = db;

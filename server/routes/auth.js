@@ -49,8 +49,34 @@ router.get('/callback', async (req, res) => {
     const { access_token, refresh_token, expires_in } = response.data;
     const expiresAt = Date.now() + expires_in * 1000;
 
+    // Fetch Yahoo user profile to get unique GUID
+    let yahooGuid = null;
+    let userName = null;
+    let userEmail = null;
+    try {
+      const profile = await axios.get('https://api.login.yahoo.com/openid/v1/userinfo', {
+        headers: { Authorization: `Bearer ${access_token}` }
+      });
+      yahooGuid = profile.data.sub;
+      userName = profile.data.name || profile.data.nickname || null;
+      userEmail = profile.data.email || null;
+      
+      // Store user profile for subscription tracking
+      if (yahooGuid) {
+        db.setUserProfile(yahooGuid, {
+          name: userName,
+          email: userEmail,
+          yahoo_guid: yahooGuid,
+          created_at: db.getUserProfile(yahooGuid)?.created_at || Date.now()
+        });
+      }
+    } catch (profileErr) {
+      console.log('[Auth] Yahoo profile fetch skipped:', profileErr.message);
+    }
+
     // Store tokens in session
     req.session.tokens = { access_token, refresh_token, expires_at: expiresAt };
+    req.session.yahoo_guid = yahooGuid;
 
     // Store in DB for persistence
     db.prepare(`INSERT OR REPLACE INTO tokens (id, access_token, refresh_token, expires_at)
@@ -102,7 +128,17 @@ router.post('/refresh', async (req, res) => {
 // Check auth status
 router.get('/status', (req, res) => {
   const row = db.prepare('SELECT * FROM tokens WHERE id = 1').get();
-  res.json({ authenticated: !!row, expires_at: row?.expires_at });
+  const yahooGuid = req.session?.yahoo_guid || null;
+  const subscription = yahooGuid ? db.getSubscription(yahooGuid) : null;
+  const aiUsage = yahooGuid ? db.getAiUsage(yahooGuid) : { count: 0 };
+  
+  res.json({ 
+    authenticated: !!row, 
+    expires_at: row?.expires_at,
+    yahoo_guid: yahooGuid,
+    subscription: subscription || { plan: 'free', max_leagues: 1 },
+    ai_usage: aiUsage
+  });
 });
 
 // Logout

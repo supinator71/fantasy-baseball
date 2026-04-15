@@ -11,6 +11,8 @@ const yahooRoutes = require('./routes/yahoo');
 const claudeRoutes = require('./routes/claude');
 const draftRoutes = require('./routes/draft');
 const mlbStatsRoutes = require('./routes/mlbStats');
+const stripeRoutes = require('./routes/stripe');
+const { checkAiLimit } = require('./middleware/subscription');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,6 +21,9 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 1);
 
 app.use(cors({ origin: true, credentials: true }));
+
+// Stripe webhook needs raw body BEFORE json parsing
+app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
 app.use(session({
@@ -48,9 +53,10 @@ const yahooLimiter = rateLimit({
 
 app.use('/auth', authRoutes);
 app.use('/api/yahoo', yahooLimiter, yahooRoutes);
-app.use('/api/claude', aiLimiter, claudeRoutes);
+app.use('/api/claude', aiLimiter, checkAiLimit, claudeRoutes);
 app.use('/api/draft', draftRoutes);
 app.use('/api/mlb', mlbStatsRoutes);
+app.use('/api/stripe', stripeRoutes);
 
 // Serve React frontend in production
 if (process.env.NODE_ENV === 'production') {

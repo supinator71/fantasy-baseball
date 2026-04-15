@@ -15,6 +15,7 @@ import TeamAudit from './components/TeamAudit/TeamAudit'
 import TradeFinder from './components/TradeFinder/TradeFinder'
 import GamePlan from './components/GamePlan/GamePlan'
 import PlayerTrends from './components/PlayerTrends/PlayerTrends'
+import UpgradePage from './components/Upgrade/Upgrade'
 
 import './index.css'
 
@@ -22,6 +23,7 @@ export default function App() {
   const [authStatus, setAuthStatus] = useState({ authenticated: false, loading: true })
   const [leagueSettings, setLeagueSettings] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [subscription, setSubscription] = useState({ plan: 'free', max_leagues: 1 })
 
   useEffect(() => {
     checkAuth()
@@ -30,6 +32,10 @@ export default function App() {
     if (params.get('auth') === 'success') {
       window.history.replaceState({}, '', '/')
       checkAuth()
+    }
+    if (params.get('upgrade') === 'success') {
+      window.history.replaceState({}, '', '/')
+      checkAuth() // refresh subscription status
     }
 
     // Global Interceptor catching 401s globally to fix the OAuth Death Spiral
@@ -57,6 +63,7 @@ export default function App() {
     try {
       const { data } = await axios.get('/auth/status')
       setAuthStatus({ ...data, loading: false })
+      if (data.subscription) setSubscription(data.subscription)
     } catch {
       setAuthStatus({ authenticated: false, loading: false })
     }
@@ -116,6 +123,7 @@ export default function App() {
                 <Route path="/audit"      element={<TeamAudit leagueSettings={leagueSettings} />} />
                 <Route path="/tradefinder" element={<TradeFinder leagueSettings={leagueSettings} />} />
                 <Route path="/gameplan"   element={<GamePlan leagueSettings={leagueSettings} />} />
+                <Route path="/upgrade"   element={<UpgradePage subscription={subscription} />} />
               </Routes>
             )}
           </main>
@@ -138,6 +146,7 @@ function Sidebar({ authenticated, isOpen, onClose }) {
     { to: '/tradefinder', label: 'Trade Finder',             icon: '◆' },
     { to: '/gameplan',    label: 'Weekly Game Plan',         icon: '▦' },
     { to: '/baseball101', label: 'Baseball 101',             icon: '🎓' },
+    { to: '/upgrade',     label: 'Upgrade to Pro',           icon: '⭐' },
   ]
 
   return (
