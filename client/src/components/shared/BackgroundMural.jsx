@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function BackgroundMural() {
   return (
-    <div style={{
+    <div className="mural-container" style={{
       position: 'fixed',
       top: 0,
       left: 0,

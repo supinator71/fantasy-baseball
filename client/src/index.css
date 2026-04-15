@@ -537,6 +537,18 @@ tr:hover td {
   /* Don't fight clamp() — only override truly fixed large sizes */
   h2 { font-size: 18px !important; }
   h3 { font-size: 15px !important; }
+
+  /* Background Mural Scaling */
+  .mural-container img {
+    opacity: 0.08 !important;   /* Fade to watermark so text is readable */
+    width: 250px !important;    /* Avoid massive images on 375px screens */
+    left: auto !important;
+    right: -10vw !important;    /* Stick them on the right edge */
+  }
+  .mural-container img:nth-child(even) {
+    right: auto !important;
+    left: -10vw !important;     /* Stick evens on the left edge */
+  }
 }
 
 /* ===================== MASCOT ANIMATIONS ===================== */
