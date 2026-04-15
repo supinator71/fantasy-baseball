@@ -1194,62 +1194,47 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}) {
     }).sort((a, b) => b.vor - a.vor);
 
   // ── 5. Build the canonical prompt block ────────────────────────────────
-  // This EXACT string gets injected into every Claude call.
-  let promptBlock = `\n=== ROSTER DIAGNOSIS (unified analysis — same engine across all modules) ===\n`;
+  // This EXACT string gets injected into every Claude call. Keep it compact.
+  let promptBlock = `\n=== ROSTER DIAGNOSIS ===\n`;
 
   // Unavailable players
   if (unavailablePlayers.length > 0) {
-    promptBlock += `\n⛔ UNAVAILABLE — DO NOT START, RECOMMEND, OR INCLUDE IN LINEUPS (IL/Suspended/Out):\n`;
-    promptBlock += unavailablePlayers.map(p => `  ${p.player_name || p.name} [${p.status}] (${p.position})`).join('\n');
-    promptBlock += `\nThese players are physically unavailable. Exclude from every lineup, trade proposal, start/sit decision, and streaming suggestion.\n`;
+    promptBlock += `⛔ UNAVAILABLE (IL/Out/Susp — exclude from all decisions): ${unavailablePlayers.map(p => `${p.player_name || p.name} [${p.status}]`).join(', ')}\n`;
   }
 
   // DTD/Questionable players
   if (dtdPlayers.length > 0) {
-    promptBlock += `\n🟡 DAY-TO-DAY / QUESTIONABLE (may miss games — flag as risk):\n`;
-    promptBlock += dtdPlayers.map(p => `  ${p.player_name || p.name} [${p.status}] (${p.position})`).join('\n');
-    promptBlock += `\nThese players are uncertain. Flag them as risks, recommend backup plans, and do not build strategy around them without contingency.\n`;
+    promptBlock += `🟡 DTD/QUESTIONABLE (flag as risk, have backup plan): ${dtdPlayers.map(p => `${p.player_name || p.name} [${p.status}]`).join(', ')}\n`;
   }
 
-  // Active roster
-  promptBlock += `\nACTIVE ROSTER (${activeRoster.length} players, sorted by VOR):\n`;
-  promptBlock += vorByPlayer.map(p => `  ${p.name} (${p.position}) — VOR: ${p.vor}/100 [${p.scarcity}]`).join('\n');
+  // Active roster — top 8 + bottom 3 to save tokens on large rosters
+  const vorTop = vorByPlayer.slice(0, 8);
+  const vorBottom = vorByPlayer.length > 11 ? vorByPlayer.slice(-3) : [];
+  const vorMiddleCount = Math.max(0, vorByPlayer.length - 11);
+  promptBlock += `\nROSTER (${activeRoster.length} active, by VOR):\n`;
+  promptBlock += vorTop.map(p => `  ${p.name} (${p.position}) VOR:${p.vor}`).join('\n');
+  if (vorMiddleCount > 0) promptBlock += `\n  ...${vorMiddleCount} middle-tier players omitted...`;
+  if (vorBottom.length > 0) promptBlock += `\n` + vorBottom.map(p => `  ${p.name} (${p.position}) VOR:${p.vor}`).join('\n');
 
-  // Positional needs
-  promptBlock += `\n\nPOSITIONAL ANALYSIS:\n`;
-  promptBlock += `  Voids (no coverage): ${rosterAnalysis.voids.join(', ') || 'None'}\n`;
-  promptBlock += `  Surpluses: ${rosterAnalysis.surpluses.map(s => `${s.position} (${s.count}: ${s.players.join(', ')})`).join('; ') || 'None'}\n`;
-  if (rosterAnalysis.sellHigh.length > 0) {
-    promptBlock += `  Sell High: ${rosterAnalysis.sellHigh.map(p => `${p.name} (VOR ${p.vor})`).join(', ')}\n`;
-  }
-  if (rosterAnalysis.buyLow.length > 0) {
-    promptBlock += `  Buy Low: ${rosterAnalysis.buyLow.map(p => `${p.name} (VOR ${p.vor})`).join(', ')}\n`;
-  }
+  // Positional needs — compact
+  promptBlock += `\nVoids: ${rosterAnalysis.voids.join(', ') || 'None'}`;
+  promptBlock += ` | Surpluses: ${rosterAnalysis.surpluses.map(s => `${s.position}(${s.count})`).join(', ') || 'None'}\n`;
 
-  // Category weakness
-  if (categoryNeeds.weakCategories.length > 0 || categoryNeeds.needsPitching || categoryNeeds.needsHitting) {
-    promptBlock += `\nCATEGORY WEAKNESS ANALYSIS:\n`;
-    if (categoryNeeds.weakCategories.length > 0) {
-      promptBlock += `  Weak categories: ${categoryNeeds.weakCategories.join(', ')}\n`;
-    }
-    if (categoryNeeds.needsPitching) {
-      promptBlock += `  ⚠️ PITCHING IS A TEAM WEAKNESS — prioritize SP/RP in all recommendations (pickups, trades, starts).\n`;
-    }
-    if (categoryNeeds.needsHitting) {
-      promptBlock += `  ⚠️ HITTING IS A TEAM WEAKNESS — prioritize bat upgrades at scarce positions.\n`;
-    }
-    promptBlock += `  Strategy: ${catAnalysis.advice}\n`;
+  // Category weakness — compact
+  if (categoryNeeds.needsPitching || categoryNeeds.needsHitting) {
+    if (categoryNeeds.needsPitching) promptBlock += `⚠️ PITCHING WEAK — prioritize SP/RP.\n`;
+    if (categoryNeeds.needsHitting) promptBlock += `⚠️ HITTING WEAK — prioritize bats at scarce positions.\n`;
+    if (categoryNeeds.weakCategories.length > 0) promptBlock += `Weak cats: ${categoryNeeds.weakCategories.join(', ')}. `;
+    promptBlock += `${catAnalysis.advice}\n`;
   }
 
-  // Summary stats
+  // Summary stats — one line
   const totalVOR = vorByPlayer.reduce((sum, p) => sum + (p.vor || 0), 0);
   const avgVOR = vorByPlayer.length > 0 ? (totalVOR / vorByPlayer.length).toFixed(1) : 0;
   const eliteCount = vorByPlayer.filter(p => p.vor >= 70).length;
   const replacementCount = vorByPlayer.filter(p => p.vor < 30).length;
 
-  promptBlock += `\nROSTER HEALTH:\n`;
-  promptBlock += `  Total VOR: ${totalVOR} | Avg VOR/player: ${avgVOR} | Elite (70+): ${eliteCount} | Replacement (<30): ${replacementCount}\n`;
-  promptBlock += `=== END ROSTER DIAGNOSIS ===\n`;
+  promptBlock += `Health: ${totalVOR} total VOR, ${avgVOR} avg, ${eliteCount} elite, ${replacementCount} replacement\n`;
 
   return {
     // Raw data for programmatic use

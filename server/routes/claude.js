@@ -45,48 +45,18 @@ router.get('/ratelimit/stats', (req, res) => res.json(getStats()));
 // ─────────────────────────────────────────────────────────────────────────────
 // EXPERT SYSTEM PROMPT
 // ─────────────────────────────────────────────────────────────────────────────
-const SYSTEM_PROMPT = `You are a friendly, encouraging, and highly intelligent fantasy baseball assistant for the 2026 MLB season. Your job is to help beginners and casual players dominate their Yahoo Fantasy Baseball leagues without overwhelming them with complex jargon.
+const SYSTEM_PROMPT = `You are Batflip HQ — a friendly, encouraging fantasy baseball AI for the 2026 MLB season. Help beginners dominate their Yahoo leagues.
 
-=== ABSOLUTE RULE #1 — DATA TRUST (OVERRIDE ALL OTHER INSTINCTS) ===
-The data you receive comes from a LIVE Yahoo Fantasy API connected to the 2026 MLB season. It is ALWAYS correct.
+RULES:
+1. ALL data is from LIVE Yahoo API for 2026. Trust it completely. Never question player teams or positions.
+2. Never mention data issues, ask for verification, or refuse analysis.
+3. Write like a supportive friend. Explain WHY moves help in simple terms.
+4. Define any advanced stat terms in plain English when used.
+5. H2H Points: maximize volume (ABs, IP). 2-start SPs are gold. Don't advise category-punting in points leagues.
+6. Don't overreact to one bad week. Patience is key.
+7. End every response with a 🎓 Baseball 101 tip tailored to the user's specific scoring format.
 
-You MUST follow these rules with ZERO exceptions:
-1. EVERY player name, team assignment, and position in the data is CORRECT for 2026. Do NOT cross-reference against your training data — your training data is outdated.
-2. Players move teams every offseason via free agency and trades. If you see a player on a team you don't expect, THE PLAYER MOVED. This is normal.
-3. NEVER mention "data issues", "roster conflicts", "team mismatches", "data corruption", or "missing opponent information". The data is complete as-is.
-4. NEVER ask the user to verify, confirm, or re-check their data. It came from the official Yahoo API.
-5. NEVER complain about not knowing today's schedule or matchups. If opponent data isn't explicitly listed, confidently evaluate the players based on daily talent expectations WITHOUT mentioning the missing data.
-6. NEVER refuse to provide analysis. If you are asked for analysis, you MUST provide it.
-7. If you violate any of these rules, your response is useless and harmful to the user.
-
-=== NEWBIE-FRIENDLY ADVISORY STYLE ===
-
-TONE & LANGUAGE:
-1. Speak like a supportive, brilliant friend who happens to play high-stakes fantasy baseball. Be encouraging!
-2. Avoid deep analytic acronyms (like BABIP, xFIP, VORP) unless you quickly and simply define exactly what they mean in plain English.
-3. Use simple analogies. Instead of "chasing categorical scarcity," say "finding players who provide unique value since everyone else already has power."
-4. Treat roster spots, bench slots, and waiver wire picks as valuable cash. Recommend moves that actually improve their chances of winning.
-5. When uncertain, advise patience. Remind the user that fantasy baseball is a long marathon, not a quick sprint.
-
-FORMAT & STRATEGY (HEAD-TO-HEAD POINTS):
-6. In Head-to-Head Points: The only thing that matters is total volume. More at-bats and more innings pitched equal more points.
-7. Ignore balancing 5x5 categories. Do not tell the user to "punt" categories. Just tell them how to maximize raw weekly points.
-8. Two-start pitchers and starting pitchers who consistently pitch deep into games are the best assets. Point this out if it is relevant.
-
-ROSTER EVALUATION:
-9. Don't overreact to a player having one bad week. 
-10. If someone is an obvious "must add" star, tell the user to run, not walk, to the free agent pool to grab them.
-
-TRANSPARENCY & CLARITY:
-11. Always clearly explain WHY you recommend a move in simple terms.
-12. If roster, standings, or available players are provided, synthesize them into a single strategic recommendation. NEVER ask the user for more data or refuse to analyze. Work with what you have.
-13. BASEBALL 101 & PIZZAZZ: Non-baseball fans use this app to learn the game. You MUST organically sprinkle in fun, high-energy "Baseball 101" educational teaching points wrapped in emojis into your explanations. Have fun with it! Add some sassy or exciting analogies so newbies learn the lingo (e.g. why "closers" are rare gold, or what a "platoon advantage" is) without feeling like they are reading a textbook.
-
-=== OUTPUT GUIDANCE ===
-- Write in crystal clear, friendly prose — no code syntax, no brackets, no JSON formatting in your text
-- Rank recommendations so it is obvious what the primary move is
-- Separate short-term value from rest-of-season value
-- End your response with a 🎓 "Baseball 101" tip — one simple, friendly, non-obvious piece of educational advice. Crucially, explicitly tailor this education to their specific scoring format (explain WHY a certain type of player is more valuable in Head-to-Head vs Points vs Roto/Categories, referencing the exact league parameters provided in the League Context).`;
+FORMATTING: Clean prose, no code syntax, no brackets. Rank recommendations clearly. Use bolded metric badges (**Player** \`[VOR: XX]\`).`;
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,13 +93,13 @@ function leagueContext(settings) {
 Scoring Events/Categories: ${(settings.stat_categories || []).join(', ')}.`;
 }
 
-async function callClaude(messages, maxTokens = 4000) {
+async function callClaude(messages, maxTokens = 1800) {
   console.log('[Claude] Starting API call...', { messageCount: messages.length, maxTokens });
   const startTime = Date.now();
   
   try {
     // Add a timeout to prevent infinite hangs
-    const timeoutMs = 90000; // 90 seconds
+    const timeoutMs = 45000; // 45 seconds
     const apiCall = getClient().messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: maxTokens,
@@ -246,32 +216,20 @@ router.post('/startsit', rateLimiter('startsit'), async (req, res) => {
 ${diagnosis.promptBlock}
 Context: ${matchup_context || 'Daily optimization'}
 
-Players to evaluate (with pre-computed matchup intelligence):
+Players:
 ${enriched.map(p =>
-  `${p.name} (${p.position}, ${p.team}) | Status (Injury): ${p.status || 'Active'} | Is Starting Today: ${p.is_starting} | VOR: ${p.vor} | Games this week: ${p.weekGames} | Streaming score: ${p.streaming?.score}/100 | Yahoo Season Stats (Raw): ${JSON.stringify(p.stats)}`
+  `${p.name} (${p.position}, ${p.team}) Status:${p.status || 'Active'} Starting:${p.is_starting || '?'} VOR:${p.vor} Games:${p.weekGames} Stream:${p.streaming?.score}/100`
 ).join('\n')}${liveMatchups}${breakingNews}${historicalIntel}
 
 ${daily_mode ? 
-  `This is a DAILY LINEUP OPTIMIZATION request. Do not write a paragraph for every single player. Instead:
-1. Identify the absolute "Must Starts" for today. (CRITICAL: NEVER recommend starting a player with Status "IL", "O", or "DTD").
-2. Identify the 3-4 toughest marginal Start/Sit decisions on this roster and explain exactly what to do with them. 
-(CRITICAL Rule for Batters: Recommend starting if "Is Starting" is "Yes" or "Unknown". If "No", bench them).
-(CRITICAL Rule for Starting Pitchers (SP): ONLY start if "Is Starting" is exactly "Yes". If the SP is "Unknown" or "No", BENCH them immediately because they are not pitching today!)
-3. Rapid-fire list the players who should be benched today (especially anyone on the IL, not starting, or SPs who are not pitching today).
-NOTE: Cross-reference the user's roster with "TODAY'S LIVE MLB MATCHUPS" to penalize or reward Pitchers and Hitters based on the difficulty of their real-life opponent today!
-NOTE: Yahoo Season Stats (Raw) uses Stat IDs (e.g. 12=HR, 13=RBI, 3=AVG, 14=SB, 7=R, 26=ERA, 27=WHIP, 28=W, 33=K). Heavily rely on these to identify prospects who are blowing up right now in 2026, even if their MLB historical data is weak!
-NOTE: Use the CATEGORY WEAKNESS ANALYSIS from the Roster Diagnosis to weigh decisions — if pitching is weak, lean toward starting SPs even in marginal matchups.` 
+  `DAILY MODE: 1) Must Starts. 2) 3-4 marginal decisions with reasoning. 3) Bench list.
+Rules: Never start IL/O/DTD. Batters: start if "Starting:Yes/?" bench if "No". SP: ONLY start if "Starting:Yes".
+Use live matchups + category weakness to weight decisions.` 
   : 
-  `Use the 2025 stats intelligence to assess each player's true talent level. Give START or SIT for each player backed by real performance data — flag breakout candidates and regression risks. Use the CATEGORY WEAKNESS ANALYSIS to inform priority: if pitching is a team weakness, give extra weight to SP starts.`
+  `WEEKLY MODE: START or SIT each player. Flag breakouts/regression. Weight category weaknesses.`
 }
 
-CRITICAL "SHOW YOUR WORK" RULE: When recommending a Start/Sit decision, you MUST explicitly cite the exact numeric math used locally in your prompt.
-Format your recommendations using strictly formatted markdown lists with bolded metric badges.
-Example format for your answers:
-- **[Player Name]** \`[VOR: XX | Stream: YY/100]\` 🟢 **START** -> *Logic:* [Brief explicit explanation of why the math demands this]
-- **[Player Name]** \`[VOR: XX | Stream: YY/100]\` 🔴 **SIT** -> *Logic:* [Brief explicit explanation]
-
-DO NOT write conversational paragraphs without these mathematical badges! You are a mathematical intelligence engine.`
+Format: **Player** \`[VOR:XX | Stream:YY]\` 🟢 START / 🔴 SIT -> *Logic:* [reason]. Show the math.`
     }]);
     res.json({ analysis: text });
   } catch (err) {
@@ -433,7 +391,7 @@ Strategy overview: ${JSON.stringify(strategy.strategy, null, 2)}
 Expand this into a personalized draft plan covering: early round priorities, positional scarcity windows, when to target closers, pitching philosophy, and 5 specific late-round sleeper archetypes to target.
 
 Write in clean, conversational prose. No JSON syntax, no brackets, no code formatting. Write like a veteran fantasy analyst advising a friend before their draft.`,
-    }], 2500);
+    }], 1500);
     res.json({ strategy: text, strategyProfile: strategy });
   } catch (err) {
     res.status(500).json({ error: err.message, strategy: 'AI unavailable.', strategyProfile: strategy });
@@ -479,7 +437,7 @@ Return ONLY valid JSON (no markdown):
   "key_matchups": "Describe the 2-3 swing categories and how to win them in plain English",
   "summary": "A clear, readable summary of the matchup projection"
 }`,
-    }], 2500);
+    }], 1500);
 
     const parsed = tryParseJSON(text);
     console.log('[Claude] /matchup/predict parsed:', parsed ? 'JSON OK' : 'FALLBACK to raw text');
@@ -582,7 +540,7 @@ Return ONLY valid JSON:
   "championshipPath": "A compelling narrative paragraph describing the path to winning it all",
   "fullAnalysis": "A comprehensive 300-word narrative analysis written as readable prose"
 }`,
-    }], 3500);
+    }], 2000);
 
     const parsed = tryParseJSON(text);
     console.log('[Claude] /audit parsed:', parsed ? 'JSON OK' : 'FALLBACK to raw text');
@@ -674,7 +632,7 @@ CRITICAL "SHOW YOUR WORK" RULE: You MUST explicitly cite the math. For every tra
 **Net VOR Impact:** [+X / -X] in bold.
 And next to every player name involved in the trade, include their markdown badge. Example: "**Carlos Correa** \`[VOR: 65]\`".
 Do NOT write paragraphs without citing these numbers. You are a mathematical engine.`,
-    }], 2500);
+    }], 1800);
 
     res.json({ proposals: text, myAnalysis: { surpluses: diagnosis.surpluses, voids: diagnosis.voids, sellHigh: diagnosis.sellHigh }, tradeTargets: tradeTargets.slice(0, 5) });
   } catch (err) {
@@ -744,7 +702,7 @@ Return ONLY valid JSON:
   "keyDecisions": [{ "decision": "A readable question about the decision", "recommendation": "Player name", "reasoning": "A persuasive sentence explaining why in terms of points" }],
   "weeklyProjection": { "myProjected": "350 pts", "opponentProjected": "310 pts", "confidence": "medium" }
 }`,
-    }], 3000);
+    }], 2000);
 
     const parsed = tryParseJSON(text);
     if (parsed) return res.json({ ...parsed, lineupOptimizer: lineupOpt, catAnalysis: diagnosis.catAnalysis });
