@@ -6,29 +6,30 @@ const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'satu
 function ProjectionBadge({ projection }) {
   if (!projection) return null
   const conf = projection.confidence
-  const confColor = conf === 'high' ? '#00a86b' : conf === 'medium' ? '#f59e0b' : '#ef4444'
+  const confColor = conf === 'high' ? '#10b981' : conf === 'medium' ? '#f59e0b' : '#ef4444'
+  
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-      {projection.myProjected && (
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 11, color: '#7aafc4', marginBottom: 2 }}>My Projected</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#00a86b' }}>{projection.myProjected}</div>
-        </div>
-      )}
-      {projection.opponentProjected && (
-        <>
-          <div style={{ fontSize: 20, color: '#4a7a94' }}>–</div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 11, color: '#7aafc4', marginBottom: 2 }}>Opponent</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#ef4444' }}>{projection.opponentProjected}</div>
+    <div className="scoreboard-badge">
+      <div className="scoreboard-content">
+        {projection.myProjected && (
+          <div className="stat-group">
+            <span className="stat-label">Proj. My Points</span>
+            <span className="stat-value text-success">{projection.myProjected}</span>
           </div>
-        </>
-      )}
+        )}
+        <div className="scoreboard-divider">VS</div>
+        {projection.opponentProjected && (
+          <div className="stat-group">
+            <span className="stat-label">Opponent Proj.</span>
+            <span className="stat-value text-danger">{projection.opponentProjected}</span>
+          </div>
+        )}
+      </div>
       {conf && (
-        <span style={{
-          padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 700,
-          textTransform: 'uppercase', background: `${confColor}22`, color: confColor
-        }}>{conf} confidence</span>
+        <div className="confidence-indicator" style={{ borderColor: confColor, color: confColor }}>
+          <span className="pulse-dot" style={{ backgroundColor: confColor }}></span>
+          {conf} Confidence
+        </div>
       )}
     </div>
   )
@@ -88,125 +89,131 @@ export default function GamePlan({ leagueSettings }) {
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: 28, fontWeight: 700 }}>Weekly Game Plan</h1>
-          <p style={{ color: '#7aafc4' }}>AI-optimized lineup, streaming targets, daily moves, and swing category strategy</p>
+    <div className="game-plan-container animate-fade-in">
+      {/* Strategic Header */}
+      <header className="module-header">
+        <div className="header-text">
+          <h1 className="text-gradient">Weekly Game Planner</h1>
+          <p className="text-muted">AI-optimized strategy for current matchup, daily moves, and category swinging.</p>
         </div>
-        <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: '100%', maxWidth: 220 }}>
-          {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
-        </select>
-      </div>
+        <div className="header-actions">
+          <div className="input-group">
+            <label>Current League</label>
+            <select 
+              value={selectedLeague} 
+              onChange={e => setSelectedLeague(e.target.value)}
+              className="league-selector"
+            >
+              {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
+            </select>
+          </div>
+        </div>
+      </header>
 
       {error && (
-        <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', borderRadius: 8, padding: 16, marginBottom: 16, color: '#ef4444' }}>
-          {error}
+        <div className="alert alert-danger mb-24">
+          <span className="alert-icon">⚠️</span>
+          <div className="alert-body">{error}</div>
         </div>
       )}
 
-      {rosterLoading && <div className="loading">Loading your roster...</div>}
+      {rosterLoading && (
+        <div className="loading-state card">
+          <div className="spinner"></div>
+          <p>Scouting your roster...</p>
+        </div>
+      )}
 
-      {!rosterLoading && roster.length > 0 && !plan && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 600 }}>Ready to plan ({roster.length} players)</h3>
-            <button className="btn btn-primary" onClick={generatePlan} disabled={loading}
-              style={{ fontSize: 14, background: 'linear-gradient(135deg, #003278 0%, #001f4c 100%)' }}>
-              {loading ? '⟳ Building...' : '📅 Generate Game Plan'}
+      {/* Action Card: No Plan Yet */}
+      {!rosterLoading && roster.length > 0 && !plan && !loading && (
+        <section className="action-card glass-card">
+          <div className="action-visual">📅</div>
+          <div className="action-content">
+            <h3>Ready for Week Analysis</h3>
+            <p>Your roster has {roster.length} active players. It's time to build a strategy.</p>
+            <button className="btn btn-primary btn-large btn-glow" onClick={generatePlan} disabled={loading}>
+              {loading ? 'Analyzing...' : 'Generate Weekly Strategy'}
             </button>
           </div>
-          <p style={{ color: '#7aafc4', fontSize: 13, margin: 0 }}>
-            Generates optimal lineup, streaming targets, daily decisions, and category strategy.
-          </p>
-        </div>
+        </section>
       )}
 
+      {/* Building State */}
       {loading && (
-        <div className="card" style={{ textAlign: 'center', padding: 48 }}>
-          <div style={{ fontSize: 42, marginBottom: 12 }}>📅</div>
-          <div className="loading">Building your weekly game plan...</div>
-          <p style={{ color: '#7aafc4', fontSize: 13, marginTop: 8 }}>Optimizing lineup, scheduling targets, analyzing categories...</p>
-        </div>
+        <section className="loading-state-full card mb-24">
+          <div className="ai-processing-visual">
+            <div className="orbit-ring"></div>
+            <div className="center-node">🤖</div>
+          </div>
+          <h3>Constructing Game Plan</h3>
+          <p className="text-muted">Simulating weekly matchups, checking streaming availability, and weighting category needs...</p>
+        </section>
       )}
 
-      {/* Plan results */}
+      {/* Plan Results Dashboard */}
       {plan && (
-        <>
-          {/* Weekly projection */}
-          {plan.weeklyProjection && (
-            <div className="card" style={{
-              marginBottom: 16, padding: '20px 28px',
-              background: 'linear-gradient(135deg, #004d4d, #0c2c56)',
-              border: '1px solid #007a7a'
-            }}>
-              <div style={{ fontSize: 11, color: '#7aafc4', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 12 }}>
-                Weekly Projection
+        <div className="strategic-dashboard animate-slide-up">
+          
+          {/* Top Level Intel */}
+          <div className="dash-row top-intel">
+            {plan.weeklyProjection && (
+              <div className="card scoreboard-card">
+                <h4 className="card-label">Strategic Outlook</h4>
+                <ProjectionBadge projection={plan.weeklyProjection} />
               </div>
-              <ProjectionBadge projection={plan.weeklyProjection} />
-            </div>
-          )}
+            )}
 
-          {/* Swing categories */}
-          {plan.swingCategories?.length > 0 && (
-            <div className="card" style={{ marginBottom: 16, background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)' }}>
-              <h3 style={{ color: '#f59e0b', marginBottom: 10, fontSize: 15 }}>🎯 Swing Categories This Week</h3>
-              <p style={{ color: '#7aafc4', fontSize: 13, marginBottom: 10 }}>Focus effort here — these categories are closest to shifting in your favor.</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {plan.swingCategories.map((cat, i) => (
-                  <span key={i} style={{
-                    background: 'rgba(245,158,11,0.2)', color: '#f59e0b', borderRadius: 6,
-                    padding: '6px 14px', fontSize: 14, fontWeight: 700
-                  }}>{cat}</span>
-                ))}
+            {plan.swingCategories?.length > 0 && (
+              <div className="card categories-card">
+                <h4 className="card-label">🎯 High-Impact Swing Categories</h4>
+                <div className="target-capsules">
+                  {plan.swingCategories.map((cat, i) => (
+                    <div key={i} className="cat-target pulse-soft">{cat}</div>
+                  ))}
+                </div>
+                <p className="tiny-advice">{plan.catAnalysis?.advice || 'Focus strategy here for maximum impact.'}</p>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* Optimal lineup + streaming */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
+          {/* Tactics Grid */}
+          <div className="tactics-grid">
+            {/* Optimal Lineup Column */}
             {plan.optimalLineup?.length > 0 && (
-              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e3d5c', fontSize: 12, fontWeight: 700, color: '#7aafc4', textTransform: 'uppercase', letterSpacing: 1 }}>
-                  ⚡ Optimal Lineup
-                </div>
-                <div style={{ padding: '8px 0' }}>
+              <div className="card col-card lineup-col">
+                <header className="card-header-compact">
+                  <span className="icon">⚡</span>
+                  <h4>Optimal Lineup</h4>
+                </header>
+                <div className="tactical-list">
                   {plan.optimalLineup.map((p, i) => (
-                    <div key={i} style={{
-                      display: 'flex', alignItems: 'flex-start', gap: 10,
-                      padding: '8px 16px', borderBottom: i < plan.optimalLineup.length - 1 ? '1px solid #0c2c56' : 'none'
-                    }}>
-                      <span className={`badge badge-${String(p.position || '').toLowerCase()}`} style={{ flexShrink: 0, marginTop: 2 }}>
-                        {p.position}
-                      </span>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: 13 }}>{p.player}</div>
-                        <div style={{ fontSize: 11, color: '#7aafc4' }}>{p.reason}</div>
+                    <div key={i} className="tactical-item">
+                      <div className="item-meta">
+                        <span className={`pos-badge pos-${String(p.position || '').toLowerCase()}`}>{p.position}</span>
+                        <span className="item-name">{p.player}</span>
                       </div>
+                      <p className="item-logic">{p.reason}</p>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* Streaming Targets Column */}
             {plan.streamingTargets?.length > 0 && (
-              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e3d5c', fontSize: 12, fontWeight: 700, color: '#00a86b', textTransform: 'uppercase', letterSpacing: 1 }}>
-                  🔥 Streaming Targets
-                </div>
-                <div style={{ padding: '8px 0' }}>
+              <div className="card col-card streaming-col">
+                <header className="card-header-compact text-accent">
+                  <span className="icon">🔥</span>
+                  <h4>Stream Targets</h4>
+                </header>
+                <div className="tactical-list">
                   {plan.streamingTargets.map((p, i) => (
-                    <div key={i} style={{
-                      display: 'flex', alignItems: 'flex-start', gap: 10,
-                      padding: '8px 16px', borderBottom: i < plan.streamingTargets.length - 1 ? '1px solid #0c2c56' : 'none'
-                    }}>
-                      <span className={`badge badge-${String(p.position || '').toLowerCase()}`} style={{ flexShrink: 0, marginTop: 2 }}>
-                        {p.position}
-                      </span>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: 13 }}>{p.player}</div>
-                        <div style={{ fontSize: 11, color: '#7aafc4' }}>{p.reason}</div>
+                    <div key={i} className="tactical-item highlight-hover">
+                      <div className="item-meta">
+                        <span className={`pos-badge pos-${String(p.position || '').toLowerCase()}`}>{p.position}</span>
+                        <span className="item-name">{p.player}</span>
                       </div>
+                      <p className="item-logic">{p.reason}</p>
                     </div>
                   ))}
                 </div>
@@ -214,75 +221,73 @@ export default function GamePlan({ leagueSettings }) {
             )}
           </div>
 
-          {/* Key Decisions */}
-          {plan.keyDecisions?.length > 0 && (
-            <div className="card" style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                <img src="/cyborg_mascot_pointing.png" alt="Galactic Slugger" className="mascot-header" />
-                <h3 style={{ color: '#007a7a', margin: 0 }}>🧠 Key Decisions</h3>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {plan.keyDecisions.map((d, i) => (
-                  <div key={i} style={{
-                    background: '#122840', border: '1px solid #1e3d5c', borderRadius: 8, padding: '12px 16px',
-                    borderLeft: '3px solid #4aafdb'
-                  }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
-                      <div style={{ fontSize: 13, color: '#7aafc4', flex: 1, minWidth: 0 }}>{d.decision}</div>
-                      <span style={{ background: 'rgba(0,168,107,0.15)', color: '#00a86b', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
-                        → {d.recommendation}
-                      </span>
+          {/* Strategic Narrative & Daily Timeline */}
+          <div className="dash-row bottom-intel">
+            {/* Key Decisions */}
+            {plan.keyDecisions?.length > 0 && (
+              <div className="card col-card decision-log">
+                <header className="card-header-main mb-16">
+                  <div className="icon-wrap">🧠</div>
+                  <h4>Master Strategy Decisions</h4>
+                </header>
+                <div className="decision-stack">
+                  {plan.keyDecisions.map((d, i) => (
+                    <div key={i} className="decision-node">
+                      <div className="node-top">
+                        <p className="node-question">{d.decision}</p>
+                        <span className="node-verdict">RECO: {d.recommendation}</span>
+                      </div>
+                      <p className="node-reasoning">{d.reasoning}</p>
                     </div>
-                    <p style={{ color: '#e2e8f0', fontSize: 12, margin: 0, lineHeight: 1.4 }}>{d.reasoning}</p>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Daily moves */}
-          {plan.dailyMoves && Object.keys(plan.dailyMoves).length > 0 && (
-            <div className="card" style={{ marginBottom: 16 }}>
-              <h3 style={{ color: '#007a7a', marginBottom: 12 }}>📅 Daily Moves</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {DAY_ORDER.filter(d => plan.dailyMoves[d]).map(day => (
-                  <div key={day} style={{
-                    display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start',
-                    padding: '10px 14px', background: '#122840', borderRadius: 8, border: '1px solid #1e3d5c'
-                  }}>
-                    <div style={{ minWidth: 70, flexShrink: 0, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', color: '#4aafdb', paddingTop: 1 }}>
-                      {day.charAt(0).toUpperCase() + day.slice(1)}
+            {/* Daily Timeline */}
+            {plan.dailyMoves && Object.keys(plan.dailyMoves).length > 0 && (
+              <div className="card col-card timeline-col">
+                <header className="card-header-main mb-16">
+                  <div className="icon-wrap">📅</div>
+                  <h4>Tactical Timeline</h4>
+                </header>
+                <div className="timeline-stack">
+                  {DAY_ORDER.filter(day => plan.dailyMoves[day]).map(day => (
+                    <div key={day} className="timeline-event">
+                      <div className="event-day">{day.charAt(0).toUpperCase() + day.slice(1)}</div>
+                      <div className="event-content">{plan.dailyMoves[day]}</div>
                     </div>
-                    <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.4, flex: 1, minWidth: 180 }}>{plan.dailyMoves[day]}</div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* Raw plan fallback */}
-          {plan.rawPlan && (
-            <div className="card" style={{ marginBottom: 16 }}>
-              <h3 style={{ color: '#007a7a', marginBottom: 12 }}>📅 Weekly Game Plan</h3>
-              <div className="ai-response">{plan.rawPlan}</div>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-primary" onClick={generatePlan} disabled={loading}>
-              {loading ? '⟳ Re-analyzing...' : '↻ Regenerate Plan'}
-            </button>
-            <button className="btn btn-ghost" onClick={() => setPlan(null)}>Clear</button>
+            )}
           </div>
-        </>
+
+          {/* Raw Fallback if needed */}
+          {plan.rawPlan && (
+            <div className="card mb-24 glass-card">
+              <h4 className="card-label mb-12">Detailed Briefing</h4>
+              <div className="ai-response-prose text-sm">{plan.rawPlan}</div>
+            </div>
+          )}
+
+          {/* Footer Actions */}
+          <footer className="plan-footer">
+            <button className="btn btn-secondary" onClick={generatePlan} disabled={loading}>
+              {loading ? 'Recalculating...' : '↻ Refresh Analysis'}
+            </button>
+            <button className="btn btn-ghost" onClick={() => setPlan(null)}>Reset View</button>
+          </footer>
+        </div>
       )}
 
       {!rosterLoading && !roster.length && !error && !loading && (
-        <div className="card" style={{ textAlign: 'center', padding: 48 }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>📅</div>
-          <p style={{ color: '#7aafc4' }}>Select a league above to generate your weekly game plan.</p>
+        <div className="empty-state-placeholder card py-48">
+          <div className="icon-large mb-16">📂</div>
+          <p className="text-muted">Select a league from the menu above to initiate a weekly tactical scan.</p>
         </div>
       )}
     </div>
   )
 }
+
