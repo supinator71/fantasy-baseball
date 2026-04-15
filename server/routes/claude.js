@@ -494,17 +494,17 @@ Pre-computed matchup analysis: ${JSON.stringify(catAnalysis)}
 
 IMPORTANT: Write all text values in clean, conversational prose. No brackets, no code syntax. Write like a sports analyst breaking down a matchup.
 
-CRITICAL JSON ESCAPING RULES: You MUST NOT use raw line-breaks (newlines) inside your JSON string values. Use the literal characters \n for line breaks. You MUST NOT use unescaped double quotes inside your strings; use single quotes instead. Output ONLY the valid JSON object without any conversational wrapper or markdown codeblock.
+CRITICAL JSON ESCAPING RULES: You MUST use double quotes for all JSON keys and string values. Do NOT use single quotes for JSON properties. If you need to use a quote inside your text prose, use single quotes (e.g., "He is a 'must-start' player"). You MUST NOT use raw newlines inside string values; use the literal sequence \\n.
 Return ONLY valid JSON (no markdown):
 {
-  "categories": [{ "name": "Category Name (e.g. HR or Total Points)", "my_proj": "value", "opp_proj": "value", "winner": "me", "confidence": "high", "note": "A readable sentence about this category projection" }],
   "projected_wins": 5, "projected_losses": 4, "projected_ties": 1,
   "overall_confidence": "medium",
-  "lineup_recommendations": "Write specific actionable moves in conversational prose",
+  "summary": "A clear, readable summary of the matchup projection",
   "key_matchups": "Describe the 2-3 swing categories and how to win them in plain English",
-  "summary": "A clear, readable summary of the matchup projection"
+  "lineup_recommendations": "Write specific actionable moves in conversational prose",
+  "categories": [{ "name": "Category Name", "my_proj": "value", "opp_proj": "value", "winner": "me", "confidence": "high", "note": "A readable sentence" }]
 }`,
-    }], 1500);
+    }], 3000);
 
     const parsed = tryParseJSON(text);
     console.log('[Claude] /matchup/predict parsed:', parsed ? 'JSON OK' : 'FALLBACK to raw text');
@@ -596,7 +596,7 @@ IMPORTANT FORMATTING RULES:
 - The championshipPath should read like a coach's motivational game plan, not a numbered list.
 - The fullAnalysis should be a compelling 300-word narrative essay.
 
-CRITICAL JSON ESCAPING RULES: You MUST NOT use raw line-breaks (newlines) inside your JSON string values. Use the literal characters \n for line breaks. You MUST NOT use unescaped double quotes inside your strings; use single quotes instead. Output ONLY the valid JSON object without any conversational wrapper or markdown codeblock.
+CRITICAL JSON ESCAPING RULES: You MUST use double quotes for all JSON keys and string values. Do NOT use single quotes for JSON properties. If you need to use a quote inside your text prose, use single quotes (e.g., "He is a 'must-start' player"). You MUST NOT use raw newlines inside string values; use the literal sequence \\n.
 Return ONLY valid JSON:
 {
   "grade": "Use the rubric above to assign the precise grade — NOT just B",
