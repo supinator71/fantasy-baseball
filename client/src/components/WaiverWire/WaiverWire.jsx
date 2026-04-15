@@ -109,7 +109,7 @@ export default function WaiverWire({ leagueSettings }) {
     const hasStats = p.stats && Object.values(p.stats).some(v => v !== '-' && v !== '-/-' && v !== undefined && v !== null)
 
     if (!hasStats) {
-      return <span style={{ fontSize: 13, color: '#5a6a72', fontStyle: 'italic' }}>Preseason — no stats yet</span>
+      return <span style={{ fontSize: 13, color: '#5a6a72', fontStyle: 'italic' }}>No stats recorded yet</span>
     }
 
     if (isPitcher) {
