@@ -788,25 +788,49 @@ ${matchup ? `MATCHUP: vs ${matchup.opponent_name || 'opponent'}\nTheir projected
 
 YOU HAVE EVERYTHING YOU NEED. Do NOT ask for more data. Analyze this roster and produce your best game plan NOW. Write clean, readable sentences. No JSON syntax in your text. Write like a manager giving his coaching staff the weekly game plan.
 
-CRITICAL JSON ESCAPING RULES: You MUST NOT use raw line-breaks (newlines) inside your JSON string values. Use the literal characters \n for line breaks. You MUST NOT use unescaped double quotes inside your strings; use single quotes instead. Output ONLY the valid JSON object without any conversational wrapper or markdown codeblock.
+CRITICAL JSON ESCAPING RULES: You MUST use double quotes for all JSON keys and string values. Do NOT use single quotes for JSON properties. If you need to use a quote inside your text prose, use single quotes (e.g., "He is a 'must-start' player"). You MUST NOT use raw newlines inside string values; use the literal sequence \\n.
 Return ONLY valid JSON:
 {
-  "optimalLineup": [{ "player": "name", "position": "SP", "reason": "A clear sentence explaining why they should start" }],
-  "volumePlays": [{ "player": "name", "position": "SP", "reason": "A clear sentence about why they should get extra volume starts" }],
+  "weeklyProjection": { "myProjected": "350 pts", "opponentProjected": "310 pts", "confidence": "medium" },
   "swingCategories": ["Total Points"],
   "dailyMoves": {
     "monday": "A clear sentence about what to do Monday",
     "tuesday": "A clear sentence about Tuesday's move",
-    "wednesday": "A clear sentence about Wednesday's adjustment"
+    "wednesday": "A clear sentence about Wednesday's adjustment",
+    "thursday": "A clear sentence about Thursday's adjustment",
+    "friday": "A clear sentence about Friday's adjustment",
+    "saturday": "A clear sentence about Saturday's adjustment",
+    "sunday": "A clear sentence about Sunday's adjustment"
   },
   "keyDecisions": [{ "decision": "A readable question about the decision", "recommendation": "Player name", "reasoning": "A persuasive sentence explaining why in terms of points" }],
-  "weeklyProjection": { "myProjected": "350 pts", "opponentProjected": "310 pts", "confidence": "medium" }
+  "volumePlays": [{ "player": "name", "position": "SP", "reason": "A clear sentence about why they should get extra volume starts" }],
+  "optimalLineup": [{ "player": "name", "position": "SP", "reason": "A clear sentence explaining why they should start" }]
 }`,
-    }], 2000);
+    }], 4000);
 
     const parsed = tryParseJSON(text);
     if (parsed) return res.json({ ...parsed, lineupOptimizer: lineupOpt, catAnalysis: diagnosis.catAnalysis });
-    res.json({ rawPlan: text, lineupOptimizer: lineupOpt, catAnalysis: diagnosis.catAnalysis });
+    
+    // Robust Fallback
+    const _myProj = text.match(/"myProjected"\s*:\s*"([^"]+)"/i);
+    const _oppProj = text.match(/"opponentProjected"\s*:\s*"([^"]+)"/i);
+    const _conf = text.match(/"confidence"\s*:\s*"([^"]+)"/i);
+
+    res.json({ 
+      rawPlan: text, 
+      weeklyProjection: {
+        myProjected: _myProj ? _myProj[1] : '?',
+        opponentProjected: _oppProj ? _oppProj[1] : '?',
+        confidence: _conf ? _conf[1] : 'low',
+      },
+      lineupOptimizer: lineupOpt, 
+      catAnalysis: diagnosis.catAnalysis,
+      optimalLineup: [],
+      volumePlays: [],
+      swingCategories: [],
+      keyDecisions: [],
+      dailyMoves: {}
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
