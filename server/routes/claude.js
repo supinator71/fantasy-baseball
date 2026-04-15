@@ -504,13 +504,29 @@ Return ONLY valid JSON (no markdown):
   "lineup_recommendations": "Write specific actionable moves in conversational prose",
   "categories": [{ "name": "Category Name", "my_proj": "value", "opp_proj": "value", "winner": "me", "confidence": "high", "note": "A readable sentence" }]
 }`,
-    }], 3000);
+    }], 4000);
 
     const parsed = tryParseJSON(text);
     console.log('[Claude] /matchup/predict parsed:', parsed ? 'JSON OK' : 'FALLBACK to raw text');
     if (parsed) return res.json(parsed);
-    // Fallback: wrap raw text so frontend can at least show something
-    res.json({ summary: text.split('\n')[0], raw: text, lineup_recommendations: text, projected_wins: '?', projected_losses: '?' });
+    
+    // Robust Fallback: Regex extraction when JSON structurally truncates
+    const _wins = text.match(/"projected_wins"\s*:\s*(\d+)/i);
+    const _losses = text.match(/"projected_losses"\s*:\s*(\d+)/i);
+    const _ties = text.match(/"projected_ties"\s*:\s*(\d+)/i);
+    const _confidence = text.match(/"overall_confidence"\s*:\s*"([^"]+)"/i);
+    const _summary = text.match(/"summary"\s*:\s*"([^"]+)"/i);
+    
+    res.json({ 
+      projected_wins: _wins ? parseInt(_wins[1]) : '?', 
+      projected_losses: _losses ? parseInt(_losses[1]) : '?',
+      projected_ties: _ties ? parseInt(_ties[1]) : 0,
+      overall_confidence: _confidence ? _confidence[1] : 'low',
+      summary: _summary ? _summary[1] : "Incomplete analysis. The API response was truncated before finishing.",
+      lineup_recommendations: null, // Avoid dumping raw JSON block into UI
+      categories: [],
+      raw: text 
+    });
   } catch (err) {
     console.error('[Claude] /matchup/predict error:', err.message);
     res.status(500).json({ error: err.message });
@@ -608,12 +624,27 @@ Return ONLY valid JSON:
   "championshipPath": "A compelling narrative paragraph describing the path to winning it all",
   "fullAnalysis": "A comprehensive 300-word narrative analysis written as readable prose"
 }`,
-    }], 2000);
+    }], 4000);
 
     const parsed = tryParseJSON(text);
     console.log('[Claude] /audit parsed:', parsed ? 'JSON OK' : 'FALLBACK to raw text');
     if (parsed) return res.json({ ...parsed, vorByPlayer: diagnosis.vorByPlayer, catAnalysis: diagnosis.catAnalysis });
-    res.json({ fullAnalysis: text, vorByPlayer: diagnosis.vorByPlayer, catAnalysis: diagnosis.catAnalysis, grade: 'N/A' });
+
+    // Robust Fallback: Regex extraction when JSON structurally truncates
+    const _grade = text.match(/"grade"\s*:\s*"([^"]+)"/i);
+    const _path = text.match(/"championshipPath"\s*:\s*"([^"]+)"/i);
+    const _analysis = text.match(/"fullAnalysis"\s*:\s*"([^"]+)"/i);
+
+    res.json({ 
+      grade: _grade ? _grade[1] : "N/A",
+      strengths: [],
+      weaknesses: [],
+      moves: [],
+      championshipPath: _path ? _path[1] : null,
+      fullAnalysis: _analysis ? _analysis[1] : "Incomplete analysis. The API response was truncated before finishing.",
+      vorByPlayer: diagnosis.vorByPlayer, 
+      catAnalysis: diagnosis.catAnalysis
+    });
   } catch (err) {
     console.error('[Claude] /audit error:', err.message);
     res.status(500).json({ error: err.message });
