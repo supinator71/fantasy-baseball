@@ -52,7 +52,7 @@ router.post('/checkout', async (req, res) => {
         price_data: {
           currency: 'usd',
           product_data: {
-            name: 'Goin\\' Yard HQ Pro Season Pass (2026)',
+            name: "Goin' Yard HQ Pro Season Pass (2026)",
             description: `Full season access through September 2026. 2 leagues, unlimited AI insights.`,
           },
           unit_amount: price,
@@ -64,7 +64,7 @@ router.post('/checkout', async (req, res) => {
         price_data: {
           currency: 'usd',
           product_data: {
-            name: 'Goin\\' Yard HQ Extra League Add-On',
+            name: "Goin' Yard HQ Extra League Add-On",
             description: 'Add one additional league to your Season Pass.',
           },
           unit_amount: 800, // $8
