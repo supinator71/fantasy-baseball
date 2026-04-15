@@ -97,7 +97,7 @@ function toArray(obj) {
   return result;
 }
 
-async function getLeagues() {
+async function getLeagues(req) {
   const data = await yahooGet(req, '/users;use_login=1/games;game_keys=mlb/leagues');
   
   // The JSON structure can vary slightly depending on whether you have 1 or multiple leagues
@@ -107,12 +107,12 @@ async function getLeagues() {
   return toArray(leagues).map(l => l?.league?.[0]).filter(Boolean);
 }
 
-async function getLeague(leagueKey) {
+async function getLeague(req, leagueKey) {
   const data = await yahooGet(req, `/league/${leagueKey}/settings`);
   return data.fantasy_content?.league;
 }
 
-async function getRoster(leagueKey, teamKey) {
+async function getRoster(req, leagueKey, teamKey) {
   const data = await yahooGet(req, `/team/${teamKey}/roster/players`);
   const team = data.fantasy_content?.team;
   
@@ -160,13 +160,13 @@ async function getRoster(leagueKey, teamKey) {
   return toArray(players);
 }
 
-async function getStandings(leagueKey) {
+async function getStandings(req, leagueKey) {
   const data = await yahooGet(req, `/league/${leagueKey}/standings`);
   const teams = data.fantasy_content?.league?.[1]?.standings?.[1]?.teams || data.fantasy_content?.league?.[1]?.standings?.[0]?.teams;
   return toArray(teams);
 }
 
-async function getScoreboard(leagueKey) {
+async function getScoreboard(req, leagueKey) {
   const data = await yahooGet(req, `/league/${leagueKey}/scoreboard`);
   const league = data.fantasy_content?.league;
   
@@ -197,7 +197,7 @@ async function getScoreboard(leagueKey) {
   return matchups;
 }
 
-async function getPlayers(leagueKey, status = 'A', start = 0) {
+async function getPlayers(req, leagueKey, status = 'A', start = 0) {
   const data = await yahooGet(req, `/league/${leagueKey}/players;status=${status};sort=AR;start=${start};count=25/stats`);
   const leagueObj = data.fantasy_content?.league;
 
@@ -218,18 +218,18 @@ async function getPlayers(leagueKey, status = 'A', start = 0) {
   return parsed;
 }
 
-async function getDraftResults(leagueKey) {
+async function getDraftResults(req, leagueKey) {
   const data = await yahooGet(req, `/league/${leagueKey}/draftresults`);
   return data.fantasy_content?.league?.[1]?.draft_results;
 }
 
-async function getTransactions(leagueKey) {
+async function getTransactions(req, leagueKey) {
   const data = await yahooGet(req, `/league/${leagueKey}/transactions;type=waiver`);
   const txns = data.fantasy_content?.league?.[1]?.transactions;
   return toArray(txns);
 }
 
-async function getPlayerStats(leagueKey, playerKey) {
+async function getPlayerStats(req, leagueKey, playerKey) {
   const data = await yahooGet(req, `/league/${leagueKey}/players;player_keys=${playerKey}/stats`);
   return data.fantasy_content?.league?.[1]?.players?.[0]?.player;
 }
@@ -287,7 +287,7 @@ function parsePlayersStats(raw) {
   return result;
 }
 
-async function getBatchPlayerStats(leagueKey, playerKeys, type) {
+async function getBatchPlayerStats(req, leagueKey, playerKeys, type) {
   if (!playerKeys || !playerKeys.length) return [];
   const batch = playerKeys.slice(0, 25).join(',');
   const typeParam = type ? `;type=${type}` : '';
@@ -295,7 +295,7 @@ async function getBatchPlayerStats(leagueKey, playerKeys, type) {
   return parsePlayersStats(data.fantasy_content?.league?.[1]?.players);
 }
 
-async function getFreeAgentsTrending(leagueKey, count = 25) {
+async function getFreeAgentsTrending(req, leagueKey, count = 25) {
   const [recent, season, historical] = await Promise.all([
     yahooGet(req, `/league/${leagueKey}/players;status=FA;sort=AR;count=${count}/stats;type=lastweek`),
     yahooGet(req, `/league/${leagueKey}/players;status=FA;sort=AR;count=${count}/stats`),
@@ -313,7 +313,7 @@ async function getFreeAgentsTrending(leagueKey, count = 25) {
   return recentPlayers.map(p => ({ ...p, recentStats: p.stats, seasonStats: seasonMap[p.key] || {}, historicalStats: historicalMap[p.key] || {} }));
 }
 
-async function getUserTeamKey(leagueKey) {
+async function getUserTeamKey(req, leagueKey) {
   try {
     const data = await yahooGet(req, `/users;use_login=1/games;game_keys=mlb/leagues;league_keys=${leagueKey}/teams`);
     
