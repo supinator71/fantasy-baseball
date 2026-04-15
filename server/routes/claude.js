@@ -97,14 +97,19 @@ async function callClaude(messages, maxTokens = 1800) {
   console.log('[Claude] Starting API call...', { messageCount: messages.length, maxTokens });
   const startTime = Date.now();
   
-  try {
-    // Add a timeout to prevent infinite hangs
-    const timeoutMs = 45000; // 45 seconds
+    const lastContent = messages[messages.length - 1]?.content || '';
+    const isJsonRequested = lastContent.includes('Return ONLY valid JSON');
+    
+    // Automatic Anthropic Message Prefill hack to FORCE valid JSON without conversational wrapping.
+    const finalMessages = isJsonRequested 
+      ? [...messages, { role: 'assistant', content: '{' }] 
+      : messages;
+
     const apiCall = getClient().messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: maxTokens,
       system: SYSTEM_PROMPT,
-      messages,
+      messages: finalMessages,
       // Automatic prompt caching — system prompt + static prefix cached for 5 min
       // Cache reads cost 90% less than uncached input. Cache writes cost 25% more (one-time).
       cache_control: { type: 'ephemeral' },
@@ -116,7 +121,9 @@ async function callClaude(messages, maxTokens = 1800) {
     
     const msg = await Promise.race([apiCall, timeoutPromise]);
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    const responseText = msg.content[0].text;
+    
+    // Add the { back since we prefilled it ONLY for JSON endpoints
+    const responseText = isJsonRequested ? ('{' + msg.content[0].text) : msg.content[0].text;
     const u = msg.usage || {};
     console.log(`[Claude] ${elapsed}s | in:${u.input_tokens} cache_read:${u.cache_read_input_tokens||0} cache_write:${u.cache_creation_input_tokens||0} out:${u.output_tokens} | ${responseText.length} chars`);
     return responseText;
@@ -131,22 +138,40 @@ async function callClaude(messages, maxTokens = 1800) {
 function tryParseJSON(text) {
   if (!text) return null;
   
-  // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+  // 1: Direct Parse
   let cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-  
-  // Try direct parse first (in case the whole response is valid JSON)
   try { return JSON.parse(cleaned); } catch {}
   
-  // Try to extract JSON object from the text
-  const match = cleaned.match(/\{[\s\S]*\}/);
-  if (match) {
-    try { return JSON.parse(match[0]); } catch (e) {
-      console.error('[Claude] JSON parse failed:', e.message);
-      console.error('[Claude] Attempted to parse:', match[0].substring(0, 200));
-    }
+  // 2: Extraction Parse
+  let match = cleaned.match(/\{[\s\S]*\}/);
+  if (!match) {
+    match = text.match(/\{[\s\S]*\}/); // try raw text
+    if (!match) return null;
   }
   
-  console.error('[Claude] Could not extract JSON from response:', text.substring(0, 300));
+  let jsonStr = match[0];
+  try { return JSON.parse(jsonStr); } catch (e) {
+    console.error('[Claude] Standard JSON parse failed:', e.message);
+  }
+
+  // 3: Aggressive JSON Hallucination Fixer
+  // Claude frequently leaves raw \n or unescaped double quotes inside its JSON prose content.
+  console.log('[Claude] Applying aggressive JSON hallucination sanitizer...');
+  try {
+    // Escape unescaped double quotes that are inside string values (between pairs of quotes)
+    // and escape raw newlines.
+    // Instead of regex, a simpler trick for raw newlines is replacing actual newlines with \n
+    // but ONLY inside the string values. It's safer to just regex out newlines inside double quotes.
+    const sanitizedStr = jsonStr.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/gs, function(m, p1) {
+      return '"' + p1.replace(/\n/g, '\\n').replace(/\r/g, '').replace(/\t/g, '\\t') + '"';
+    });
+    
+    // Now try to parse the sanitized string
+    return JSON.parse(sanitizedStr);
+  } catch (err2) {
+    console.error('[Claude] Aggressive JSON sanitizer failed:', err2.message);
+  }
+  
   return null;
 }
 
