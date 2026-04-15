@@ -321,16 +321,40 @@ router.post('/waiver', rateLimiter('waiver'), async (req, res) => {
   const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
   const leagueSize = settings?.num_teams || 12;
+  const scoringType = settings?.scoring_type || 'Points';
 
   // Identify specific roster needs ( voids & surpluses ) to align with Team Audit
-  const myAnalysis = brain.analyzeRosterStrengths(my_roster || [], leagueSize);
+  const myAnalysis = brain.analyzeRosterStrengths(my_roster || [], { num_teams: leagueSize, scoring_type: scoringType });
 
-  // fantasyBrain: waiver priority score for each player
+  // ── Category-level analysis (same engine as GamePlan) ──────────────────
+  // Aggregate team-level stats from roster to detect pitching vs hitting weakness
+  const teamStats = {};
+  (my_roster || []).forEach(p => {
+    const stats = p.stats || {};
+    Object.entries(stats).forEach(([k, v]) => {
+      teamStats[k] = (teamStats[k] || 0) + (parseFloat(v) || 0);
+    });
+  });
+  const catAnalysis = brain.analyzeCategories(teamStats, [], scoringType);
+
+  // Determine category needs for the waiver scorer
+  const pitchingCats = ['W', 'SV', 'K', 'ERA', 'WHIP'];
+  const hittingCats = ['R', 'HR', 'RBI', 'SB', 'AVG'];
+  const weaknessList = catAnalysis.weaknesses || [];
+  const categoryNeeds = {
+    needsPitching: weaknessList.some(c => pitchingCats.includes(c)) ||
+      myAnalysis.voids.some(v => ['SP', 'RP'].includes(v)),
+    needsHitting: weaknessList.some(c => hittingCats.includes(c)) ||
+      myAnalysis.voids.some(v => ['C', 'SS', '2B', '3B', '1B', 'OF'].includes(v)),
+    weakCategories: weaknessList,
+  };
+
+  // fantasyBrain: waiver priority score for each player — now with category awareness
   const scored = (available_players || [])
     .filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
     .map(p => ({
     ...p,
-    waiverScore: brain.scoreWaiverTarget(p, my_roster || [], settings || {}),
+    waiverScore: brain.scoreWaiverTarget(p, my_roster || [], settings || {}, categoryNeeds),
   })).sort((a, b) => b.waiverScore.score - a.waiverScore.score);
 
   // Calculate VOR for the current roster so the AI mathematically understands who is actually droppable
@@ -342,7 +366,7 @@ router.post('/waiver', rateLimiter('waiver'), async (req, res) => {
     return {
       name: p.player_name || p.name,
       position: pos,
-      vor: brain.calculateVOR(p.stats || {}, pos, leagueSize, settings?.scoring_type)
+      vor: brain.calculateVOR(p.stats || {}, pos, leagueSize, scoringType)
     };
   }).sort((a, b) => b.vor - a.vor);
 
@@ -372,6 +396,11 @@ router.post('/waiver', rateLimiter('waiver'), async (req, res) => {
     console.log('[Claude/waiver] MLB stats lookup skipped:', e.message);
   }
 
+  // Build category context for the prompt
+  const categoryCtx = categoryNeeds.weakCategories.length > 0
+    ? `\n=== CATEGORY WEAKNESS ANALYSIS (same engine as Game Plan) ===\nYour team's weak categories: ${categoryNeeds.weakCategories.join(', ')}\n${categoryNeeds.needsPitching ? '⚠️ PITCHING IS A TEAM WEAKNESS — prioritize SP/RP pickups, especially 2-start SPs and streaming arms on 7-game teams.\n' : ''}${categoryNeeds.needsHitting ? '⚠️ HITTING IS A TEAM WEAKNESS — prioritize hitters filling positional voids at scarce positions.\n' : ''}Strategy: ${catAnalysis.advice}\n`
+    : '';
+
   try {
     const text = await callClaude([{
       role: 'user',
@@ -379,13 +408,13 @@ router.post('/waiver', rateLimiter('waiver'), async (req, res) => {
 ${breakingNews}My roster (sorted by VOR value, 0-100): ${rosterWithVOR.map(p => `${p.name} (${p.position}, VOR: ${p.vor})`).join(', ')}
 My Positional Needs (Voids): ${myAnalysis.voids.join(', ') || 'None'}
 My Positional Surpluses: ${myAnalysis.surpluses.map(s => `${s.position} (${s.count})`).join(', ') || 'None'}
-
+${categoryCtx}
 Waiver targets (pre-scored by priority engine):
 ${scored.slice(0, 12).map(p =>
   `${p.player_name||p.name} (${p.position}, ${p.team}) — Priority: ${p.waiverScore.score}/100 [${p.waiverScore.priority}] — ${p.waiverScore.reasoning}`
 ).join('\n')}${historicalIntel}
 
-Use the 2025 stats intelligence AND the team's specific Positional Needs (Voids) to identify the best targets. Align your recommendations with the team's structural needs (do not recommend adding a position where the team already has a Surplus unless they are a must-add star). Give top 3 add/drop recommendations with specific reasoning backed by last year's real stats.
+Use the 2025 stats intelligence, the team's Positional Needs (Voids), AND the Category Weakness Analysis to identify the best targets. If pitching categories are weak, you MUST recommend pitching pickups — especially streaming SPs. Align your recommendations with the team's structural needs (do not recommend adding a position where the team already has a Surplus unless they are a must-add star). Give top 3 add/drop recommendations with specific reasoning backed by last year's real stats.
 
 CRITICAL "SHOW YOUR WORK" RULE: Do NOT formulate paragraphs of general advice. You MUST explicitly cite the math.
 Format your recommendations using strictly formatted markdown lists with bolded metric badges.

@@ -468,19 +468,37 @@ function evaluateTrade(giving = [], receiving = [], myRoster = [], leagueContext
 // F) WAIVER WIRE PRIORITY SCORING
 // ─────────────────────────────────────────────────────────────────────────────
 
-function scoreWaiverTarget(player = {}, myRoster = [], leagueSettings = {}) {
+function scoreWaiverTarget(player = {}, myRoster = [], leagueSettings = {}, categoryNeeds = null) {
   let score = 30  // baseline
 
-  const pos = String(player.position || '').split('/')[0].toUpperCase()
+  const pos = String(player.position || '').split('/')[0].split(',')[0].trim().toUpperCase()
   const leagueSize = leagueSettings.num_teams || 12
   const scarcity = getPositionalScarcity(pos, leagueSize)
-  const myPositions = myRoster.map(p => String(p.position || '').split('/')[0].toUpperCase())
+  const myPositions = myRoster.map(p => String(p.position || '').split(/[/,]/)[0].trim().toUpperCase())
   const countAtPos = myPositions.filter(p => p === pos).length
   const required = (leagueSettings.roster_slots || {})[pos] || 1
 
   // Positional need
   if (countAtPos < required) score += scarcity.urgencyScore * 3
   else if (countAtPos >= required) score -= 10
+
+  // ── Category-need boost ────────────────────────────────────────────────
+  // If the roster's category analysis shows pitching weakness, boost SP/RP.
+  // If hitting weakness, boost hitters — ensures waiver aligns with gameplan.
+  const isPitcher = ['SP', 'RP', 'P'].includes(pos)
+  if (categoryNeeds) {
+    if (isPitcher && categoryNeeds.needsPitching) {
+      score += 18  // major boost — pitching is a team weakness
+    }
+    if (!isPitcher && categoryNeeds.needsHitting) {
+      score += 12  // moderate boost — hitting is a team weakness
+    }
+    // Extra streaming bonus: 2-start SP or 7-game hitter in a category need week
+    if (isPitcher && categoryNeeds.needsPitching) {
+      const weekGamesTeam = getWeeklyGameCount(player.team, leagueSettings.current_week || 1)
+      if (weekGamesTeam >= 7) score += 8  // likely 2-start SP on a busy team
+    }
+  }
 
   // Recent performance vs career norms
   const recentAVG = parseFloat(player.recentStats?.['3'] || player.recent_avg || 0)
@@ -515,17 +533,19 @@ function scoreWaiverTarget(player = {}, myRoster = [], leagueSettings = {}) {
 
   // Roster spot cost (who would I drop?)
   const benchDepth = myRoster.filter(p =>
-    String(p.position || '').split('/')[0].toUpperCase() === pos
+    String(p.position || '').split(/[/,]/)[0].trim().toUpperCase() === pos
   ).length - required
   if (benchDepth > 1) score += 5  // easy to make room
   else if (benchDepth < 0) score -= 5  // would need to drop a starter
 
   score = Math.min(100, Math.max(0, Math.round(score)))
 
+  const catNote = categoryNeeds ? (isPitcher && categoryNeeds.needsPitching ? ', category-need boost (pitching)' : !isPitcher && categoryNeeds.needsHitting ? ', category-need boost (hitting)' : '') : ''
+
   return {
     score,
     priority: score >= 85 ? 'MUST ADD' : score >= 70 ? 'High priority' : score >= 50 ? 'Speculative add' : score >= 35 ? 'Monitor' : 'Pass',
-    reasoning: `Positional need (${pos}: ${countAtPos}/${required}), schedule (${weekGames} games), ` +
+    reasoning: `Positional need (${pos}: ${countAtPos}/${required}), schedule (${weekGames} games)${catNote}, ` +
       (babip > 0 ? `BABIP ${babip} ${babip > 0.360 ? '(regression risk)' : babip < 0.250 ? '(due for boost)' : '(normal)'}` : 'no BABIP data'),
   }
 }
@@ -723,7 +743,9 @@ function analyzeRosterStrengths(roster = [], leagueContext = {}) {
       scarcity: getPositionalScarcity(pos, leagueSize).tier,
     }))
 
-  const voids = ['C', 'SS', '2B', '3B', 'SP'].filter(pos =>
+  // Check ALL roster positions for voids — not just a subset
+  const allPositions = Object.keys(POSITIONAL_DATA)  // C, SS, 2B, 3B, 1B, OF, SP, RP
+  const voids = allPositions.filter(pos =>
     !byPosition[pos] || byPosition[pos].length === 0
   )
 
