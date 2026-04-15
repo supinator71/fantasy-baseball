@@ -1,6 +1,6 @@
 const db = require('../db/database');
 
-const FREE_DAILY_AI_LIMIT = 3;
+const FREE_DAILY_AI_LIMIT = 100; // Increased to 100 for dev/QA testing
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Subscription Middleware
