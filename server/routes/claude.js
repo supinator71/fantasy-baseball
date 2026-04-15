@@ -105,6 +105,9 @@ async function callClaude(messages, maxTokens = 1800) {
       max_tokens: maxTokens,
       system: SYSTEM_PROMPT,
       messages,
+      // Automatic prompt caching — system prompt + static prefix cached for 5 min
+      // Cache reads cost 90% less than uncached input. Cache writes cost 25% more (one-time).
+      cache_control: { type: 'ephemeral' },
     });
     
     const timeoutPromise = new Promise((_, reject) =>
@@ -114,8 +117,8 @@ async function callClaude(messages, maxTokens = 1800) {
     const msg = await Promise.race([apiCall, timeoutPromise]);
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     const responseText = msg.content[0].text;
-    console.log(`[Claude] API call completed in ${elapsed}s, response length: ${responseText.length}`);
-    console.log(`[Claude] Response preview: ${responseText.substring(0, 200)}`);
+    const u = msg.usage || {};
+    console.log(`[Claude] ${elapsed}s | in:${u.input_tokens} cache_read:${u.cache_read_input_tokens||0} cache_write:${u.cache_creation_input_tokens||0} out:${u.output_tokens} | ${responseText.length} chars`);
     return responseText;
   } catch (err) {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
