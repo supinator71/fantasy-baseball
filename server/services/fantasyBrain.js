@@ -1124,6 +1124,156 @@ function generatePlayerIntelligence(playerData = {}) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// O) UNIFIED ROSTER DIAGNOSIS
+// Single source of truth for every AI endpoint. Call once per request, inject
+// the promptBlock into every Claude call. No more inconsistent analyses.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Builds a complete roster diagnosis that every AI endpoint can consume.
+ * @param {Array} roster - Full roster from Yahoo API (including IL/DTD players)
+ * @param {Object} leagueCtx - { num_teams, scoring_type, roster_slots, current_week, ... }
+ * @returns {Object} Unified diagnosis with promptBlock for Claude injection
+ */
+function buildRosterDiagnosis(roster = [], leagueCtx = {}) {
+  const leagueSize = leagueCtx.num_teams || 12;
+  const scoringType = leagueCtx.scoring_type || 'Points';
+
+  // ── 1. Three-tier player status split ──────────────────────────────────
+  const IL_STATUSES = ['IL', 'IL10', 'IL15', 'IL60', 'DL', 'DL10', 'DL15', 'DL60', 'O', 'OUT', 'SUSPENDED', 'NA'];
+  const DTD_STATUSES = ['DTD', 'Q', 'QUESTIONABLE', 'D2D', 'DAY-TO-DAY'];
+
+  function getPlayerStatus(p) {
+    if (!p.status) return 'active';
+    const s = String(p.status).toUpperCase().trim();
+    if (IL_STATUSES.some(x => s.includes(x))) return 'unavailable';
+    if (DTD_STATUSES.some(x => s.includes(x))) return 'dtd';
+    return 'active';
+  }
+
+  const activeRoster = roster.filter(p => getPlayerStatus(p) === 'active' || getPlayerStatus(p) === 'dtd');
+  const unavailablePlayers = roster.filter(p => getPlayerStatus(p) === 'unavailable');
+  const dtdPlayers = roster.filter(p => getPlayerStatus(p) === 'dtd');
+
+  // ── 2. Positional analysis (voids, surpluses, sell/buy) ────────────────
+  const rosterAnalysis = analyzeRosterStrengths(activeRoster, { num_teams: leagueSize, scoring_type: scoringType });
+
+  // ── 3. Category-level analysis ─────────────────────────────────────────
+  const teamStats = {};
+  activeRoster.forEach(p => {
+    const stats = p.stats || {};
+    Object.entries(stats).forEach(([k, v]) => {
+      teamStats[k] = (teamStats[k] || 0) + (parseFloat(v) || 0);
+    });
+  });
+  const catAnalysis = analyzeCategories(teamStats, [], scoringType);
+
+  const pitchingCats = ['W', 'SV', 'K', 'ERA', 'WHIP'];
+  const hittingCats = ['R', 'HR', 'RBI', 'SB', 'AVG'];
+  const weaknessList = catAnalysis.weaknesses || [];
+
+  const categoryNeeds = {
+    needsPitching: weaknessList.some(c => pitchingCats.includes(c)) ||
+      rosterAnalysis.voids.some(v => ['SP', 'RP'].includes(v)),
+    needsHitting: weaknessList.some(c => hittingCats.includes(c)) ||
+      rosterAnalysis.voids.some(v => ['C', 'SS', '2B', '3B', '1B', 'OF'].includes(v)),
+    weakCategories: weaknessList,
+  };
+
+  // ── 4. VOR by player (active only) ─────────────────────────────────────
+  const vorByPlayer = activeRoster
+    .filter(p => getPlayerStatus(p) !== 'dtd' || true) // DTD stays in VOR calc
+    .map(p => {
+      const pos = String(p.position || '').split(/[/,]/)[0].trim().toUpperCase();
+      return {
+        name: p.player_name || p.name,
+        position: pos,
+        vor: calculateVOR(p.stats || {}, pos, leagueSize, scoringType),
+        scarcity: getPositionalScarcity(pos, leagueSize).tier,
+      };
+    }).sort((a, b) => b.vor - a.vor);
+
+  // ── 5. Build the canonical prompt block ────────────────────────────────
+  // This EXACT string gets injected into every Claude call.
+  let promptBlock = `\n=== ROSTER DIAGNOSIS (unified analysis — same engine across all modules) ===\n`;
+
+  // Unavailable players
+  if (unavailablePlayers.length > 0) {
+    promptBlock += `\n⛔ UNAVAILABLE — DO NOT START, RECOMMEND, OR INCLUDE IN LINEUPS (IL/Suspended/Out):\n`;
+    promptBlock += unavailablePlayers.map(p => `  ${p.player_name || p.name} [${p.status}] (${p.position})`).join('\n');
+    promptBlock += `\nThese players are physically unavailable. Exclude from every lineup, trade proposal, start/sit decision, and streaming suggestion.\n`;
+  }
+
+  // DTD/Questionable players
+  if (dtdPlayers.length > 0) {
+    promptBlock += `\n🟡 DAY-TO-DAY / QUESTIONABLE (may miss games — flag as risk):\n`;
+    promptBlock += dtdPlayers.map(p => `  ${p.player_name || p.name} [${p.status}] (${p.position})`).join('\n');
+    promptBlock += `\nThese players are uncertain. Flag them as risks, recommend backup plans, and do not build strategy around them without contingency.\n`;
+  }
+
+  // Active roster
+  promptBlock += `\nACTIVE ROSTER (${activeRoster.length} players, sorted by VOR):\n`;
+  promptBlock += vorByPlayer.map(p => `  ${p.name} (${p.position}) — VOR: ${p.vor}/100 [${p.scarcity}]`).join('\n');
+
+  // Positional needs
+  promptBlock += `\n\nPOSITIONAL ANALYSIS:\n`;
+  promptBlock += `  Voids (no coverage): ${rosterAnalysis.voids.join(', ') || 'None'}\n`;
+  promptBlock += `  Surpluses: ${rosterAnalysis.surpluses.map(s => `${s.position} (${s.count}: ${s.players.join(', ')})`).join('; ') || 'None'}\n`;
+  if (rosterAnalysis.sellHigh.length > 0) {
+    promptBlock += `  Sell High: ${rosterAnalysis.sellHigh.map(p => `${p.name} (VOR ${p.vor})`).join(', ')}\n`;
+  }
+  if (rosterAnalysis.buyLow.length > 0) {
+    promptBlock += `  Buy Low: ${rosterAnalysis.buyLow.map(p => `${p.name} (VOR ${p.vor})`).join(', ')}\n`;
+  }
+
+  // Category weakness
+  if (categoryNeeds.weakCategories.length > 0 || categoryNeeds.needsPitching || categoryNeeds.needsHitting) {
+    promptBlock += `\nCATEGORY WEAKNESS ANALYSIS:\n`;
+    if (categoryNeeds.weakCategories.length > 0) {
+      promptBlock += `  Weak categories: ${categoryNeeds.weakCategories.join(', ')}\n`;
+    }
+    if (categoryNeeds.needsPitching) {
+      promptBlock += `  ⚠️ PITCHING IS A TEAM WEAKNESS — prioritize SP/RP in all recommendations (pickups, trades, starts).\n`;
+    }
+    if (categoryNeeds.needsHitting) {
+      promptBlock += `  ⚠️ HITTING IS A TEAM WEAKNESS — prioritize bat upgrades at scarce positions.\n`;
+    }
+    promptBlock += `  Strategy: ${catAnalysis.advice}\n`;
+  }
+
+  // Summary stats
+  const totalVOR = vorByPlayer.reduce((sum, p) => sum + (p.vor || 0), 0);
+  const avgVOR = vorByPlayer.length > 0 ? (totalVOR / vorByPlayer.length).toFixed(1) : 0;
+  const eliteCount = vorByPlayer.filter(p => p.vor >= 70).length;
+  const replacementCount = vorByPlayer.filter(p => p.vor < 30).length;
+
+  promptBlock += `\nROSTER HEALTH:\n`;
+  promptBlock += `  Total VOR: ${totalVOR} | Avg VOR/player: ${avgVOR} | Elite (70+): ${eliteCount} | Replacement (<30): ${replacementCount}\n`;
+  promptBlock += `=== END ROSTER DIAGNOSIS ===\n`;
+
+  return {
+    // Raw data for programmatic use
+    activeRoster,
+    unavailablePlayers,
+    dtdPlayers,
+    voids: rosterAnalysis.voids,
+    surpluses: rosterAnalysis.surpluses,
+    sellHigh: rosterAnalysis.sellHigh,
+    buyLow: rosterAnalysis.buyLow,
+    categoryNeeds,
+    catAnalysis,
+    vorByPlayer,
+    totalVOR,
+    avgVOR: parseFloat(avgVOR),
+    eliteCount,
+    replacementCount,
+
+    // The canonical prompt string — inject into every Claude call
+    promptBlock,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 module.exports = {
   // A) Positional scarcity
   getPositionalScarcity,
@@ -1177,7 +1327,11 @@ module.exports = {
 
   // N) ADP vs actual stats trend analysis
   analyzeADPvsTrend,
+
+  // O) UNIFIED ROSTER DIAGNOSIS — the single source of truth
+  buildRosterDiagnosis,
 }
+
 
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -195,6 +195,9 @@ router.post('/startsit', rateLimiter('startsit'), async (req, res) => {
   const leagueCtx = leagueContext(settings);
   const leagueSize = settings?.num_teams || 12;
 
+  // ── Unified Roster Diagnosis ───────────────────────────────────────────
+  const diagnosis = brain.buildRosterDiagnosis(players || [], settings || {});
+
   // fantasyBrain: streaming value + platoon for each player
   const enriched = (players || []).map(p => {
     const pos = String(p.position || '').split('/')[0].toUpperCase();
@@ -240,6 +243,7 @@ router.post('/startsit', rateLimiter('startsit'), async (req, res) => {
     const text = await callClaude([{
       role: 'user',
       content: `${leagueCtx}
+${diagnosis.promptBlock}
 Context: ${matchup_context || 'Daily optimization'}
 
 Players to evaluate (with pre-computed matchup intelligence):
@@ -255,9 +259,10 @@ ${daily_mode ?
 (CRITICAL Rule for Starting Pitchers (SP): ONLY start if "Is Starting" is exactly "Yes". If the SP is "Unknown" or "No", BENCH them immediately because they are not pitching today!)
 3. Rapid-fire list the players who should be benched today (especially anyone on the IL, not starting, or SPs who are not pitching today).
 NOTE: Cross-reference the user's roster with "TODAY'S LIVE MLB MATCHUPS" to penalize or reward Pitchers and Hitters based on the difficulty of their real-life opponent today!
-NOTE: Yahoo Season Stats (Raw) uses Stat IDs (e.g. 12=HR, 13=RBI, 3=AVG, 14=SB, 7=R, 26=ERA, 27=WHIP, 28=W, 33=K). Heavily rely on these to identify prospects who are blowing up right now in 2026, even if their MLB historical data is weak!` 
+NOTE: Yahoo Season Stats (Raw) uses Stat IDs (e.g. 12=HR, 13=RBI, 3=AVG, 14=SB, 7=R, 26=ERA, 27=WHIP, 28=W, 33=K). Heavily rely on these to identify prospects who are blowing up right now in 2026, even if their MLB historical data is weak!
+NOTE: Use the CATEGORY WEAKNESS ANALYSIS from the Roster Diagnosis to weigh decisions — if pitching is weak, lean toward starting SPs even in marginal matchups.` 
   : 
-  `Use the 2025 stats intelligence to assess each player's true talent level. Give START or SIT for each player backed by real performance data — flag breakout candidates and regression risks.`
+  `Use the 2025 stats intelligence to assess each player's true talent level. Give START or SIT for each player backed by real performance data — flag breakout candidates and regression risks. Use the CATEGORY WEAKNESS ANALYSIS to inform priority: if pitching is a team weakness, give extra weight to SP starts.`
 }
 
 CRITICAL "SHOW YOUR WORK" RULE: When recommending a Start/Sit decision, you MUST explicitly cite the exact numeric math used locally in your prompt.
@@ -280,6 +285,9 @@ router.post('/trade', rateLimiter('trade'), async (req, res) => {
   const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
 
+  // ── Unified Roster Diagnosis ───────────────────────────────────────────
+  const diagnosis = brain.buildRosterDiagnosis(my_roster || [], settings || {});
+
   // fantasyBrain: trade fairness engine
   const evaluation = brain.evaluateTrade(
     giving || [], receiving || [], my_roster || [],
@@ -290,7 +298,7 @@ router.post('/trade', rateLimiter('trade'), async (req, res) => {
     const text = await callClaude([{
       role: 'user',
       content: `${leagueCtx}
-
+${diagnosis.promptBlock}
 TRADE PROPOSAL:
 GIVING: ${(giving||[]).map(p => `${p.player_name||p.name} (${p.position})`).join(', ')}
 RECEIVING: ${(receiving||[]).map(p => `${p.player_name||p.name} (${p.position})`).join(', ')}
@@ -302,10 +310,13 @@ ${evaluation.sellHighFlags?.length ? 'Sell high flags: ' + evaluation.sellHighFl
 ${evaluation.buyLowFlags?.length ? 'Buy low flags: ' + evaluation.buyLowFlags.join('; ') : ''}
 ${evaluation.counterOffer ? 'Suggested counter: ' + evaluation.counterOffer : ''}
 
-My roster: ${(my_roster||[]).map(p => `${p.player_name||p.name} (${p.position})`).join(', ')}
 Their roster: ${(their_roster||[]).map(p => `${p.player_name||p.name} (${p.position})`).join(', ')}
 
-Validate and expand on this trade analysis. Identify any sell-high/buy-low dynamics, what the other manager's incentive is, and give a concrete recommendation with counter-offer if needed.
+Validate and expand on this trade analysis. Use the ROSTER DIAGNOSIS above to determine:
+1. Does this trade ADDRESS a team weakness (void or category need)? If so, it's worth more than VOR alone suggests.
+2. Does this trade WORSEN a weakness? If so, reject or counter.
+3. What the other manager's incentive is.
+Give a concrete recommendation with counter-offer if needed.
 
 Write in clean, conversational prose. No JSON syntax, no brackets, no code formatting. Write like a fantasy analyst giving persuasive trade advice.`
     }]);
@@ -320,55 +331,17 @@ router.post('/waiver', rateLimiter('waiver'), async (req, res) => {
   const { available_players, my_roster, drop_candidates, league_key } = req.body;
   const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
-  const leagueSize = settings?.num_teams || 12;
-  const scoringType = settings?.scoring_type || 'Points';
 
-  // Identify specific roster needs ( voids & surpluses ) to align with Team Audit
-  const myAnalysis = brain.analyzeRosterStrengths(my_roster || [], { num_teams: leagueSize, scoring_type: scoringType });
+  // ── Unified Roster Diagnosis ───────────────────────────────────────────
+  const diagnosis = brain.buildRosterDiagnosis(my_roster || [], settings || {});
 
-  // ── Category-level analysis (same engine as GamePlan) ──────────────────
-  // Aggregate team-level stats from roster to detect pitching vs hitting weakness
-  const teamStats = {};
-  (my_roster || []).forEach(p => {
-    const stats = p.stats || {};
-    Object.entries(stats).forEach(([k, v]) => {
-      teamStats[k] = (teamStats[k] || 0) + (parseFloat(v) || 0);
-    });
-  });
-  const catAnalysis = brain.analyzeCategories(teamStats, [], scoringType);
-
-  // Determine category needs for the waiver scorer
-  const pitchingCats = ['W', 'SV', 'K', 'ERA', 'WHIP'];
-  const hittingCats = ['R', 'HR', 'RBI', 'SB', 'AVG'];
-  const weaknessList = catAnalysis.weaknesses || [];
-  const categoryNeeds = {
-    needsPitching: weaknessList.some(c => pitchingCats.includes(c)) ||
-      myAnalysis.voids.some(v => ['SP', 'RP'].includes(v)),
-    needsHitting: weaknessList.some(c => hittingCats.includes(c)) ||
-      myAnalysis.voids.some(v => ['C', 'SS', '2B', '3B', '1B', 'OF'].includes(v)),
-    weakCategories: weaknessList,
-  };
-
-  // fantasyBrain: waiver priority score for each player — now with category awareness
+  // fantasyBrain: waiver priority score for each player — with category awareness from diagnosis
   const scored = (available_players || [])
     .filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
     .map(p => ({
     ...p,
-    waiverScore: brain.scoreWaiverTarget(p, my_roster || [], settings || {}, categoryNeeds),
+    waiverScore: brain.scoreWaiverTarget(p, my_roster || [], settings || {}, diagnosis.categoryNeeds),
   })).sort((a, b) => b.waiverScore.score - a.waiverScore.score);
-
-  // Calculate VOR for the current roster so the AI mathematically understands who is actually droppable
-  // CRITICAL FIX: Explicitly exclude injured players from being considered droppable mathematically, as 0 VOR is misleading.
-  const rosterWithVOR = (my_roster || [])
-    .filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
-    .map(p => {
-    const pos = String(p.position || '').split('/')[0].toUpperCase();
-    return {
-      name: p.player_name || p.name,
-      position: pos,
-      vor: brain.calculateVOR(p.stats || {}, pos, leagueSize, scoringType)
-    };
-  }).sort((a, b) => b.vor - a.vor);
 
   // Fetch real 2025 stats and breaking news for top waiver targets (non-blocking)
   let historicalIntel = '';
@@ -396,25 +369,18 @@ router.post('/waiver', rateLimiter('waiver'), async (req, res) => {
     console.log('[Claude/waiver] MLB stats lookup skipped:', e.message);
   }
 
-  // Build category context for the prompt
-  const categoryCtx = categoryNeeds.weakCategories.length > 0
-    ? `\n=== CATEGORY WEAKNESS ANALYSIS (same engine as Game Plan) ===\nYour team's weak categories: ${categoryNeeds.weakCategories.join(', ')}\n${categoryNeeds.needsPitching ? '⚠️ PITCHING IS A TEAM WEAKNESS — prioritize SP/RP pickups, especially 2-start SPs and streaming arms on 7-game teams.\n' : ''}${categoryNeeds.needsHitting ? '⚠️ HITTING IS A TEAM WEAKNESS — prioritize hitters filling positional voids at scarce positions.\n' : ''}Strategy: ${catAnalysis.advice}\n`
-    : '';
-
   try {
     const text = await callClaude([{
       role: 'user',
       content: `${leagueCtx}
-${breakingNews}My roster (sorted by VOR value, 0-100): ${rosterWithVOR.map(p => `${p.name} (${p.position}, VOR: ${p.vor})`).join(', ')}
-My Positional Needs (Voids): ${myAnalysis.voids.join(', ') || 'None'}
-My Positional Surpluses: ${myAnalysis.surpluses.map(s => `${s.position} (${s.count})`).join(', ') || 'None'}
-${categoryCtx}
+${diagnosis.promptBlock}
+${breakingNews}
 Waiver targets (pre-scored by priority engine):
 ${scored.slice(0, 12).map(p =>
   `${p.player_name||p.name} (${p.position}, ${p.team}) — Priority: ${p.waiverScore.score}/100 [${p.waiverScore.priority}] — ${p.waiverScore.reasoning}`
 ).join('\n')}${historicalIntel}
 
-Use the 2025 stats intelligence, the team's Positional Needs (Voids), AND the Category Weakness Analysis to identify the best targets. If pitching categories are weak, you MUST recommend pitching pickups — especially streaming SPs. Align your recommendations with the team's structural needs (do not recommend adding a position where the team already has a Surplus unless they are a must-add star). Give top 3 add/drop recommendations with specific reasoning backed by last year's real stats.
+Use the 2025 stats intelligence AND the ROSTER DIAGNOSIS above to identify the best targets. If pitching categories are weak, you MUST recommend pitching pickups — especially streaming SPs. Align your recommendations with the team's structural needs (do not recommend adding a position where the team already has a Surplus unless they are a must-add star). Give top 3 add/drop recommendations with specific reasoning backed by last year's real stats.
 
 CRITICAL "SHOW YOUR WORK" RULE: Do NOT formulate paragraphs of general advice. You MUST explicitly cite the math.
 Format your recommendations using strictly formatted markdown lists with bolded metric badges.
@@ -422,7 +388,7 @@ Example format for your answers:
 - 🟢 **ADD: [Player Name]** \`[Priority Score: YY/100]\` -> *Logic:* [Brief explicit explanation of why the math demands this]
 - 🔴 **DROP: [Player Name]** \`[VOR: XX]\` -> *Logic:* [Brief explicit explanation of why their math dictates they are the drop]
 
-CRITICAL LOGIC RULE: Do NOT generate a "Summary" or "After these moves your roster will look like..." section where you list out the entire roster again. It wastes tokens and frequently results in hallucinations where you accidentally list players you just said to drop. Only provide the actionable analysis and direct Drop/Add recommendations.`
+CRITICAL LOGIC RULE: Do NOT generate a "Summary" or "After these moves your roster will look like..." section. Only provide actionable Drop/Add recommendations.`
     }]);
     res.json({ recommendations: text, scored: scored.slice(0, 10) });
   } catch (err) {
@@ -533,29 +499,13 @@ router.post('/audit', rateLimiter('audit'), async (req, res) => {
   const { roster, league_standings, league_key } = req.body;
   const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
-  const leagueSize = settings?.num_teams || 12;
 
   if (!roster || roster.length === 0) {
     return res.status(400).json({ error: 'Roster is required for audit.' });
   }
 
-  // fantasyBrain: full roster analysis
-  const analysis = brain.analyzeRosterStrengths(roster, leagueSize);
-  const catAnalysis = brain.analyzeCategories(
-    req.body.my_stats || {},
-    league_standings || [],
-    settings?.scoring_type || 'Roto'
-  );
-
-  // VOR for every active player (ignoring injured/out)
-  const vorByPlayer = roster
-    .filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
-    .map(p => ({
-    name: p.player_name || p.name,
-    position: String(p.position || '').split('/')[0].toUpperCase(),
-    vor: brain.calculateVOR(p.stats || {}, p.position, leagueSize, settings?.scoring_type),
-    scarcity: brain.getPositionalScarcity(p.position, leagueSize).tier,
-  })).sort((a, b) => b.vor - a.vor);
+  // ── Unified Roster Diagnosis ───────────────────────────────────────────
+  const diagnosis = brain.buildRosterDiagnosis(roster, settings || {});
 
   // Fetch real 2025 stats for roster players (non-blocking)
   let historicalIntel = '';
@@ -583,48 +533,21 @@ router.post('/audit', rateLimiter('audit'), async (req, res) => {
   }
 
   try {
-    // Separate Active Roster from IL so AI doesn't evaluate injured pitching/hitting as core strength
-    const activeRosterPrint = roster
-      .filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
-      .map(p => `${p.player_name||p.name} | ${p.position} | ${p.team}`).join('\n');
-
-    const ilRosterPrint = roster
-      .filter(p => p.status && (String(p.status).toUpperCase().includes('IL') || ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) !== -1))
-      .map(p => `${p.player_name||p.name} | ${p.position} | ${p.team} | Status: ${p.status}`).join('\n');
-
     const text = await callClaude([{
       role: 'user',
       content: `${leagueCtx}
-
-=== FULL TEAM AUDIT REQUEST ===
-
-ACTIVE ROSTER (Core Starting Power):
-${activeRosterPrint || 'None'}
-
-INJURED \& SUSPENDED LIST (Stash Assets ONLY):
-${ilRosterPrint || 'None'}
-
-VOR RANKINGS (Value Over Replacement, 0-100):
-${vorByPlayer.map(p => `${p.name} (${p.position}): ${p.vor}/100 [${p.scarcity}]`).join('\n')}
-
-POSITIONAL ANALYSIS:
-Surpluses: ${analysis.surpluses.map(s => `${s.position} (${s.count} players: ${s.players.join(', ')})`).join('; ') || 'None'}
-Voids: ${analysis.voids.join(', ') || 'None'}
-Sell high candidates: ${analysis.sellHigh.map(p => `${p.name} (VOR ${p.vor})`).join(', ') || 'None'}
-Buy low candidates: ${analysis.buyLow.map(p => `${p.name} (VOR ${p.vor})`).join(', ') || 'None'}
-
-CATEGORY ANALYSIS:
-${JSON.stringify(catAnalysis)}${historicalIntel}
+${diagnosis.promptBlock}
+=== FULL TEAM AUDIT REQUEST ===${historicalIntel}
 
 LEAGUE STANDINGS CONTEXT:
 ${league_standings?.length ? JSON.stringify(league_standings.slice(0, 5)) : 'Not provided'}
 
 Use the 2025 real stats and intelligence data above to ground your analysis in actual performance. Flag breakout candidates, regression risks, age-curve concerns, and which players are contributing vs dragging each fantasy category.
 
-TOTAL ROSTER VOR SCORE: ${vorByPlayer.reduce((sum, p) => sum + (p.vor || 0), 0)} (out of a maximum ~2300 for a ${roster.length}-player roster)
-AVERAGE VOR PER PLAYER: ${(vorByPlayer.reduce((sum, p) => sum + (p.vor || 0), 0) / Math.max(1, vorByPlayer.length)).toFixed(1)}
-ELITE PLAYERS (VOR 70+): ${vorByPlayer.filter(p => p.vor >= 70).length}
-REPLACEMENT-LEVEL PLAYERS (VOR < 30): ${vorByPlayer.filter(p => p.vor < 30).length}
+TOTAL ROSTER VOR SCORE: ${diagnosis.totalVOR} (out of a maximum ~2300 for a ${roster.length}-player roster)
+AVERAGE VOR PER PLAYER: ${diagnosis.avgVOR}
+ELITE PLAYERS (VOR 70+): ${diagnosis.eliteCount}
+REPLACEMENT-LEVEL PLAYERS (VOR < 30): ${diagnosis.replacementCount}
 
 === GRADING RUBRIC (YOU MUST USE THIS — DO NOT DEFAULT TO B) ===
 A+ : Championship favorite. 5+ elite VOR players, zero category holes, top-tier depth at scarce positions, avg VOR >65
@@ -663,8 +586,8 @@ Return ONLY valid JSON:
 
     const parsed = tryParseJSON(text);
     console.log('[Claude] /audit parsed:', parsed ? 'JSON OK' : 'FALLBACK to raw text');
-    if (parsed) return res.json({ ...parsed, vorByPlayer, catAnalysis });
-    res.json({ fullAnalysis: text, vorByPlayer, catAnalysis, grade: 'N/A' });
+    if (parsed) return res.json({ ...parsed, vorByPlayer: diagnosis.vorByPlayer, catAnalysis: diagnosis.catAnalysis });
+    res.json({ fullAnalysis: text, vorByPlayer: diagnosis.vorByPlayer, catAnalysis: diagnosis.catAnalysis, grade: 'N/A' });
   } catch (err) {
     console.error('[Claude] /audit error:', err.message);
     res.status(500).json({ error: err.message });
@@ -684,8 +607,8 @@ router.post('/trade/find', rateLimiter('tradefinder'), async (req, res) => {
     return res.status(400).json({ error: 'My roster is required.' });
   }
 
-  // Identify my surpluses and voids
-  const myAnalysis = brain.analyzeRosterStrengths(my_roster, leagueSize);
+  // ── Unified Roster Diagnosis ───────────────────────────────────────────
+  const diagnosis = brain.buildRosterDiagnosis(my_roster, settings || {});
 
   // Find teams with opposite needs
   const tradeTargets = [];
@@ -693,23 +616,21 @@ router.post('/trade/find', rateLimiter('tradefinder'), async (req, res) => {
   
   if (all_rosters && Array.isArray(all_rosters)) {
     all_rosters.forEach(team => {
-      // Parse lightweight player strings "Name (Pos)" back into mock objects
       const mockRoster = (team.players || []).map(pStr => {
         const match = pStr.match(/\((.*?)\)$/);
         return { position: match ? match[1] : '' };
       });
       
       const theirAnalysis = brain.analyzeRosterStrengths(mockRoster, leagueSize);
-      // They have surplus where I have void, and vice versa
       const theirSurposPositions = theirAnalysis.surpluses.map(s => s.position);
-      const matchingVoids = myAnalysis.voids.filter(v => theirSurposPositions.includes(v));
-      const mySurplusPositions = myAnalysis.surpluses.map(s => s.position);
+      const matchingVoids = diagnosis.voids.filter(v => theirSurposPositions.includes(v));
+      const mySurplusPositions = diagnosis.surpluses.map(s => s.position);
       const theirVoids = theirAnalysis.voids;
       const matchingSurplus = mySurplusPositions.filter(p => theirVoids.includes(p));
 
       if (matchingVoids.length > 0 || matchingSurplus.length > 0) {
         tradeTargets.push({
-          team: team.team || team.team_name || team.name, // Access team name from new format
+          team: team.team || team.team_name || team.name,
           theyHave: matchingVoids,
           theyNeed: matchingSurplus,
           compatibility: matchingVoids.length + matchingSurplus.length,
@@ -730,13 +651,8 @@ router.post('/trade/find', rateLimiter('tradefinder'), async (req, res) => {
     const text = await callClaude([{
       role: 'user',
       content: `${leagueCtx}
-
+${diagnosis.promptBlock}
 === TRADE FINDER ===
-
-MY ROSTER: ${my_roster.map(p => `${p.player_name||p.name} (${p.position})`).join(', ')}
-MY SURPLUSES: ${myAnalysis.surpluses.map(s => `${s.position} (${s.players.join(', ')})`).join('; ') || 'None identified'}
-MY VOIDS: ${myAnalysis.voids.join(', ') || 'None'}
-MY SELL-HIGH candidates: ${myAnalysis.sellHigh.map(p => p.name).join(', ') || 'None'}
 
 BEST TRADE PARTNERS (by roster compatibility):
 ${tradeTargets.slice(0, 5).map(t =>
@@ -750,6 +666,8 @@ Generate 3-5 specific trade proposals using the ENTIRE LEAGUE ROSTERS data above
 4. A fairness score estimate (-100 to +100, from MY perspective)
 5. The "pitch" — exact language to use when proposing this trade to the other manager
 
+CRITICAL: Use the ROSTER DIAGNOSIS above to ensure trades address CATEGORY WEAKNESSES, not just positional voids. If pitching is a team weakness, propose trades that acquire starting pitching. If hitting is weak, target hitters at scarce positions.
+
 Focus heavily on trades that exploit my surplus to fill my voids while offering the specific opponent manager something they genuinely need. Do not invent players; use the actual rosters provided.
 
 CRITICAL "SHOW YOUR WORK" RULE: You MUST explicitly cite the math. For every trade, explicitly write:
@@ -758,7 +676,7 @@ And next to every player name involved in the trade, include their markdown badg
 Do NOT write paragraphs without citing these numbers. You are a mathematical engine.`,
     }], 2500);
 
-    res.json({ proposals: text, myAnalysis: { surpluses: myAnalysis.surpluses, voids: myAnalysis.voids, sellHigh: myAnalysis.sellHigh }, tradeTargets: tradeTargets.slice(0, 5) });
+    res.json({ proposals: text, myAnalysis: { surpluses: diagnosis.surpluses, voids: diagnosis.voids, sellHigh: diagnosis.sellHigh }, tradeTargets: tradeTargets.slice(0, 5) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -777,64 +695,37 @@ router.post('/gameplan', rateLimiter('gameplan'), async (req, res) => {
     return res.status(400).json({ error: 'Roster is required.' });
   }
 
-  // ── Split roster: active vs unavailable (IL / suspended / OUT) ──────────
-  const IL_STATUSES = ['IL', 'IL10', 'IL15', 'IL60', 'DL', 'DL10', 'DL15', 'DL60', 'O', 'OUT', 'SUSPENDED', 'NA'];
-  function isUnavailable(p) {
-    if (!p.status) return false;
-    const s = String(p.status).toUpperCase().trim();
-    return IL_STATUSES.some(x => s.includes(x));
-  }
-  const activeRoster       = my_roster.filter(p => !isUnavailable(p));
-  const unavailablePlayers = my_roster.filter(p => isUnavailable(p));
-
-  // ── Flag DTD/Questionable (stay in roster but need caution callout) ────────
-  const DTD_STATUSES = ['DTD', 'Q', 'QUESTIONABLE', 'D2D', 'DAY-TO-DAY'];
-  function isDTD(p) {
-    if (!p.status) return false;
-    const s = String(p.status).toUpperCase().trim();
-    return DTD_STATUSES.some(x => s.includes(x));
-  }
-  const dtdPlayers = activeRoster.filter(p => isDTD(p));
+  // ── Unified Roster Diagnosis ───────────────────────────────────────────
+  const diagnosis = brain.buildRosterDiagnosis(my_roster, settings || {});
 
   // fantasyBrain: lineup optimization on ACTIVE players only
   const weekSchedule = {};
-  activeRoster.forEach(p => {
+  diagnosis.activeRoster.forEach(p => {
     const team = String(p.team || '').toUpperCase();
     weekSchedule[team] = brain.getWeeklyGameCount(team, week_number || 1);
   });
 
-  const lineupOpt = brain.optimizeLineup(activeRoster, weekSchedule, scoringType);
-  const catAnalysis = matchup
+  const lineupOpt = brain.optimizeLineup(diagnosis.activeRoster, weekSchedule, scoringType);
+
+  // If matchup data provided, do matchup-specific analysis on top of diagnosis
+  const matchupAnalysis = matchup
     ? brain.analyzeCategories(matchup.my_stats || {}, [{ stats: matchup.opp_stats || {} }], scoringType)
-    : { advice: 'No matchup provided — optimizing for maximum output.' };
-
-  // Build unavailable section for the prompt
-  const unavailableStr = unavailablePlayers.length > 0
-    ? `\n⚠️ UNAVAILABLE — DO NOT START OR RECOMMEND (IL/Suspended/Out): ${unavailablePlayers.map(p => `${p.player_name || p.name} [${p.status}]`).join(', ')}\nThese players are physically unavailable this week. Exclude them from every lineup slot, streaming suggestion, and key decision recommendation.`
-    : '';
-
-  // Build DTD/questionable section for the prompt
-  const dtdStr = dtdPlayers.length > 0
-    ? `\n🟡 DAY-TO-DAY / QUESTIONABLE (start/sit risk this week): ${dtdPlayers.map(p => `${p.player_name || p.name} [${p.status}]`).join(', ')}\nThese players are uncertain for game-day availability. Flag them as risks in key decisions and note backup plan if they can't go.`
-    : '';
+    : null;
 
   try {
     const text = await callClaude([{
       role: 'user',
       content: `${leagueCtx}
-
+${diagnosis.promptBlock}
 === WEEKLY GAME PLAN — Week ${week_number || 'current'} ===
 
 DATA ACCURACY NOTE: This roster is pulled directly from the Yahoo Fantasy API for the 2026 season. All player team assignments are correct. Do not question any team assignments — analyze as given.
-${unavailableStr}${dtdStr}
-
-ACTIVE ROSTER (${activeRoster.length} available): ${activeRoster.map(p => `${p.player_name||p.name} (${p.position}, ${p.team})`).join(', ')}
 
 LINEUP OPTIMIZER RESULTS (active players only):
 Top starters: ${lineupOpt.starters.slice(0, 10).map(p => `${p.player_name} — ${p.weekGames} games, confidence: ${p.confidence}`).join('\n')}
 Streaming targets (7-game teams): ${lineupOpt.streamingTargets.map(p => p.player_name).join(', ') || 'None'}
 
-POINTS ANALYSIS: ${catAnalysis.advice}
+POINTS ANALYSIS: ${matchupAnalysis ? matchupAnalysis.advice : diagnosis.catAnalysis.advice}
 
 ${matchup ? `MATCHUP: vs ${matchup.opponent_name || 'opponent'}\nTheir projected stats: ${JSON.stringify(matchup.opp_stats || {})}` : 'No specific matchup data — optimize for maximum total points output.'}
 
@@ -856,8 +747,8 @@ Return ONLY valid JSON:
     }], 3000);
 
     const parsed = tryParseJSON(text);
-    if (parsed) return res.json({ ...parsed, lineupOptimizer: lineupOpt, catAnalysis });
-    res.json({ rawPlan: text, lineupOptimizer: lineupOpt, catAnalysis });
+    if (parsed) return res.json({ ...parsed, lineupOptimizer: lineupOpt, catAnalysis: diagnosis.catAnalysis });
+    res.json({ rawPlan: text, lineupOptimizer: lineupOpt, catAnalysis: diagnosis.catAnalysis });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
