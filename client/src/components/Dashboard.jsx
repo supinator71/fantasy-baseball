@@ -50,9 +50,6 @@ export default function Dashboard({ leagueSettings }) {
 
   return (
     <div style={{ position: 'relative' }}>
-      {/* Background Graphic Scatter */}
-      <img src="/card-pitcher.png" alt="" style={{ position: 'absolute', top: -50, right: -80, width: 350, opacity: 0.4, transform: 'rotate(15deg)', pointerEvents: 'none', zIndex: -1 }} />
-      <img src="/card-hitter.png" alt="" style={{ position: 'absolute', top: 600, left: -60, width: 320, opacity: 0.4, transform: 'rotate(-25deg)', pointerEvents: 'none', zIndex: -1 }} />
       {/* Hero Banner */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 20, marginBottom: 28,

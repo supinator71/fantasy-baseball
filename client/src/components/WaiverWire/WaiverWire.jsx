@@ -128,9 +128,6 @@ export default function WaiverWire({ leagueSettings }) {
 
   return (
     <div style={{ position: 'relative', minHeight: '80vh' }}>
-      {/* Background Graphic Scatter */}
-      <img src="/card-pitcher.png" alt="" style={{ position: 'absolute', top: -10, right: -40, width: 350, opacity: 0.4, transform: 'rotate(20deg)', pointerEvents: 'none', zIndex: -1 }} />
-      <img src="/card-hitter.png" alt="" style={{ position: 'absolute', top: 400, left: -60, width: 320, opacity: 0.4, transform: 'rotate(-15deg)', pointerEvents: 'none', zIndex: -1 }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>⟳ Waiver Wire</h1>

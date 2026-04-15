@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
 import { Toaster, toast } from 'react-hot-toast'
+import BackgroundMural from './components/shared/BackgroundMural'
 import axios from 'axios'
 
 import Dashboard from './components/Dashboard'
@@ -106,7 +107,8 @@ export default function App() {
             <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.02em', fontFamily: 'var(--font-heading)' }}>⚾ Goin' Yard HQ</span>
           </div>
 
-          <main className="main-content">
+          <main className="main-content" style={{ position: 'relative' }}>
+            <BackgroundMural />
             {!authStatus.authenticated ? (
               <LoginPage />
             ) : (
