@@ -431,6 +431,7 @@ Pre-computed matchup analysis: ${JSON.stringify(catAnalysis)}
 
 IMPORTANT: Write all text values in clean, conversational prose. No brackets, no code syntax. Write like a sports analyst breaking down a matchup.
 
+CRITICAL JSON ESCAPING RULES: You MUST NOT use raw line-breaks (newlines) inside your JSON string values. Use the literal characters \n for line breaks. You MUST NOT use unescaped double quotes inside your strings; use single quotes instead. Output ONLY the valid JSON object without any conversational wrapper or markdown codeblock.
 Return ONLY valid JSON (no markdown):
 {
   "categories": [{ "name": "Category Name (e.g. HR or Total Points)", "my_proj": "value", "opp_proj": "value", "winner": "me", "confidence": "high", "note": "A readable sentence about this category projection" }],
@@ -532,6 +533,7 @@ IMPORTANT FORMATTING RULES:
 - The championshipPath should read like a coach's motivational game plan, not a numbered list.
 - The fullAnalysis should be a compelling 300-word narrative essay.
 
+CRITICAL JSON ESCAPING RULES: You MUST NOT use raw line-breaks (newlines) inside your JSON string values. Use the literal characters \n for line breaks. You MUST NOT use unescaped double quotes inside your strings; use single quotes instead. Output ONLY the valid JSON object without any conversational wrapper or markdown codeblock.
 Return ONLY valid JSON:
 {
   "grade": "Use the rubric above to assign the precise grade — NOT just B",
@@ -692,6 +694,7 @@ ${matchup ? `MATCHUP: vs ${matchup.opponent_name || 'opponent'}\nTheir projected
 
 YOU HAVE EVERYTHING YOU NEED. Do NOT ask for more data. Analyze this roster and produce your best game plan NOW. Write clean, readable sentences. No JSON syntax in your text. Write like a manager giving his coaching staff the weekly game plan.
 
+CRITICAL JSON ESCAPING RULES: You MUST NOT use raw line-breaks (newlines) inside your JSON string values. Use the literal characters \n for line breaks. You MUST NOT use unescaped double quotes inside your strings; use single quotes instead. Output ONLY the valid JSON object without any conversational wrapper or markdown codeblock.
 Return ONLY valid JSON:
 {
   "optimalLineup": [{ "player": "name", "position": "SP", "reason": "A clear sentence explaining why they should start" }],
