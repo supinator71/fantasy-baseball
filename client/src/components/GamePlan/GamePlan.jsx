@@ -43,6 +43,7 @@ export default function GamePlan({ leagueSettings }) {
   const [leagues, setLeagues] = useState([])
   const [selectedLeague, setSelectedLeague] = useState('')
   const [roster, setRoster] = useState([])
+  const [matchup, setMatchup] = useState(null)
   const [rosterLoading, setRosterLoading] = useState(false)
   const [plan, setPlan] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -62,10 +63,42 @@ export default function GamePlan({ leagueSettings }) {
   async function loadRoster() {
     setRosterLoading(true)
     setPlan(null)
+    setMatchup(null)
     setError('')
     try {
-      const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/myroster`)
-      setRoster(data.players || [])
+      // Fetch roster and matchup in parallel
+      const [rosterRes, matchupRes] = await Promise.allSettled([
+        axios.get(`/api/yahoo/league/${selectedLeague}/myroster`),
+        axios.get(`/api/yahoo/league/${selectedLeague}/matchup`)
+      ])
+
+      if (rosterRes.status === 'fulfilled') {
+        setRoster(rosterRes.value.data.players || [])
+      } else {
+        setError('Could not load roster.')
+      }
+
+      if (matchupRes.status === 'fulfilled') {
+        const m = matchupRes.value.data
+        // Build matchup object for the gameplan API
+        if (m && m.myTeam && m.opponent) {
+          const myStats = {}
+          const oppStats = {}
+          ;(m.stats || []).forEach(s => {
+            if (s.name) {
+              myStats[s.name] = s.my_value ?? s.value
+              oppStats[s.name] = s.opp_value ?? s.value
+            }
+          })
+          setMatchup({
+            opponent_name: m.opponent?.name || 'Opponent',
+            my_stats: myStats,
+            opp_stats: oppStats,
+            week: m.week
+          })
+        }
+      }
+      // Matchup fetch failure is non-critical — plan still works without it
     } catch (err) {
       setError('Could not load roster.')
     } finally {
@@ -80,8 +113,8 @@ export default function GamePlan({ leagueSettings }) {
     try {
       const { data } = await axios.post('/api/claude/gameplan', {
         my_roster: roster,
-        matchup: null,
-        week_number: null,
+        matchup: matchup,
+        week_number: matchup?.week || null,
         league_key: selectedLeague
       })
       setPlan(data)
@@ -136,9 +169,10 @@ export default function GamePlan({ leagueSettings }) {
           <div className="gameplan-cta-inner">
             <div className="gameplan-cta-icon">📅</div>
             <div className="gameplan-cta-text">
-              <h3>Ready for Week Analysis</h3>
+              <h3>Ready for Week {matchup?.week || ''} Analysis</h3>
               <p className="text-muted">
-                Your roster has <strong>{roster.length}</strong> active players. Generate a full AI strategy breakdown.
+                Your roster has <strong>{roster.length}</strong> active players.
+                {matchup ? ` Matchup: vs ${matchup.opponent_name}.` : ''} Generate a full AI strategy breakdown.
               </p>
             </div>
             <button className="btn btn-primary btn-large" onClick={generatePlan} disabled={loading}>
