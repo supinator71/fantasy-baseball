@@ -98,6 +98,7 @@ async function callClaude(messages, maxTokens = 1800) {
   const startTime = Date.now();
   
   try {
+    const timeoutMs = 45000; // 45 seconds
     const lastContent = messages[messages.length - 1]?.content || '';
     const isJsonRequested = lastContent.includes('Return ONLY valid JSON');
     
