@@ -54,12 +54,15 @@ router.get('/callback', async (req, res) => {
     let userName = null;
     let userEmail = null;
     try {
-      const profile = await axios.get('https://api.login.yahoo.com/openid/v1/userinfo', {
+      const profile = await axios.get('https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1?format=json', {
         headers: { Authorization: `Bearer ${access_token}` }
       });
-      yahooGuid = profile.data.sub;
-      userName = profile.data.name || profile.data.nickname || null;
-      userEmail = profile.data.email || null;
+      const userNode = profile.data?.fantasy_content?.users?.['0']?.user?.[0];
+      if (userNode) {
+        yahooGuid = userNode.guid;
+        userName = userNode.nickname || null;
+      }
+      userEmail = null; // Fantasy API doesn't return email, which is fine
       
       // Store user profile for subscription tracking
       if (yahooGuid) {
