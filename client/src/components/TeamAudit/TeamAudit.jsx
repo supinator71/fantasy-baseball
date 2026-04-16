@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import PackDropModal from '../TrophyCase/PackDropModal'
 
 function GradeBadge({ grade }) {
   const g = String(grade || '').charAt(0).toUpperCase()
@@ -39,6 +40,9 @@ export default function TeamAudit({ leagueSettings }) {
   const [audit, setAudit] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  
+  // Trophy gamification state
+  const [awardedCard, setAwardedCard] = useState(null)
 
   useEffect(() => {
     axios.get('/api/yahoo/leagues').then(({ data }) => {
@@ -117,6 +121,23 @@ export default function TeamAudit({ leagueSettings }) {
     }
   }
 
+  async function checkTrophyUnlocks(auditData) {
+    const grade = auditData?.grade || '';
+    if (grade.startsWith('A')) {
+      // Award premium card
+      try {
+        const { data } = await axios.post('/api/trophy/award', { trigger: 'audit_aplus' });
+        if (data?.awarded) setAwardedCard(data.awarded);
+      } catch (e) {}
+    } else if (grade.startsWith('B')) {
+      // Award base card
+      try {
+        const { data } = await axios.post('/api/trophy/award', { trigger: 'audit_b' });
+        if (data?.awarded) setAwardedCard(data.awarded);
+      } catch (e) {}
+    }
+  }
+
   async function runAudit() {
     if (!roster.length) return
     setLoading(true)
@@ -129,6 +150,7 @@ export default function TeamAudit({ leagueSettings }) {
         league_key: selectedLeague
       })
       setAudit(data)
+      checkTrophyUnlocks(data)
     } catch (err) {
       setError(err.response?.data?.error || 'Audit failed. Please try again.')
     } finally {
@@ -138,6 +160,8 @@ export default function TeamAudit({ leagueSettings }) {
 
   return (
     <div>
+      <PackDropModal awardedCard={awardedCard} onClose={() => setAwardedCard(null)} />
+      
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>

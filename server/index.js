@@ -51,12 +51,15 @@ const yahooLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const { router: trophyRoutes } = require('./routes/trophy');
+
 app.use('/auth', authRoutes);
 app.use('/api/yahoo', yahooLimiter, yahooRoutes);
 app.use('/api/claude', aiLimiter, checkAiLimit, claudeRoutes);
 app.use('/api/draft', draftRoutes);
 app.use('/api/mlb', mlbStatsRoutes);
 app.use('/api/stripe', stripeRoutes);
+app.use('/api/trophy', trophyRoutes);
 
 // Serve React frontend in production
 if (process.env.NODE_ENV === 'production') {

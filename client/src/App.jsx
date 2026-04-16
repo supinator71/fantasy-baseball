@@ -17,6 +17,7 @@ import TradeFinder from './components/TradeFinder/TradeFinder'
 import GamePlan from './components/GamePlan/GamePlan'
 import PlayerTrends from './components/PlayerTrends/PlayerTrends'
 import UpgradePage from './components/Upgrade/Upgrade'
+import TrophyCase from './components/TrophyCase/TrophyCase'
 
 import './index.css'
 
@@ -125,6 +126,7 @@ export default function App() {
                 <Route path="/audit"      element={<TeamAudit leagueSettings={leagueSettings} />} />
                 <Route path="/tradefinder" element={<TradeFinder leagueSettings={leagueSettings} />} />
                 <Route path="/gameplan"   element={<GamePlan leagueSettings={leagueSettings} />} />
+                <Route path="/album"      element={<TrophyCase />} />
                 <Route path="/upgrade"   element={<UpgradePage subscription={subscription} />} />
               </Routes>
             )}
@@ -148,6 +150,7 @@ function Sidebar({ authenticated, isOpen, onClose }) {
     { to: '/tradefinder', label: 'Trade Finder',             icon: '◆' },
     { to: '/gameplan',    label: 'Weekly Game Plan',         icon: '▦' },
     { to: '/baseball101', label: 'Baseball 101',             icon: '🎓' },
+    { to: '/album',       label: 'Card Album',               icon: '🏆' },
     { to: '/upgrade',     label: 'Upgrade to Pro',           icon: '⭐' },
   ]
 

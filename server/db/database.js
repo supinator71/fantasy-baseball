@@ -11,13 +11,18 @@ const DEFAULT_DATA = {
   my_roster: [],
   notes: [],
   subscriptions: {},     // map: { [yahoo_guid]: { plan, season, max_leagues, ... } }
-  user_profiles: {}      // map: { [yahoo_guid]: { name, email, created_at } }
+  user_profiles: {},     // map: { [yahoo_guid]: { name, email, created_at } }
+  trophy_cases: {},      // map: { [yahoo_guid]: { unlocked_cards: [{ id, unlocked_at, reason }] } }
+  ai_usage: {}           // map: { [yahoo_guid]: { count, date } }
 };
 
 function load() {
   try {
     if (fs.existsSync(DB_FILE)) {
-      return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+      const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+      if (!data.trophy_cases) data.trophy_cases = {};
+      if (!data.ai_usage) data.ai_usage = {};
+      return data;
     }
   } catch {}
   return { ...DEFAULT_DATA };
@@ -199,6 +204,47 @@ const db = {
     }
     save(data);
     return data.ai_usage[yahooGuid];
+  },
+
+  // ── Gamification / Trophy Case ───────────────────────────────────────
+  getTrophyCase(yahooGuid) {
+    if (!yahooGuid) return { unlocked_cards: [], last_daily_pack: null };
+    const data = load();
+    if (!data.trophy_cases) data.trophy_cases = {};
+    const tc = data.trophy_cases[yahooGuid];
+    return tc || { unlocked_cards: [], last_daily_pack: null };
+  },
+
+  awardCard(yahooGuid, cardId, reason) {
+    if (!yahooGuid) return false;
+    const data = load();
+    if (!data.trophy_cases) data.trophy_cases = {};
+    
+    let tc = data.trophy_cases[yahooGuid];
+    if (!tc) tc = { unlocked_cards: [], last_daily_pack: null };
+    
+    // Check if already unlocked to prevent duplicates of unique cards, though duplicate trading cards is a real thing. 
+    // We will allow duplicates because pulling dupes is part of card collecting!
+    tc.unlocked_cards.push({
+      id: cardId,
+      unlocked_at: Date.now(),
+      reason: reason || 'Random Drop'
+    });
+    
+    data.trophy_cases[yahooGuid] = tc;
+    save(data);
+    return true;
+  },
+
+  updateDailyPackTimer(yahooGuid) {
+    if (!yahooGuid) return;
+    const data = load();
+    if (!data.trophy_cases) data.trophy_cases = {};
+    let tc = data.trophy_cases[yahooGuid];
+    if (!tc) tc = { unlocked_cards: [], last_daily_pack: null };
+    tc.last_daily_pack = Date.now();
+    data.trophy_cases[yahooGuid] = tc;
+    save(data);
   }
 };
 

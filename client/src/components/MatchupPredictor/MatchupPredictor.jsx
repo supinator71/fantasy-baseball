@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import LastUpdated from '../shared/LastUpdated'
+import PackDropModal from '../TrophyCase/PackDropModal'
 
 function ConfidenceBadge({ level }) {
   const styles = {
@@ -27,7 +28,7 @@ export default function MatchupPredictor({ leagueSettings }) {
   const [aiLoading, setAiLoading] = useState(false)
   const [error, setError] = useState('')
   const [cachedAt, setCachedAt] = useState(null)
-  const [fromCache, setFromCache] = useState(false)
+  const [awardedCard, setAwardedCard] = useState(null)
 
   useEffect(() => {
     axios.get('/api/yahoo/leagues').then(({ data }) => {
@@ -58,6 +59,17 @@ export default function MatchupPredictor({ leagueSettings }) {
     }
   }
 
+  async function checkTrophyUnlocks(predictData) {
+    // Check if projecting a Stolen Bases win!
+    const sbCat = predictData.categories?.find(c => c.name.includes('SB') || c.name.includes('Stolen'));
+    if (sbCat && sbCat.winner === 'me') {
+      try {
+        const { data } = await axios.post('/api/trophy/award', { trigger: 'stolen_base_win' });
+        if (data?.awarded) setAwardedCard(data.awarded);
+      } catch (e) {}
+    }
+  }
+
   async function getPrediction() {
     if (!matchup) return
     setAiLoading(true)
@@ -70,6 +82,7 @@ export default function MatchupPredictor({ leagueSettings }) {
         league_key: selectedLeague
       })
       setPrediction(data)
+      checkTrophyUnlocks(data)
     } catch (err) {
       setError('AI prediction failed. Please try again.')
     } finally {
@@ -159,6 +172,7 @@ export default function MatchupPredictor({ leagueSettings }) {
 
   return (
     <div>
+      <PackDropModal awardedCard={awardedCard} onClose={() => setAwardedCard(null)} />
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
