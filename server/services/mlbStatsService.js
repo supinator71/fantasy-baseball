@@ -274,7 +274,7 @@ async function getUpcomingSchedule() {
   try {
     // Get schedule for today
     const date = new Date().toISOString().split('T')[0];
-    const { data } = await axios.get(`${BASE_URL}/schedule?sportId=1&date=${date}`, {
+    const { data } = await axios.get(`${BASE_URL}/schedule?sportId=1&date=${date}&hydrate=probablePitcher`, {
       timeout: 8000,
     });
 
