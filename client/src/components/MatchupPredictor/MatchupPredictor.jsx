@@ -28,6 +28,7 @@ export default function MatchupPredictor({ leagueSettings }) {
   const [aiLoading, setAiLoading] = useState(false)
   const [error, setError] = useState('')
   const [cachedAt, setCachedAt] = useState(null)
+  const [fromCache, setFromCache] = useState(false)
   const [awardedCard, setAwardedCard] = useState(null)
 
   useEffect(() => {
