@@ -150,7 +150,7 @@ function Sidebar({ authenticated, isOpen, onClose }) {
     { to: '/tradefinder', label: 'Trade Finder',             icon: '◆' },
     { to: '/gameplan',    label: 'Weekly Game Plan',         icon: '▦' },
     { to: '/baseball101', label: 'Baseball 101',             icon: '🎓' },
-    { to: '/album',       label: 'Card Album',               icon: '🏆' },
+    { to: '/album',       label: 'Trophy Case',              icon: '🏆' },
     { to: '/upgrade',     label: 'Upgrade to Pro',           icon: '⭐' },
   ]
 
