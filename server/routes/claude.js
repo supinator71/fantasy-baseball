@@ -802,11 +802,9 @@ Return ONLY valid JSON:
     "saturday": "A clear sentence about Saturday's adjustment",
     "sunday": "A clear sentence about Sunday's adjustment"
   },
-  "keyDecisions": [{ "decision": "A readable question about the decision", "recommendation": "Player name", "reasoning": "A persuasive sentence explaining why in terms of points" }],
-  "volumePlays": [{ "player": "name", "position": "SP", "reason": "A clear sentence about why they should get extra volume starts" }],
-  "optimalLineup": [{ "player": "name", "position": "SP", "reason": "A clear sentence explaining why they should start" }]
+  "keyDecisions": [{ "decision": "A readable question about the decision", "recommendation": "Player name", "reasoning": "A persuasive sentence explaining why in terms of points" }]
 }`,
-    }], 4000);
+    }], 2000);
 
     const parsed = tryParseJSON(text);
     if (parsed) return res.json({ ...parsed, lineupOptimizer: lineupOpt, catAnalysis: diagnosis.catAnalysis });

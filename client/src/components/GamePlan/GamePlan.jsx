@@ -223,34 +223,34 @@ export default function GamePlan({ leagueSettings }) {
 
           {/* Middle Row: Optimal Lineup + Streaming Targets */}
           <div className="gameplan-columns">
-            {plan.optimalLineup?.length > 0 && (
+            {plan.lineupOptimizer?.starters?.length > 0 && (
               <div className="card gameplan-section">
                 <h4 className="section-title">⚡ Optimal Lineup</h4>
                 <div className="tactical-list">
-                  {plan.optimalLineup.map((p, i) => (
+                  {plan.lineupOptimizer.starters.map((p, i) => (
                     <div key={i} className="tactical-item">
                       <div className="item-meta">
                         <span className="pos-pill">{p.position || '??'}</span>
-                        <span className="item-name">{p.player}</span>
+                        <span className="item-name">{p.player_name || p.player}</span>
                       </div>
-                      <p className="item-logic">{p.reason}</p>
+                      <p className="item-logic">{p.reasoning || p.reason}</p>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {plan.volumePlays?.length > 0 && (
+            {plan.lineupOptimizer?.volumePlays?.length > 0 && (
               <div className="card gameplan-section">
                 <h4 className="section-title">🔥 Extra Volume (7-Game Week)</h4>
                 <div className="tactical-list">
-                  {plan.volumePlays.map((p, i) => (
+                  {plan.lineupOptimizer.volumePlays.map((p, i) => (
                     <div key={i} className="tactical-item highlight-hover">
                       <div className="item-meta">
                         <span className="pos-pill accent">{p.position || '??'}</span>
-                        <span className="item-name">{p.player}</span>
+                        <span className="item-name">{p.player_name || p.player}</span>
                       </div>
-                      <p className="item-logic">{p.reason}</p>
+                      <p className="item-logic">{p.reasoning || p.reason}</p>
                     </div>
                   ))}
                 </div>
