@@ -42,7 +42,10 @@ async function forceRefreshToken(req, refresh_token) {
   }
 }
 
-const DB_DIR = path.join(__dirname);
+const DB_DIR = path.join(__dirname, '..', 'data');
+if (!fs.existsSync(DB_DIR)) {
+  fs.mkdirSync(DB_DIR, { recursive: true });
+}
 const DB_FILE = path.join(DB_DIR, 'data.json');
 
 const DEFAULT_DATA = {

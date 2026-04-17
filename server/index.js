@@ -27,7 +27,7 @@ app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
 app.use(session({
-  store: new SQLiteStore({ db: 'sessions.sqlite', dir: './server/db' }),
+  store: new SQLiteStore({ db: 'sessions.sqlite', dir: './server/data' }),
   secret: process.env.SESSION_SECRET || 'fantasy-baseball-secret',
   resave: false,
   saveUninitialized: false,
