@@ -24,7 +24,14 @@ app.use(cors({ origin: true, credentials: true }));
 
 // Stripe webhook needs raw body BEFORE json parsing
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+const fs = require('fs');
+
 app.use(express.json());
+
+const DB_DIR = path.join(__dirname, 'data');
+if (!fs.existsSync(DB_DIR)) {
+  fs.mkdirSync(DB_DIR, { recursive: true });
+}
 
 app.use(session({
   store: new SQLiteStore({ db: 'sessions.sqlite', dir: './server/data' }),
