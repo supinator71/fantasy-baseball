@@ -14,9 +14,9 @@ export default function Baseball101() {
           <span>⚾</span> The absolute basics
         </h2>
         <p style={{ color: 'var(--text-main)', fontSize: 15, lineHeight: 1.6 }}>
-          Baseball is a game played between two teams taking turns hitting and fielding. The objective is to score more <strong>Runs</strong>. 
-          A run is scored when a hitter safely rounds all four bases and crosses home plate. 
-          The fielding team tries to get three <strong>Outs</strong>. Once they get three outs, it is their turn to hit. 
+          The core objective of baseball is simple: score more <strong>Runs</strong>. 
+          A run is scored when a hitter safely hits the ball, rounds all four bases in consecutive order, and crosses home plate. 
+          Meanwhile, the opposing team (the defense on the field) tries to record three <strong>Outs</strong>. An out is recorded when a batter fails to reach base safely—most commonly by striking out, hitting a ball that is caught in the air before it touches the ground, or having the ball thrown to the base before they can run there. Once the defense gets three outs, the teams swap places and it is their turn to hit. 
           There are nine <strong>Innings</strong> in a standard game. Each inning is split into two halves: the <strong>Top</strong> of the inning (where the Away team bats) and the <strong>Bottom</strong> of the inning (where the Home team bats). The break in between is called the Middle of the inning.
         </p>
       </div>
@@ -80,6 +80,23 @@ export default function Baseball101() {
             <div>
               <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>SV (Saves)</div>
               <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>A specialized stat for Relief Pitchers who come into the 9th inning to protect a close lead.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Advanced Stats */}
+      <div className="card" style={{ marginBottom: 32 }}>
+        <h2 style={{ borderBottom: '1px solid var(--border)', paddingBottom: 12, marginBottom: 16, fontSize: 18, color: '#4aafdb' }}>
+          Advanced Fantasy Analytics
+        </h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>VOR (Value Over Replacement)</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.5 }}>
+              This is the holy grail metric for fantasy baseball. VOR calculates how many more points/stats a player produces compared to a totally average, "free" replacement-level player you could just pick off the Waiver Wire. 
+              <br/><br/>
+              <strong>Why it matters:</strong> A First Baseman who hits 25 home runs is good, but a Catcher who hits 25 home runs has an exponentially higher VOR, because good hitting catchers are incredibly rare! VOR tells you exactly who is actually helping you win your league by accounting for positional scarcity.
             </div>
           </div>
         </div>
