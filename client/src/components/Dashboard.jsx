@@ -108,7 +108,9 @@ export default function Dashboard({ leagueSettings }) {
           { label: 'Team Audit',         icon: '📊', href: '/audit',        desc: 'Grade your team' },
           { label: 'Trade Finder',       icon: '💡', href: '/tradefinder',  desc: 'AI trade proposals' },
           { label: 'Weekly Game Plan',   icon: '📅', href: '/gameplan',     desc: 'Lineup optimizer' },
+          { label: 'Baseball 101',       icon: '🎓', href: '/baseball101',  desc: 'Beginner metrics guide' },
           { label: 'Trophy Case',        icon: '🏆', href: '/album',        desc: 'Gamification unlocks' },
+          { label: 'Upgrade to Pro',     icon: '⭐', href: '/upgrade',      desc: 'Unlock infinite AI insights' },
         ].map(item => (
           <a key={item.href} href={item.href} style={{ textDecoration: 'none' }}>
             <div className="card" style={{ cursor: 'pointer', transition: 'border-color 0.2s', padding: '16px' }}
