@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html id="Stencil" lang="en-US" class="no-js mobile light-theme ">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=0, shrink-to-fit=no"/>
+        <meta name="format-detection" content="telephone=no">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <title>Login - Sign in to Yahoo</title>
+        <meta name="description" content="Sign in to access the best in class Yahoo Mail, breaking local, national and global news, finance, sports, music, movies... You get more out of the web, you get more out of life." />
+        <link rel="dns-prefetch" href="//gstatic.com">
+        <link rel="dns-prefetch" href="//google.com">
+        <link rel="dns-prefetch" href="//s.yimg.com">
+        <link rel="dns-prefetch" href="//y.analytics.yahoo.com">
+        <link rel="dns-prefetch" href="//ucs.query.yahoo.com">
+        <link rel="dns-prefetch" href="//geo.query.yahoo.com">
+        <link rel="dns-prefetch" href="//geo.yahoo.com">
+        <link rel="icon" type="image/x-icon" href="https://s.yimg.com/wm/mbr/images/yahoo-yep-favicon-v1.ico">
+        <link rel="shortcut icon" type="image/x-icon" href="https://s.yimg.com/wm/mbr/images/yahoo-yep-favicon-v1.ico">
+        <meta name="google-site-verification" content="yOTFyUBPTnXtuk2cPpqfv7ZvZ960JgqsV8FomN3n7Y0" />
+        <link rel="apple-touch-icon" href="https://s.yimg.com/wm/mbr/images/yahoo-apple-touch-v0.0.2.png">
+        <link rel="apple-touch-icon-precomposed" href="https://s.yimg.com/wm/mbr/images/yahoo-apple-touch-v0.0.2.png">
+        <style nonce="m8cmf1QdEde9vVeRchqu68WZAgNFKj0GQOrfk26rHj+q20T7">
+            #mbr-css-check {
+                display: inline;
+            }
+        </style>
+        <link href="https://s.yimg.com/wm/mbr/17a77a1d1fa3e8809e2af6cdb9517a615062cb6f/yahoo-main.css" rel="stylesheet" type="text/css">
+        <script nonce="m8cmf1QdEde9vVeRchqu68WZAgNFKj0GQOrfk26rHj+q20T7">
+            var pageStartTime = new Date().getTime();
+            (function(root) {
+                var isGoodJS = ('create' in Object && 'isArray' in Array && 'pushState' in window.history);
+                root.isGoodJS = isGoodJS;
+            }(this));
+            
+(function (root) {
+/* -- Data -- */
+root.YUI_config = {"comboBase":"https:\u002F\u002Fs.yimg.com\u002Fzz\u002Fcombo?","combine":true,"root":"yui-s:3.18.0\u002F"};
+root.I13N_config = {"keys":{"pt":"utility","ver":"nodejs"},"tag_id":"G-P9C3W3ESF1"};
+root.I13N_config || (root.I13N_config = {});
+root.I13N_config.spaceid = 794201016;
+root.I13N_config.location = "https:\u002F\u002Fapi.login.yahoo.com\u002Foauth2\u002Ferror?client_id=dj0yJmk9ZjUxeTFGbFM0NE5mJmQ9WVdrOVYzcDFWR1pYUlc4bWNHbzlNQT09JnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PWMx";
+root.I13N_config.event_params || (root.I13N_config.event_params = {});
+root.I13N_config.event_params.page_location = "https:\u002F\u002Fapi.login.yahoo.com\u002Foauth2\u002Ferror?client_id=dj0yJmk9ZjUxeTFGbFM0NE5mJmQ9WVdrOVYzcDFWR1pYUlc4bWNHbzlNQT09JnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PWMx";
+root.I13N_config.referrer = "";
+root.I13N_config.event_params.page_referrer = "";
+root.I13N_config.keys || (root.I13N_config.keys = {});
+root.I13N_config.keys.pg_name = "DEFAULT_PAGENAME";
+root.I13N_config.event_params.yPageScreenName = "DEFAULT_PAGENAME";
+root.I13N_config.keys.gm_np = "yahoo";
+root.I13N_config.event_params.yNamespace = "yahoo";
+root.I13N_config.keys.p_sec = "DEFAULT_SECTION";
+root.I13N_config.keys.p_subsec = "DEFAULT_SUBSECTION";
+root.I13N_config.keys.test = "mbr-oauth2-api-host,mbr-oauth2-post-api-host,";
+root.I13N_config.event_params.yBucketIds = "mbr-oauth2-api-host,mbr-oauth2-post-api-host,";
+root.I13N_config.keys.cause = "direct-nav";
+root.I13N_config.event_params.yPropActivity = "direct-nav";
+root.I13N_config.keys.src_id = 794201016;
+root.I13N_config.event_params.yPageSrc = 794201016;
+root.COMET_URL = "https:\u002F\u002Fserver.comet.yahoo.com\u002Fcomet";
+root.oauthData || (root.oauthData = {});
+root.oauthData.defaultRedirectUrl = "https:\u002F\u002Fwww.yahoo.com";
+root.oauthData.minWindowWidth = 320;
+root.isIOSDevice = false;
+}(this));
+
+            
+            YUI_config.global = window;
+
+
+            window.mbrSendError = function (name, url) {
+                (new Image()).src = '/account/js-reporting/?rid=2vp48jhku533t&crumb=' + encodeURIComponent('XBm5CQJZP3S76a0JsTZfLQ') + '&message=' + encodeURIComponent(name) + '&url=' + encodeURIComponent(url);
+            };
+
+            var oldError = window.onerror;
+
+            var allowListedErrorScripts = ["bundle.js"];
+            window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
+                const fileName = url ? url.split('/').pop() : null;
+                if (fileName && allowListedErrorScripts.indexOf(fileName) > -1) {
+                    window.mbrSendError(errorMsg, url);
+                    if (oldError) {
+                        oldError.apply(this, arguments);
+                    }
+                    return false;
+                }
+            }
+
+        </script>
+    </head>
+    <body class="bucket-">
+    <script nonce="m8cmf1QdEde9vVeRchqu68WZAgNFKj0GQOrfk26rHj+q20T7">
+        (function(root) {
+            var doc = document;
+            if (root.isGoodJS) {
+                doc.documentElement.className = doc.documentElement.className.replace('no-js', 'js');
+            }
+        }(this));
+    </script>
+    <div id="login-body" class="loginish  responsive  mobile-challenge-view  ">
+    <div class="mbr-login-hd" id="mbr-uh-hd">
+        <img src="https://s.yimg.com/rz/p/yahoo_frontpage_en-US_s_f_p_bestfit_frontpage_2x.png" alt="Yahoo" class="logo yahoo-en-US" width="" height="27" />
+        <img src="https://s.yimg.com/rz/p/yahoo_frontpage_en-US_s_f_w_bestfit_frontpage_2x.png" alt="Yahoo" class="dark-mode-logo logo yahoo-en-US" width="" height="27" />
+</div>
+    <div class="oauth2">
+    <div class="oauth2-error txt-align-center">
+        <h1 class="oauth2-title" data-error="INVALID_REQUEST">Uh oh</h1>
+        <p class="margin8 writeup">Looks like something went wrong.</p>
+        <p class="writeup" data-error-desc="INVALID REDIRECT URI">Please try again later.</p>
+        <div class="margin20 close">
+            <a role="button" id="oauth2-close" class="pure-button puree-button-primary" href="https://www.yahoo.com">Close</a>
+        </div>
+
+        <p class="oauth2-developer-footer" data-error="INVALID_REQUEST">Developers: Please specify a valid request and submit again.</p>
+
+    </div>
+</div>
+    
+    <div class="login-footer">
+    <p>
+        <a href="https://help.yahoo.com/kb/index?locale&#x3D;en_US&amp;page&#x3D;product&amp;y&#x3D;PROD_ACCT" target="_blank" class="help" rel="noopener">Help</a>
+        <a href="https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html" target="_blank" class="terms" rel="noopener">Terms</a>
+             
+                <a href="https://legal.yahoo.com/us/en/yahoo/privacy/index.html" target="_blank" class="privacy" rel="noopener">Privacy</a>
+            
+    </p>
+</div>
+</div>
+    <script src="https://s.yimg.com/oa/ac-1.0.601.js"></script>
+    <script src="https://s.yimg.com/ss/analytics3.js"></script>
+    <script nonce="m8cmf1QdEde9vVeRchqu68WZAgNFKj0GQOrfk26rHj+q20T7">
+        var rapidInstance = new YAHOO.i13n.Rapid(I13N_config);
+    </script>
+    <script src="https://s.yimg.com/wm/mbr/17a77a1d1fa3e8809e2af6cdb9517a615062cb6f/bundle.js"></script>
+    <noscript>
+        <img src="/account/js-reporting/?crumb=XBm5CQJZP3S76a0JsTZfLQ&message=javascript_not_enabled&ref=%2Foauth2%2Ferror" height="0" width="0" style="visibility: hidden;">
+    </noscript>
+    <div id="mbr-css-check"></div>
+    <div id="page-mask" class="page-mask hide"></div>
+    <div id="ad"></div>
+    <div class="mbr-legacy-device-bar" id="mbr-legacy-device-bar">
+        <label class="cross" for="mbr-legacy-device-bar-cross" aria-label="Close this warning">x</label>
+        <input type="checkbox" id="mbr-legacy-device-bar-cross" />
+        <p class="mbr-legacy-device">
+                Enable JavaScript and try again.
+        </p>
+    </div>
+    <script nonce="m8cmf1QdEde9vVeRchqu68WZAgNFKj0GQOrfk26rHj+q20T7">
+        (function(root) {
+            if (!root.isGoodJS) {
+                document.getElementById('mbr-legacy-device-bar').style.display = 'block';
+            }
+        }(this));
+    </script>
+    </body>
+</html>
+<!-- fe02.member.gq1.yahoo.com - Fri Apr 17 2026 19:39:41 GMT+0000 (Coordinated Universal Time) - (1ms) -->

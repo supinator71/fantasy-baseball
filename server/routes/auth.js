@@ -8,7 +8,7 @@ const YAHOO_TOKEN_URL = 'https://api.login.yahoo.com/oauth2/get_token';
 
 // Step 1: Redirect user to Yahoo login
 router.get('/yahoo', (req, res) => {
-  const redirect_uri = (process.env.YAHOO_REDIRECT_URI || 'https://goinyard.app/auth/callback').trim();
+  const redirect_uri = (process.env.YAHOO_REDIRECT_URI || 'https://goinyard.app/auth/yahoo/callback').trim();
   const clientId = (process.env.YAHOO_CLIENT_ID || '').trim();
   
   console.log('Starting Yahoo auth. CLIENT_ID:', clientId ? 'SET' : 'MISSING', 'REDIRECT_URI:', redirect_uri);
@@ -24,7 +24,7 @@ router.get('/yahoo', (req, res) => {
 });
 
 // Step 2: Yahoo redirects back with auth code
-router.get('/callback', async (req, res) => {
+router.get(['/callback', '/yahoo/callback'], async (req, res) => {
   console.log('OAuth callback received:', JSON.stringify(req.query));
   const { code, error, error_description } = req.query;
   if (error) return res.status(400).json({ error, error_description, query: req.query });
@@ -36,7 +36,7 @@ router.get('/callback', async (req, res) => {
     
     const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
-    const redirect_uri = (process.env.YAHOO_REDIRECT_URI || 'https://goinyard.app/auth/callback').trim();
+    const redirect_uri = (process.env.YAHOO_REDIRECT_URI || 'https://goinyard.app/auth/yahoo/callback').trim();
 
     const response = await axios.post(YAHOO_TOKEN_URL,
       new URLSearchParams({
