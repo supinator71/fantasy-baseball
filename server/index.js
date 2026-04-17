@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
-const FileStore = require('session-file-store')(session);
+const SQLiteStore = require('connect-sqlite3')(session);
 const cors = require('cors');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
@@ -27,7 +27,7 @@ app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
 app.use(session({
-  store: new FileStore({ path: './server/db/sessions', retries: 0, logFn: () => {} }),
+  store: new SQLiteStore({ db: 'sessions.sqlite', dir: './server/db' }),
   secret: process.env.SESSION_SECRET || 'fantasy-baseball-secret',
   resave: false,
   saveUninitialized: false,

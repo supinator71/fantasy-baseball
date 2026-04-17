@@ -1,5 +1,46 @@
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
+
+const YAHOO_TOKEN_URL = 'https://api.login.yahoo.com/oauth2/get_token';
+
+// Force an active token refresh
+async function forceRefreshToken(req, refresh_token) {
+  try {
+    const credentials = Buffer.from(
+      `${process.env.YAHOO_CLIENT_ID}:${process.env.YAHOO_CLIENT_SECRET}`
+    ).toString('base64');
+    
+    const response = await axios.post(YAHOO_TOKEN_URL,
+      new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refresh_token
+      }),
+      {
+        headers: {
+          'Authorization': `Basic ${credentials}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    );
+    
+    const { access_token, refresh_token: new_refresh_token, expires_in } = response.data;
+    const expiresAt = Date.now() + expires_in * 1000;
+    
+    const guid = req?.session?.yahoo_guid;
+    if (req && req.session) {
+      req.session.tokens = { access_token, refresh_token: new_refresh_token, expires_at: expiresAt };
+    }
+    if (guid) {
+      db.setToken(guid, { access_token, refresh_token: new_refresh_token, expires_at: expiresAt });
+    }
+    
+    return access_token;
+  } catch (err) {
+    console.error('[Yahoo OAuth] CRITICAL error forcefully refreshing token', err.message);
+    throw new Error('Failed to refresh token');
+  }
+}
 
 const DB_DIR = path.join(__dirname);
 const DB_FILE = path.join(DB_DIR, 'data.json');
