@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap');
+
 /* Trophy Case Layout */
 .trophy-case-container {
   padding: 24px 32px;
@@ -256,4 +258,45 @@
 @keyframes fade-up {
   0% { transform: translateY(40px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
+}
+
+/* Legendary Gamification - Fabric Texture */
+.card-visual-wrapper.legendary::before,
+.pack-card-container.legendary::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 4px), repeating-linear-gradient(-45deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 4px);
+  background-size: 8px 8px;
+  mix-blend-mode: overlay;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* Legendary Gamification - Digital Signature overlay */
+.card-signature {
+  position: absolute;
+  bottom: 15%;
+  right: 10%;
+  font-family: 'Caveat', 'Playball', cursive, sans-serif;
+  font-size: 28px;
+  color: rgba(255, 215, 0, 0.85); /* Gold ink */
+  transform: rotate(-10deg);
+  z-index: 10;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.8), 0 0 10px rgba(255,215,0,0.4);
+  pointer-events: none;
+  opacity: 0;
+  animation: sign-in 1.5s 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.pack-card-container .card-signature {
+  font-size: 42px;
+  bottom: 12%;
+  right: 8%;
+}
+
+@keyframes sign-in {
+  0% { clip-path: polygon(0 0, 0 100%, 0 100%, 0 0); opacity: 0; }
+  50% { opacity: 1; }
+  100% { clip-path: polygon(0 0, 0 100%, 100% 100%, 100% 0); opacity: 1; }
 }

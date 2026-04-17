@@ -59,6 +59,9 @@ export default function TrophyCase() {
             alt={cardDef.name} 
             className={`card-image ${cardDef.rarity}`} 
           />
+          {isUnlocked && cardDef.rarity === 'legendary' && (
+            <div className="card-signature">Cyborg 71</div>
+          )}
           {!isUnlocked && (
             <div className="lock-overlay">
               <span style={{ fontSize: 32 }}>🔒</span>
