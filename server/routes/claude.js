@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Anthropic = require('@anthropic-ai/sdk');
-const db = require('../db/database');
+const db = require('../services/database');
 const brain = require('../services/fantasyBrain');
 const mlbStats = require('../services/mlbStatsService');
 const { rateLimiter, getStats } = require('../middleware/rateLimiter');

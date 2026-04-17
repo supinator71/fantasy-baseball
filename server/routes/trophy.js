@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db/database');
+const db = require('../services/database');
 
 // Master dictionary of all collectible cards in the application
 const CARD_COLLECTION = [

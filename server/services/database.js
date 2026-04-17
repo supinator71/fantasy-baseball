@@ -42,7 +42,7 @@ async function forceRefreshToken(req, refresh_token) {
   }
 }
 
-const DB_DIR = path.join(__dirname, '..', 'data');
+const DB_DIR = path.join(__dirname, '..', 'db');
 if (!fs.existsSync(DB_DIR)) {
   fs.mkdirSync(DB_DIR, { recursive: true });
 }

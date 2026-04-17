@@ -28,13 +28,13 @@ const fs = require('fs');
 
 app.use(express.json());
 
-const DB_DIR = path.join(__dirname, 'data');
+const DB_DIR = path.join(__dirname, 'db');
 if (!fs.existsSync(DB_DIR)) {
   fs.mkdirSync(DB_DIR, { recursive: true });
 }
 
 app.use(session({
-  store: new SQLiteStore({ db: 'sessions.sqlite', dir: './server/data' }),
+  store: new SQLiteStore({ db: 'sessions.sqlite', dir: './server/db' }),
   secret: process.env.SESSION_SECRET || 'fantasy-baseball-secret',
   resave: false,
   saveUninitialized: false,

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db/database');
+const db = require('../services/database');
 const yahoo = require('../services/yahooService');
 
 // ── Helper: parse Yahoo players response into flat array ──────────────────────

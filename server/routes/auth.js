@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
-const db = require('../db/database');
+const db = require('../services/database');
 
 const YAHOO_AUTH_URL = 'https://api.login.yahoo.com/oauth2/request_auth';
 const YAHOO_TOKEN_URL = 'https://api.login.yahoo.com/oauth2/get_token';

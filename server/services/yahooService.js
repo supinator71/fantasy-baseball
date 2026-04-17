@@ -1,6 +1,6 @@
 const axios = require('axios');
 const xml2js = require('xml2js');
-const db = require('../db/database');
+const db = require('./database');
 
 const YAHOO_API_BASE = 'https://fantasysports.yahooapis.com/fantasy/v2';
 

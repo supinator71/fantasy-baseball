@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const yahoo = require('../services/yahooService');
 const cache = require('../services/cache');
-const db = require('../db/database');
+const db = require('../services/database');
 const mlbStats = require('../services/mlbStatsService');
 
 // TTLs (ms)

@@ -1,4 +1,4 @@
-const db = require('../db/database');
+const db = require('../services/database');
 
 const FREE_DAILY_AI_LIMIT = 100; // Increased to 100 for dev/QA testing
 
