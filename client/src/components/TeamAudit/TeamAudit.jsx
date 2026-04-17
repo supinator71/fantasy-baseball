@@ -347,14 +347,6 @@ export default function TeamAudit({ leagueSettings }) {
             </div>
           )}
 
-          {/* Full analysis */}
-          {audit.fullAnalysis && (
-            <div className="card" style={{ marginBottom: 16 }}>
-              <h3 style={{ color: '#007a7a', marginBottom: 12 }}>📊 Full Analysis</h3>
-              <div className="ai-response">{audit.fullAnalysis}</div>
-            </div>
-          )}
-
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-primary" onClick={runAudit} disabled={loading}>
               {loading ? '⟳ Re-analyzing...' : '↻ Re-run Audit'}

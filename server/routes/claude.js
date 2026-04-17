@@ -477,6 +477,25 @@ router.post('/matchup/predict', rateLimiter('matchup'), async (req, res) => {
   (opponent?.stats || my_team?.stats || []).forEach(s => { if (s.name) oppStats[s.name] = s.opp_value ?? s.value; });
   const catAnalysis = brain.analyzeCategories(myStats, [{ stats: oppStats }], settings?.scoring_type || 'H2H');
 
+  const safeCats = stat_categories || ['W','SV','OUT','H','ER','BB','HBP','K','R','1B','2B','3B','HR','RBI','SB'];
+  const mathCategories = safeCats.map((cat, i) => {
+    const myStatObj = (my_team?.stats || [])[i] || {};
+    const oppStatObj = (opponent?.stats || [])[i] || {};
+    let myVal = parseFloat(myStats[cat] || myStatObj.value || 0);
+    let oppVal = parseFloat(oppStats[cat] || oppStatObj.value || 0);
+    const lowerIsBetter = ['ERA', 'WHIP', 'L', 'ER', 'BB', 'HBP', 'H/AB', 'L'].includes(cat);
+    let winner = 'tie';
+    if (myVal !== oppVal) {
+      winner = lowerIsBetter ? (myVal < oppVal ? 'me' : 'opponent') : (myVal > oppVal ? 'me' : 'opponent');
+    }
+    return { name: cat, my_proj: myVal, opp_proj: oppVal, winner, confidence: 'high' };
+  });
+
+  const mathProjectedWins = mathCategories.filter(c => c.winner === 'me').length;
+  const mathProjectedLosses = mathCategories.filter(c => c.winner === 'opponent').length;
+  const mathProjectedTies = mathCategories.filter(c => c.winner === 'tie').length;
+
+
   try {
     const text = await callClaude([{
       role: 'user',
@@ -504,11 +523,19 @@ Return ONLY valid JSON (no markdown):
   "lineup_recommendations": "Write specific actionable moves in conversational prose",
   "categories": [{ "name": "Category Name", "my_proj": "value", "opp_proj": "value", "winner": "me", "confidence": "high", "note": "A readable sentence" }]
 }`,
-    }], 4000);
+    }], 1500);
 
     const parsed = tryParseJSON(text);
     console.log('[Claude] /matchup/predict parsed:', parsed ? 'JSON OK' : 'FALLBACK to raw text');
-    if (parsed) return res.json(parsed);
+    if (parsed) {
+      return res.json({
+        ...parsed,
+        projected_wins: mathProjectedWins,
+        projected_losses: mathProjectedLosses,
+        projected_ties: mathProjectedTies,
+        categories: mathCategories
+      });
+    }
     
     // Robust Fallback: Regex extraction when JSON structurally truncates
     const _wins = text.match(/"projected_wins"\s*:\s*(\d+)/i);
@@ -518,13 +545,13 @@ Return ONLY valid JSON (no markdown):
     const _summary = text.match(/"summary"\s*:\s*"([^"]+)"/i);
     
     res.json({ 
-      projected_wins: _wins ? parseInt(_wins[1]) : '?', 
-      projected_losses: _losses ? parseInt(_losses[1]) : '?',
-      projected_ties: _ties ? parseInt(_ties[1]) : 0,
+      projected_wins: mathProjectedWins, 
+      projected_losses: mathProjectedLosses,
+      projected_ties: mathProjectedTies,
       overall_confidence: _confidence ? _confidence[1] : 'low',
       summary: _summary ? _summary[1] : "Incomplete analysis. The API response was truncated before finishing.",
       lineup_recommendations: null, // Avoid dumping raw JSON block into UI
-      categories: [],
+      categories: mathCategories,
       raw: text 
     });
   } catch (err) {
@@ -610,8 +637,6 @@ IMPORTANT FORMATTING RULES:
 - Write strengths/weaknesses as readable sentences a fantasy manager would enjoy reading.
 - For moves, write "action" as a clear headline (e.g. "Trade Contreras and Jansen for a young starter") and "reasoning" as a persuasive paragraph.
 - The championshipPath should read like a coach's motivational game plan, not a numbered list.
-- The fullAnalysis should be a compelling 300-word narrative essay.
-
 CRITICAL JSON ESCAPING RULES: You MUST use double quotes for all JSON keys and string values. Do NOT use single quotes for JSON properties. If you need to use a quote inside your text prose, use single quotes (e.g., "He is a 'must-start' player"). You MUST NOT use raw newlines inside string values; use the literal sequence \\n.
 Return ONLY valid JSON:
 {
@@ -621,10 +646,9 @@ Return ONLY valid JSON:
   "moves": [
     { "action": "Clear headline describing the move", "reasoning": "Persuasive paragraph explaining why", "priority": "immediate" }
   ],
-  "championshipPath": "A compelling narrative paragraph describing the path to winning it all",
-  "fullAnalysis": "A comprehensive 300-word narrative analysis written as readable prose"
+  "championshipPath": "A compelling narrative paragraph describing the path to winning it all"
 }`,
-    }], 4000);
+    }], 1500);
 
     const parsed = tryParseJSON(text);
     console.log('[Claude] /audit parsed:', parsed ? 'JSON OK' : 'FALLBACK to raw text');
@@ -633,7 +657,7 @@ Return ONLY valid JSON:
     // Robust Fallback: Regex extraction when JSON structurally truncates
     const _grade = text.match(/"grade"\s*:\s*"([^"]+)"/i);
     const _path = text.match(/"championshipPath"\s*:\s*"([^"]+)"/i);
-    const _analysis = text.match(/"fullAnalysis"\s*:\s*"([^"]+)"/i);
+    const _analysis = ["", "AI audit computed without dense prose to save generation time."];
 
     res.json({ 
       grade: _grade ? _grade[1] : "N/A",
