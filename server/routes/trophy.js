@@ -36,7 +36,17 @@ const CARD_COLLECTION = [
   // Legendary (Signatures & Ultimate Pulls)
   { id: 'sp_closeup', name: 'Rookie True Gold (Visor Edition)', img: '/cyborg_silver_prism_closeup.png', rarity: 'legendary' },
   { id: 'arcana_hand', name: 'Homerun Arcana (Signed)', img: '/cyborg_card_hand_arcana.png', rarity: 'legendary' },
-  { id: 'leg_walkoff', name: 'Walk-Off Homer (Autograph Edition)', img: '/cyborg_walkoff_homer.png', rarity: 'legendary' }
+  { id: 'leg_walkoff', name: 'Walk-Off Homer (Autograph Edition)', img: '/cyborg_walkoff_homer.png', rarity: 'legendary' },
+
+  // --- SERIES 2: TITANIUM GRAPEFRUIT LEAGUE ---
+  { id: 'tgl_bk_hit', name: 'Brooklyn Biotics (Franchise Hitter)', img: '/tgl_brooklyn_hitter_1776485884068.png', rarity: 'common' },
+  { id: 'tgl_tok_stl', name: 'Tokyo Tachyons (Speed Demon)', img: '/tgl_tokyo_stealer_1776485899445.png', rarity: 'common' },
+  { id: 'tgl_neo_inf', name: 'Neon City Sliders (Double Play)', img: '/tgl_neoncity_infielder_1776485917829.png', rarity: 'common' },
+  { id: 'tgl_sv_pit', name: 'Silicon Valley Sentinels (Surgical Pitcher)', img: '/tgl_siliconvalley_pitcher_1776485929503.png', rarity: 'rare' },
+  { id: 'tgl_dal_cow', name: 'Dallas Tex-Mechs (Outfield Ranger)', img: '/tgl_dallas_cowboy_1776485952292.png', rarity: 'rare' },
+  { id: 'tgl_osa_hit', name: 'Osaka Overclockers (Heavy Hitter)', img: '/tgl_osaka_hitter_1776485966934.png', rarity: 'epic' },
+  { id: 'tgl_kyo_kai', name: 'Kyoto Kaiju (Behemoth Pitcher)', img: '/tgl_kyoto_kaiju_pitcher_1776485980459.png', rarity: 'epic' },
+  { id: 'tgl_ros_inf', name: 'Roswell Rayguns (Infield Saucer)', img: '/tgl_roswell_infielder_1776485994040.png', rarity: 'legendary' }
 ];
 
 // Helper to pull a random card based on rarity weights
