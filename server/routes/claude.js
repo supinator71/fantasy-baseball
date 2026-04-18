@@ -657,7 +657,6 @@ Return ONLY valid JSON:
     // Robust Fallback: Regex extraction when JSON structurally truncates
     const _grade = text.match(/"grade"\s*:\s*"([^"]+)"/i);
     const _path = text.match(/"championshipPath"\s*:\s*"([^"]+)"/i);
-    const _analysis = ["", "AI audit computed without dense prose to save generation time."];
 
     res.json({ 
       grade: _grade ? _grade[1] : "N/A",
@@ -665,7 +664,8 @@ Return ONLY valid JSON:
       weaknesses: [],
       moves: [],
       championshipPath: _path ? _path[1] : null,
-      fullAnalysis: _analysis ? _analysis[1] : "Incomplete analysis. The API response was truncated before finishing.",
+      fullAnalysis: "The AI generated a complex analytical response that could not be mapped to the strict UI boxes. See raw analysis below.",
+      raw: text,
       vorByPlayer: diagnosis.vorByPlayer, 
       catAnalysis: diagnosis.catAnalysis
     });

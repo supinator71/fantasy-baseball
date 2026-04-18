@@ -280,6 +280,15 @@ export default function TeamAudit({ leagueSettings }) {
             )}
           </div>
 
+          {(!audit.strengths || audit.strengths.length === 0) && audit.raw && (
+            <div className="card" style={{ marginBottom: 16 }}>
+              <h3 style={{ color: '#4aafdb', marginBottom: 12, fontSize: 15 }}>🧠 Deep Analysis</h3>
+              <div style={{ color: '#e2e8f0', fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                {audit.raw.replace(/```json/g, '').replace(/```/g, '')}
+              </div>
+            </div>
+          )}
+
           {/* Actionable moves */}
           {audit.moves?.length > 0 && (
             <div className="card" style={{ marginBottom: 16 }}>
