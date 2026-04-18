@@ -90,7 +90,10 @@ export default function TrophyCase() {
   
   // Calculate if daily pack is available
   const canClaimDaily = !last_daily_pack || (Date.now() - last_daily_pack > 24 * 60 * 60 * 1000);
-  const uniqueUnlocked = new Set(unlocked_cards?.map(c => c.id)).size;
+  
+  // Only count unlocked cards that still exist in the master collection library
+  const validUnlockedIds = unlocked_cards?.filter(c => all_cards?.some(card => card.id === c.id)).map(c => c.id) || [];
+  const uniqueUnlocked = new Set(validUnlockedIds).size;
 
   return (
     <div className="trophy-case-container">
