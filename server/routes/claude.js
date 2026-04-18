@@ -648,7 +648,7 @@ Return ONLY valid JSON:
   ],
   "championshipPath": "A compelling narrative paragraph describing the path to winning it all"
 }`,
-    }], 1500);
+    }], 2500);
 
     const parsed = tryParseJSON(text);
     console.log('[Claude] /audit parsed:', parsed ? 'JSON OK' : 'FALLBACK to raw text');
