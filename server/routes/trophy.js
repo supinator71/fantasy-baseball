@@ -107,9 +107,9 @@ router.post('/daily-pack', (req, res) => {
   try {
     const tc = db.getTrophyCase(guid);
     const now = Date.now();
-    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+    const TWENTY_HOURS = 20 * 60 * 60 * 1000;
     
-    if (tc.last_daily_pack && (now - tc.last_daily_pack < TWENTY_FOUR_HOURS)) {
+    if (tc.last_daily_pack && (now - tc.last_daily_pack < TWENTY_HOURS)) {
       return res.status(400).json({ error: 'Daily pack not ready yet' });
     }
 

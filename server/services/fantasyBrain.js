@@ -538,8 +538,12 @@ function scoreWaiverTarget(player = {}, myRoster = [], leagueSettings = {}, cate
   const countAtPos = myPositions.filter(p => p === pos).length
   const required = (leagueSettings.roster_slots || {})[pos] || 1
 
+  const fmt = detectFormat(leagueSettings.scoring_type)
+
   // Positional need
-  if (countAtPos < required) score += scarcity.urgencyScore * 3
+  if (fmt === FORMAT.H2H_POINTS && pos === 'C' && countAtPos >= 1) {
+    score -= 50  // Rule 1: NEVER advise a backup catcher
+  } else if (countAtPos < required) score += scarcity.urgencyScore * 3
   else if (countAtPos >= required) score -= 10
 
   // ── Category-need boost ────────────────────────────────────────────────
@@ -583,13 +587,23 @@ function scoreWaiverTarget(player = {}, myRoster = [], leagueSettings = {}, cate
   }
   const kPct = parseFloat(player.k_pct || player.stats?.k_pct || 0)
   if (kPct > 0 && kPct < 0.18) score += 8  // low K-rate = sustainable contact
-  else if (kPct > 0.30) score -= 8
+  else if (kPct > 0.30) {
+    if (fmt !== FORMAT.H2H_POINTS) score -= 8  // Rule 6: No K penalty in points
+  }
 
   // Schedule quality (games this week)
   const weekGames = getWeeklyGameCount(player.team, leagueSettings.current_week || 1)
-  if (weekGames >= 7) score += 12
-  else if (weekGames >= 6) score += 6
-  else if (weekGames <= 4) score -= 8
+  if (fmt === FORMAT.H2H_POINTS) {
+    // Rule 3 and Rule 4: Volume > Talent, stream aggressively
+    if (weekGames >= 7) score += isPitcher ? 35 : 20
+    else if (weekGames >= 6) score += 8
+    else if (weekGames <= 4) score -= 15
+  } else {
+    // Standard format fallback
+    if (weekGames >= 7) score += 12
+    else if (weekGames >= 6) score += 6
+    else if (weekGames <= 4) score -= 8
+  }
 
   // Roster spot cost (who would I drop?)
   const benchDepth = myRoster.filter(p =>
@@ -639,9 +653,9 @@ function optimizeLineup(roster = [], weekSchedule = {}, scoringType = 'Roto', le
 
     // ── Format-specific adjustments ───────────────────────────────────
     if (fmt === FORMAT.H2H_POINTS) {
-      // Points: volume is king. 7-game players always start.
-      startScore += weekGames * 4  // extra volume weight
-      if (isPitcher && weekGames >= 7) startScore += 15  // likely 2-start SP = massive points
+      // Points: volume is king. 7-game players always start (Rule 3/10)
+      startScore += weekGames * 15  // massively overweight volume over VOR
+      if (isPitcher && weekGames >= 7) startScore += 35  // 2-start SPs are top priority
     } else if (fmt === FORMAT.ROTO) {
       // Roto: protect ratios. Penalize high-ERA pitchers more heavily.
       if (isPitcher && recentERA > 5.0) startScore -= 20  // ratio damage lasts all season
@@ -844,7 +858,30 @@ function analyzeRosterStrengths(roster = [], leagueContext = {}) {
     .slice(0, 3)
     .map(p => ({ ...p, reason: 'Low VOR vs expected — buy low or cut' }))
 
-  return { byPosition, surpluses, voids, sellHigh, buyLow, vorByPlayer }
+  const rosterWarnings = []
+  const fmt = detectFormat(scoringType)
+
+  if (fmt === FORMAT.H2H_POINTS) {
+    // 1. Catcher check (Rule 1)
+    if (byPosition['C'] && byPosition['C'].length > 1) {
+      rosterWarnings.push(`RULE 1 VIOLATION: You are carrying ${byPosition['C'].length} catchers. In H2H points, a bench spot used on a backup catcher is completely wasted. Drop the backup for a streaming SP.`)
+    }
+    
+    // 2. Bench balance (Rule 8) - Approximation
+    const numStartingPitchers = (byPosition['SP']?.length || 0) + (byPosition['RP']?.length || 0)
+    if (numStartingPitchers > 9) { // 7 active slots + maybe 2 bench
+      rosterWarnings.push(`RULE 8 WARNING: You have too many bench pitchers. Consider maintaining a strict 3-Bat / 1-Pitcher bench split to ensure daily coverage for off-days.`)
+    }
+
+    // 3. IL Spot Check (Rule 9)
+    const ilPlayers = roster.filter(p => p.status && String(p.status).toUpperCase().includes('IL'))
+    const ilSlots = leagueContext?.roster_slots?.IL || 0
+    if (ilSlots > 0 && ilPlayers.length < ilSlots) {
+      rosterWarnings.push(`RULE 9 WARNING: You have ${ilSlots - ilPlayers.length} empty IL slots. These are free roster spots! Stash injured players immediately.`)
+    }
+  }
+
+  return { byPosition, surpluses, voids, sellHigh, buyLow, vorByPlayer, rosterWarnings }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -859,9 +896,10 @@ const LEAGUE_AVG = {
   ERA: 4.08, WHIP: 1.27, K9: 8.6, BB9: 3.3,
 }
 
-function detectBreakoutRegression(playerStats = {}, type = 'hitter') {
+function detectBreakoutRegression(playerStats = {}, type = 'hitter', scoringType = 'Roto') {
   const flags = []
   let breakoutScore = 0  // positive = breakout candidate, negative = regression risk
+  const fmt = detectFormat(scoringType)
 
   if (type === 'hitter') {
     const babip = parseFloat(playerStats.BABIP || playerStats.babip || 0)
@@ -888,23 +926,37 @@ function detectBreakoutRegression(playerStats = {}, type = 'hitter') {
         flags.push({ stat: 'K%', value: kPct, verdict: 'ELITE CONTACT', note: `${(kPct * 100).toFixed(1)}% K-rate. Elite contact profile — sustains AVG.` })
         breakoutScore += 10
       } else if (kPct > 0.30) {
-        flags.push({ stat: 'K%', value: kPct, verdict: 'HIGH K-RATE', note: `${(kPct * 100).toFixed(1)}% K-rate. Volatile AVG, needs power to compensate.` })
-        breakoutScore -= 10
+        if (fmt === FORMAT.H2H_POINTS) {
+          flags.push({ stat: 'K%', value: kPct, verdict: 'HIGH K-RATE', note: `${(kPct * 100).toFixed(1)}% K-rate. Ignored in Points mode (No K penalty).` })
+        } else {
+          flags.push({ stat: 'K%', value: kPct, verdict: 'HIGH K-RATE', note: `${(kPct * 100).toFixed(1)}% K-rate. Volatile AVG, needs power to compensate.` })
+          breakoutScore -= 10
+        }
       }
     }
 
     // Walk rate (plate discipline)
     if (bbPct > 0) {
       if (bbPct > 0.12) {
-        flags.push({ stat: 'BB%', value: bbPct, verdict: 'ELITE DISCIPLINE', note: `${(bbPct * 100).toFixed(1)}% walk rate. High OBP floor.` })
-        breakoutScore += 8
+        if (fmt === FORMAT.H2H_POINTS) {
+          flags.push({ stat: 'BB%', value: bbPct, verdict: 'ELITE DISCIPLINE', note: `${(bbPct * 100).toFixed(1)}% walk rate. Massive value in Points mode (BB = 1B).` })
+          breakoutScore += 25
+        } else {
+          flags.push({ stat: 'BB%', value: bbPct, verdict: 'ELITE DISCIPLINE', note: `${(bbPct * 100).toFixed(1)}% walk rate. High OBP floor.` })
+          breakoutScore += 8
+        }
       }
     }
 
     // Power sustainability (ISO Power)
     if (isoP > 0.250) {
-      flags.push({ stat: 'ISO', value: isoP, verdict: 'ELITE POWER', note: `ISO ${isoP.toFixed(3)} indicates legit 35+ HR power.` })
-      breakoutScore += 12
+      if (fmt === FORMAT.H2H_POINTS) {
+        flags.push({ stat: 'ISO', value: isoP, verdict: 'ELITE POWER', note: `ISO ${isoP.toFixed(3)}. Supreme value in Points mode (Power > Contact).` })
+        breakoutScore += 30
+      } else {
+        flags.push({ stat: 'ISO', value: isoP, verdict: 'ELITE POWER', note: `ISO ${isoP.toFixed(3)} indicates legit 35+ HR power.` })
+        breakoutScore += 12
+      }
     } else if (isoP > 0 && isoP < 0.100) {
       flags.push({ stat: 'ISO', value: isoP, verdict: 'NO POWER', note: `ISO ${isoP.toFixed(3)}. Batter provides no power upside.` })
       breakoutScore -= 5
@@ -1299,6 +1351,10 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}) {
   const replacementCount = vorByPlayer.filter(p => p.vor < 30).length;
 
   promptBlock += `Health: ${totalVOR} total VOR, ${avgVOR} avg, ${eliteCount} elite, ${replacementCount} replacement\n`;
+
+  if (rosterAnalysis.rosterWarnings && rosterAnalysis.rosterWarnings.length > 0) {
+    promptBlock += `\n🚨 CRITICAL ROSTER VIOLATIONS (Must Fix):\n${rosterAnalysis.rosterWarnings.map(w => `- ${w}`).join('\n')}\n`;
+  }
 
   return {
     // Raw data for programmatic use
