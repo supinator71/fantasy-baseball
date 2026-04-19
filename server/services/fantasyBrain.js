@@ -90,7 +90,7 @@ const POSITIONAL_DATA = {
     tier: 'elite',
     draftWindow: 'rounds 3-7',
     replacementDropoff: 'massive',
-    notes: 'Only 3-4 viable starters in a 12-team league. Elite C worth a 3rd rounder. Replacement-level C (.230 AVG, 12 HR) is a weekly liability.',
+    notes: 'Only 3-4 viable starters in a 12-team league. Elite C worth a 3rd rounder. CRITICAL RULE: Never roster a backup catcher unless it is a 2-catcher league. Holding a backup C on the bench is a complete waste of a roster spot.',
     replacementLevel: { R: 45, HR: 11, RBI: 45, SB: 2, AVG: 0.232 },
     starterSlots: 1,
   },
