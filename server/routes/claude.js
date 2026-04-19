@@ -89,9 +89,16 @@ function leagueContext(settings) {
     rule = 'DO NOT focus solely on total points. You MUST consider how a player balances and wins specific stat categories against a weekly opponent.\\n- PITCHING STRATEGY: Balance gathering counting stats (W, K) with protecting ratios (ERA, WHIP). Strategic streaming is necessary if trailing in W/K, but warn against blowing up ratios with bad pitchers.\\n- OFFENSE: It is okay to punt 1-2 weak categories to guarantee winning the other 4-5.';
   }
   
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/Los_Angeles' });
+  const isWeekend = ['Saturday', 'Sunday'].includes(today);
+  const timeLever = isWeekend 
+    ? '\\n- TIME LEVER (WEEKEND): The matchup ends tomorrow! Activate DESPERATION MODE if trailing. Ignore 2-start pitchers; focus ONLY on pitchers starting today or tomorrow.' 
+    : '\\n- TIME LEVER (EARLY WEEK): It is early/mid week. Focus on maximizing volume with 2-start pitchers and long-term holds.';
+
   return `League Rules: ${settings.num_teams || 12} teams, **${format} scoring**. 
-(CRITICAL RULE: The user is playing ${format}. ${rule})
-Scoring Events/Categories: ${(settings.stat_categories || []).join(', ')}.`;
+(CRITICAL RULE: The user is playing ${format}. ${rule}${timeLever})
+Scoring Events/Categories: ${(settings.stat_categories || []).join(', ')}.
+📅 TODAY IS: ${today}. Calibrate all logic to how many days are left before Sunday!`;
 }
 
 async function callClaude(messages, maxTokens = 1800) {

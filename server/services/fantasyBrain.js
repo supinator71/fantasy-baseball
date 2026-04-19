@@ -593,15 +593,23 @@ function scoreWaiverTarget(player = {}, myRoster = [], leagueSettings = {}, cate
 
   // Schedule quality (games this week)
   const weekGames = getWeeklyGameCount(player.team, leagueSettings.current_week || 1)
+  const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/Los_Angeles' });
+  const isWeekend = ['Saturday', 'Sunday'].includes(todayStr);
+
   if (fmt === FORMAT.H2H_POINTS) {
-    // Rule 3 and Rule 4: Volume > Talent, stream aggressively
-    if (weekGames >= 7) score += isPitcher ? 35 : 20
-    else if (weekGames >= 6) score += 8
-    else if (weekGames <= 4) score -= 15
+    if (isWeekend) {
+      // It is the weekend. Do not apply massive 7-game volume boosts because those games already happened.
+      if (weekGames >= 7) score += 5
+    } else {
+      // Rule 3 and Rule 4: Volume > Talent, stream aggressively
+      if (weekGames >= 7) score += isPitcher ? 35 : 20
+      else if (weekGames >= 6) score += 8
+      else if (weekGames <= 4) score -= 15
+    }
   } else {
     // Standard format fallback
-    if (weekGames >= 7) score += 12
-    else if (weekGames >= 6) score += 6
+    if (!isWeekend && weekGames >= 7) score += 12
+    else if (!isWeekend && weekGames >= 6) score += 6
     else if (weekGames <= 4) score -= 8
   }
 
