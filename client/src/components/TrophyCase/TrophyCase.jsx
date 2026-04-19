@@ -88,8 +88,16 @@ export default function TrophyCase() {
 
   const { all_cards, unlocked_cards, last_daily_pack } = collection || {};
   
-  // Calculate if daily pack is available (20 hour cooldown)
-  const canClaimDaily = !last_daily_pack || (Date.now() - last_daily_pack > 20 * 60 * 60 * 1000);
+  // Calculate if daily pack is available (Resets at midnight UTC)
+  let canClaimDaily = true;
+  if (last_daily_pack) {
+    const today = new Date().toISOString().slice(0, 10);
+    if (typeof last_daily_pack === 'string') {
+      canClaimDaily = (last_daily_pack !== today);
+    } else {
+      canClaimDaily = (Date.now() - last_daily_pack > 20 * 60 * 60 * 1000);
+    }
+  }
   
   // Only count unlocked cards that still exist in the master collection library
   const validUnlockedIds = unlocked_cards?.filter(c => all_cards?.some(card => card.id === c.id)).map(c => c.id) || [];

@@ -106,11 +106,22 @@ router.post('/daily-pack', (req, res) => {
 
   try {
     const tc = db.getTrophyCase(guid);
-    const now = Date.now();
-    const TWENTY_HOURS = 20 * 60 * 60 * 1000;
     
-    if (tc.last_daily_pack && (now - tc.last_daily_pack < TWENTY_HOURS)) {
-      return res.status(400).json({ error: 'Daily pack not ready yet' });
+    // Support both the legacy millisecond timestamp and the new date string format
+    const today = new Date().toISOString().slice(0, 10);
+    let claimedToday = false;
+    
+    if (tc.last_daily_pack) {
+      if (typeof tc.last_daily_pack === 'string') {
+        claimedToday = (tc.last_daily_pack === today);
+      } else {
+        const TWENTY_HOURS = 20 * 60 * 60 * 1000;
+        claimedToday = (Date.now() - tc.last_daily_pack < TWENTY_HOURS);
+      }
+    }
+    
+    if (claimedToday) {
+      return res.status(400).json({ error: 'Daily pack not ready yet. Resets at midnight UTC.' });
     }
 
     const cardId = getRandomCardId();
