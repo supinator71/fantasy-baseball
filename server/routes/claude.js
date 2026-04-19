@@ -79,14 +79,14 @@ function leagueContext(settings) {
   const rawType = (settings.scoring_type || '').toLowerCase();
   
   let format = 'Rotisserie (Roto)';
-  let rule = 'DO NOT talk about weekly head-to-head matchups. Focus on long-term categorical accumulation over the whole 162-game season.';
+  let rule = 'DO NOT talk about weekly head-to-head matchups. Focus on long-term categorical accumulation over the whole 162-game season.\\n- PITCHING STRATEGY: Protect ERA and WHIP ratios at all costs. DO NOT aggressively stream mediocre pitchers for counting stats. Stick to 5-6 elite, reliable starting pitchers.\\n- OFFENSE: Never completely punt a category. Balance is key.';
   
   if (rawType.includes('headpoint')) {
     format = 'Head-to-Head Points';
-    rule = 'DO NOT give 5x5 Roto advice. Ignore balancing categories. Give advice explicitly tailored for maximizing raw total points in a weekly matchup!';
+    rule = 'DO NOT give 5x5 Roto advice. Ignore balancing categories. Give advice explicitly tailored for maximizing raw total points in a weekly matchup!\\n- PITCHING STRATEGY: Maximize Innings Pitched and Strikeout volume. Stream 2-start pitchers relentlessly. Do NOT worry about preserving strict ERA/WHIP ratios; raw points (outs, Ks) are king. You want 7+ Starting Pitchers.\\n- OFFENSE: Volume is everything. 7-game weeks are extremely valuable.';
   } else if (rawType.includes('head')) {
     format = 'Head-to-Head Categories';
-    rule = 'DO NOT focus solely on total points. You MUST consider how a player balances and wins specific stat categories against a weekly opponent.';
+    rule = 'DO NOT focus solely on total points. You MUST consider how a player balances and wins specific stat categories against a weekly opponent.\\n- PITCHING STRATEGY: Balance gathering counting stats (W, K) with protecting ratios (ERA, WHIP). Strategic streaming is necessary if trailing in W/K, but warn against blowing up ratios with bad pitchers.\\n- OFFENSE: It is okay to punt 1-2 weak categories to guarantee winning the other 4-5.';
   }
   
   return `League Rules: ${settings.num_teams || 12} teams, **${format} scoring**. 
