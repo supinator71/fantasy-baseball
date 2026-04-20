@@ -325,7 +325,10 @@ async function getFreeAgentsTrending(req, leagueKey, count = 25) {
 
 async function getUserTeamKey(req, leagueKey) {
   try {
-    const data = await yahooGet(req, `/users;use_login=1/games;game_keys=mlb/leagues;league_keys=${leagueKey}/teams`);
+    // Crucial Yahoo API fix: Do NOT use /leagues.../teams here. 
+    // Yahoo's /leagues resource ignores the use_login=1 filter and returns ALL teams in the league.
+    // To isolated the user's specific team, we must fetch their personal Teams collection globally and match the league prefix.
+    const data = await yahooGet(req, '/users;use_login=1/games;game_keys=mlb/teams');
     
     // Convert unpredictable structure into an array
     const gamesObj = data?.fantasy_content?.users?.['0']?.user?.[1]?.games;
@@ -335,21 +338,16 @@ async function getUserTeamKey(req, leagueKey) {
       const gItem = g?.game;
       if (!gItem) continue;
       
-      const leaguesObj = gItem[1]?.leagues;
-      const leagueList = toArray(leaguesObj);
+      const teamsObj = gItem[1]?.teams;
+      const teamsList = toArray(teamsObj);
       
-      for (const lItem of leagueList) {
-        const leagueData = lItem?.league;
-        if (!leagueData) continue;
+      for (const tItem of teamsList) {
+        const tData = tItem?.team;
+        if (!tData) continue;
         
-        // Find the matching league object
-        const lKey = leagueData[0]?.league_key;
-        if (lKey === leagueKey && leagueData[1]?.teams) {
-             const teamsList = toArray(leagueData[1].teams);
-             for (const tItem of teamsList) {
-                 const tData = tItem?.team;
-                 if (tData) return tData[0]?.[0]?.team_key || tData[0]?.team_key;
-             }
+        const tKey = tData[0]?.[0]?.team_key || tData[0]?.team_key;
+        if (tKey && tKey.startsWith(leagueKey + '.t.')) {
+             return tKey;
         }
       }
     }
