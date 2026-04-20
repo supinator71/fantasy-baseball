@@ -414,10 +414,16 @@ router.post('/waiver', rateLimiter('waiver'), async (req, res) => {
 
   // ── Unified Roster Diagnosis ───────────────────────────────────────────
   const diagnosis = brain.buildRosterDiagnosis(my_roster || [], settings || {}, sharedMatchup, pitchingContext);
+  
+  const rosterBasicNames = (my_roster || []).map(p => (p.player_name || p.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
 
   // fantasyBrain: waiver priority score for each player — with category awareness from diagnosis
   const scored = (available_players || [])
     .filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
+    .filter(p => {
+        const basicName = (p.player_name || p.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return !rosterBasicNames.includes(basicName);
+    })
     .map(p => {
       const basicName = (p.player_name || p.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       
