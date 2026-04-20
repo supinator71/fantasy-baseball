@@ -334,6 +334,103 @@ async function getBreakingNews() {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// TWO-START PITCHERS — Calculate next week's 2-start pitchers
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function getTwoStartPitchers() {
+  const key = 'rolling_two_start_pitchers';
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.ts < 2 * 60 * 60 * 1000) return cached.data; // 2 hour cache
+
+  try {
+    const now = new Date();
+    const day = now.getDay(); // 0 is Sunday, 1 is Monday
+
+    // 1. Calculate Current Week Monday & Sunday
+    const currentMondayDate = new Date(now);
+    const daysSinceMonday = day === 0 ? 6 : day - 1;
+    currentMondayDate.setDate(now.getDate() - daysSinceMonday);
+    
+    const currentSundayDate = new Date(currentMondayDate);
+    currentSundayDate.setDate(currentMondayDate.getDate() + 6);
+
+    // 2. Calculate Next Week Monday & Sunday
+    const nextMondayDate = new Date(now);
+    const daysUntilNextMonday = day === 0 ? 1 : 8 - day;
+    nextMondayDate.setDate(now.getDate() + daysUntilNextMonday);
+
+    const nextSundayDate = new Date(nextMondayDate);
+    nextSundayDate.setDate(nextMondayDate.getDate() + 6);
+
+    // Date strings
+    const cMonStr = currentMondayDate.toISOString().split('T')[0];
+    const cTueStr = new Date(currentMondayDate.getTime() + 86400000).toISOString().split('T')[0];
+    const cSunStr = currentSundayDate.toISOString().split('T')[0];
+
+    const nMonStr = nextMondayDate.toISOString().split('T')[0];
+    const nTueStr = new Date(nextMondayDate.getTime() + 86400000).toISOString().split('T')[0];
+    const nSunStr = nextSundayDate.toISOString().split('T')[0];
+
+    // Fetch BOTH weeks in parallel
+    const [currentData, nextData] = await Promise.all([
+      axios.get(`${BASE_URL}/schedule`, {
+        params: { sportId: 1, startDate: cMonStr, endDate: cSunStr, hydrate: 'probablePitcher' },
+        timeout: 8000
+      }).then(res => res.data).catch(() => ({ dates: [] })),
+      axios.get(`${BASE_URL}/schedule`, {
+        params: { sportId: 1, startDate: nMonStr, endDate: nSunStr, hydrate: 'probablePitcher' },
+        timeout: 8000
+      }).then(res => res.data).catch(() => ({ dates: [] }))
+    ]);
+
+    function processSchedule(data, monStr, tueStr) {
+      const dates = data.dates || [];
+      const teamGames = {};
+      const earlyStarters = new Set();
+      
+      dates.forEach(d => {
+        const dateStr = d.date; // YYYY-MM-DD
+        const games = d.games || [];
+        games.forEach(g => {
+          const awayId = g.teams?.away?.team?.id;
+          const homeId = g.teams?.home?.team?.id;
+          if (awayId) teamGames[awayId] = (teamGames[awayId] || 0) + 1;
+          if (homeId) teamGames[homeId] = (teamGames[homeId] || 0) + 1;
+          
+          if (dateStr === monStr || dateStr === tueStr) {
+            if (g.teams?.away?.probablePitcher?.fullName) {
+               earlyStarters.add({ name: g.teams.away.probablePitcher.fullName, teamId: awayId });
+            }
+            if (g.teams?.home?.probablePitcher?.fullName) {
+               earlyStarters.add({ name: g.teams.home.probablePitcher.fullName, teamId: homeId });
+            }
+          }
+        });
+      });
+
+      const twoStartPitchers = [];
+      earlyStarters.forEach(p => {
+        if (teamGames[p.teamId] >= 6) {
+          twoStartPitchers.push(p.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+        }
+      });
+      return twoStartPitchers;
+    }
+
+    const currentWeek = processSchedule(currentData, cMonStr, cTueStr);
+    const nextWeek = processSchedule(nextData, nMonStr, nTueStr);
+
+    const result = { currentWeek, nextWeek };
+    cache.set(key, { data: result, ts: Date.now() });
+    return result;
+
+  } catch (err) {
+    console.error(`[MLB Stats] Failed to fetch 2-start pitchers:`, err.message);
+    return { currentWeek: [], nextWeek: [] };
+  }
+}
+
 module.exports = {
   searchPlayer,
   getPlayerStats,
@@ -341,6 +438,7 @@ module.exports = {
   getBulkPlayerStats,
   getMultiSeasonStats,
   getLiveProbablePitchers,
+  getTwoStartPitchers,
   getUpcomingSchedule,
   getBreakingNews,
 };

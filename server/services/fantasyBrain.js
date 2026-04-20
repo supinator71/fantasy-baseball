@@ -528,8 +528,10 @@ function evaluateTrade(giving = [], receiving = [], myRoster = [], leagueContext
 // F) WAIVER WIRE PRIORITY SCORING
 // ─────────────────────────────────────────────────────────────────────────────
 
-function scoreWaiverTarget(player = {}, myRoster = [], leagueSettings = {}, categoryNeeds = null) {
+function scoreWaiverTarget(player = {}, myRoster = [], leagueSettings = {}, categoryNeeds = null, pitchingContext = null) {
   let score = 30  // baseline
+  let reasoning = '';
+  let priorityLevel = 'STANDARD';
 
   const pos = String(player.position || '').split('/')[0].split(',')[0].trim().toUpperCase()
   const leagueSize = leagueSettings.num_teams || 12
@@ -546,21 +548,38 @@ function scoreWaiverTarget(player = {}, myRoster = [], leagueSettings = {}, cate
   } else if (countAtPos < required) score += scarcity.urgencyScore * 3
   else if (countAtPos >= required) score -= 10
 
+  // ── Two-Start Pitcher Math Override ─────────────────────────────────────
+  const isPitcher = ['SP', 'RP', 'P'].includes(pos);
+  const basicName = (player.player_name || player.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  if (isPitcher && pitchingContext) {
+    if (pitchingContext.currentWeekTwoStart?.includes(basicName)) {
+      score += 150;
+      priorityLevel = 'CHAMPIONSHIP STREAM';
+      reasoning = '🏆 CONFIRMED 2-START PITCHER THIS WEEK. Mathematical mismatch identified.';
+    } else if (pitchingContext.nextWeekTwoStart?.includes(basicName)) {
+      score += 150;
+      priorityLevel = 'CHAMPIONSHIP STREAM';
+      reasoning = '🔮 CONFIRMED 2-START PITCHER NEXT WEEK. Critical lookahead pickup.';
+    } else if (pitchingContext.today?.includes(basicName)) {
+      if (categoryNeeds && categoryNeeds.needsPitching) {
+        score += 80;
+        priorityLevel = 'CRITICAL STREAM';
+        reasoning = '🔥 CONFIRMED STARTING PITCHER. Team pitching weakness identified.';
+      } else {
+        score += 20;
+        reasoning = 'Confirmed SP starting today.';
+      }
+    }
+  }
+
   // ── Category-need boost ────────────────────────────────────────────────
-  // If the roster's category analysis shows pitching weakness, boost SP/RP.
-  // If hitting weakness, boost hitters — ensures waiver aligns with gameplan.
-  const isPitcher = ['SP', 'RP', 'P'].includes(pos)
   if (categoryNeeds) {
     if (isPitcher && categoryNeeds.needsPitching) {
       score += 18  // major boost — pitching is a team weakness
     }
     if (!isPitcher && categoryNeeds.needsHitting) {
       score += 12  // moderate boost — hitting is a team weakness
-    }
-    // Extra streaming bonus: 2-start SP or 7-game hitter in a category need week
-    if (isPitcher && categoryNeeds.needsPitching) {
-      const weekGamesTeam = getWeeklyGameCount(player.team, leagueSettings.current_week || 1)
-      if (weekGamesTeam >= 7) score += 8  // likely 2-start SP on a busy team
     }
   }
 
@@ -624,11 +643,19 @@ function scoreWaiverTarget(player = {}, myRoster = [], leagueSettings = {}, cate
 
   const catNote = categoryNeeds ? (isPitcher && categoryNeeds.needsPitching ? ', category-need boost (pitching)' : !isPitcher && categoryNeeds.needsHitting ? ', category-need boost (hitting)' : '') : ''
 
+  if (priorityLevel === 'STANDARD') {
+    priorityLevel = score >= 85 ? 'MUST ADD' : score >= 70 ? 'High priority' : score >= 50 ? 'Speculative add' : score >= 35 ? 'Monitor' : 'Pass';
+  }
+  
+  if (reasoning === '') {
+    reasoning = `Positional need (${pos}: ${countAtPos}/${required}), schedule (${weekGames} games)${catNote}, ` +
+      (babip > 0 ? `BABIP ${babip} ${babip > 0.360 ? '(regression risk)' : babip < 0.250 ? '(due for boost)' : '(normal)'}` : 'no BABIP data');
+  }
+
   return {
     score,
-    priority: score >= 85 ? 'MUST ADD' : score >= 70 ? 'High priority' : score >= 50 ? 'Speculative add' : score >= 35 ? 'Monitor' : 'Pass',
-    reasoning: `Positional need (${pos}: ${countAtPos}/${required}), schedule (${weekGames} games)${catNote}, ` +
-      (babip > 0 ? `BABIP ${babip} ${babip > 0.360 ? '(regression risk)' : babip < 0.250 ? '(due for boost)' : '(normal)'}` : 'no BABIP data'),
+    priority: priorityLevel,
+    reasoning,
   }
 }
 
@@ -1243,7 +1270,7 @@ function generatePlayerIntelligence(playerData = {}) {
  * @param {Object} leagueCtx - { num_teams, scoring_type, roster_slots, stat_categories, current_week, ... }
  * @returns {Object} Unified diagnosis with promptBlock for Claude injection
  */
-function buildRosterDiagnosis(roster = [], leagueCtx = {}) {
+function buildRosterDiagnosis(roster = [], leagueCtx = {}, sharedMatchup = null, pitchingContext = null) {
   const leagueSize = leagueCtx.num_teams || 12;
   const scoringType = leagueCtx.scoring_type || 'Points';
   const fmt = detectFormat(scoringType);
@@ -1280,7 +1307,13 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}) {
 
   const pitchingCats = ['W', 'SV', 'K', 'ERA', 'WHIP'];
   const hittingCats = ['R', 'HR', 'RBI', 'SB', 'AVG'];
-  const weaknessList = catAnalysis.weaknesses || [];
+  let weaknessList = catAnalysis.weaknesses || [];
+
+  // Matchup contextual override for weaknesses
+  if (sharedMatchup && sharedMatchup.stats && fmt === FORMAT.H2H_CAT) {
+    // Override the generic season-long weaknesses with specifically what we are currently losing this week
+    weaknessList = sharedMatchup.stats.filter(s => s.opp_winning).map(s => s.name || s.stat_id);
+  }
 
   const categoryNeeds = {
     needsPitching: weaknessList.some(c => pitchingCats.includes(c)) ||
@@ -1295,8 +1328,21 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}) {
     .filter(p => getPlayerStatus(p) !== 'dtd' || true) // DTD stays in VOR calc
     .map(p => {
       const pos = String(p.position || '').split(/[/,]/)[0].trim().toUpperCase();
+      let displayName = p.player_name || p.name;
+      
+      if (pitchingContext && ['SP', 'RP', 'P'].some(x => pos.includes(x))) {
+        const basicName = (displayName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        if (pitchingContext.currentWeekTwoStart?.includes(basicName)) {
+           displayName += ' [🏆 2-STARTS THIS WEEK]';
+        } else if (pitchingContext.nextWeekTwoStart?.includes(basicName)) {
+           displayName += ' [🔮 2-STARTS NEXT WEEK]';
+        } else if (pitchingContext.today?.includes(basicName)) {
+           displayName += ' [⚾ STARTING TODAY]';
+        }
+      }
+
       return {
-        name: p.player_name || p.name,
+        name: displayName,
         position: pos,
         vor: calculateVOR(p.stats || {}, pos, leagueSize, scoringType),
         scarcity: getPositionalScarcity(pos, leagueSize).tier,
@@ -1304,13 +1350,29 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}) {
     }).sort((a, b) => b.vor - a.vor);
 
   // ── 5. Build the canonical prompt block ────────────────────────────────
-  // This EXACT string gets injected into every Claude call. Keep it compact.
   const formatLabel = fmt === FORMAT.H2H_POINTS ? 'H2H Points'
     : fmt === FORMAT.H2H_CAT ? 'H2H Categories'
     : 'Rotisserie (Roto)'
   let promptBlock = `\n=== ROSTER DIAGNOSIS (${formatLabel}, ${leagueSize}-team) ===\n`;
 
-  // Format-specific strategic framing — Claude MUST know the format to give right advice
+  // Live Matchup Injector!
+  if (sharedMatchup && sharedMatchup.myTeam && sharedMatchup.opponent) {
+    promptBlock += `\n🚨 LIVE MATCHUP ALERTS 🚨\n`;
+    promptBlock += `- Opponent: ${sharedMatchup.opponent.name}\n`;
+    
+    if (fmt === FORMAT.H2H_CAT) {
+      const trailingIn = sharedMatchup.stats.filter(s => s.opp_winning).map(s => s.name);
+      promptBlock += `- Matchup Status: MUST Prioritize ${trailingIn.join(', ') || 'None'} to win the week!\n\n`;
+    } else {
+      // H2H Points or Total Points override
+      const myScore = parseFloat(sharedMatchup.myTeam.stats.find(s => String(s.stat_id) === '1' || s.name === 'Total')?.value || sharedMatchup.myTeam.stats[0]?.value || 0);
+      const oppScore = parseFloat(sharedMatchup.opponent.stats.find(s => String(s.stat_id) === '1' || s.name === 'Total')?.value || sharedMatchup.opponent.stats[0]?.value || 0);
+      const diff = (myScore - oppScore).toFixed(1);
+      promptBlock += `- Current Score: ${myScore} to ${oppScore} (${diff < 0 ? 'Trailing by ' + Math.abs(diff) : 'Winning by ' + diff})\n\n`;
+    }
+  }
+
+  // Format-specific strategic framing
   if (fmt === FORMAT.H2H_POINTS) {
     promptBlock += `🎯 FORMAT: H2H POINTS — Maximize raw point output each week. Volume (ABs, IP) is everything. 2-start SPs are king. Never leave a roster spot empty. Do NOT give category-balancing advice.\n`;
   } else if (fmt === FORMAT.H2H_CAT) {
