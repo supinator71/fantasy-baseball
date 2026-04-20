@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { GoogleGenAI } = require('@google/genai');
+const Anthropic = require('@anthropic-ai/sdk');
 const db = require('../services/database');
 const brain = require('../services/fantasyBrain');
 const mlbStats = require('../services/mlbStatsService');
@@ -8,35 +8,33 @@ const { rateLimiter, getStats } = require('../middleware/rateLimiter');
 
 let client = null;
 function getClient() {
-  if (!client) {
-      // Fallback in case they didn't add GEMINI_API_KEY despite warning
-      const apiKey = process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY; 
-      client = new GoogleGenAI({ apiKey: apiKey });
-  }
+  if (!client) client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   return client;
 }
 
-// Health check — tests the Gemini API key
+// Health check — tests the Claude API key
 router.get('/health', async (req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY;
-  const keySet = !!apiKey;
-  const keyPrefix = apiKey ? apiKey.slice(0, 10) : 'NOT SET';
+  const keySet = !!process.env.ANTHROPIC_API_KEY;
+  const keyPrefix = process.env.ANTHROPIC_API_KEY?.slice(0, 10) || 'NOT SET';
   
   if (!keySet) {
-    return res.json({ status: 'error', error: 'GEMINI_API_KEY not set', keyPrefix });
+    return res.json({ status: 'error', error: 'ANTHROPIC_API_KEY not set', keyPrefix });
   }
   
   try {
-    const msg = await getClient().models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: 'Say "ok"'
+    const msg = await getClient().messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 10,
+      messages: [{ role: 'user', content: 'Say "ok"' }],
     });
-    res.json({ status: 'ok', keyPrefix, model: 'gemini-2.0-flash', response: msg.text });
+    res.json({ status: 'ok', keyPrefix, model: 'claude-haiku-4-5-20251001', response: msg.content[0].text });
   } catch (err) {
     res.json({ 
       status: 'error', 
       keyPrefix,
-      error: err.message
+      error: err.message,
+      statusCode: err.status,
+      errorType: err.error?.error?.type || err.type,
     });
   }
 });
@@ -104,7 +102,7 @@ Scoring Events/Categories: ${(settings.stat_categories || []).join(', ')}.
 }
 
 async function callClaude(messages, maxTokens = 1800) {
-  console.log('[Gemini Engine] Starting API call...', { messageCount: messages.length, maxTokens });
+  console.log('[Claude] Starting API call...', { messageCount: messages.length, maxTokens });
   const startTime = Date.now();
   
   try {
@@ -112,48 +110,43 @@ async function callClaude(messages, maxTokens = 1800) {
     const lastContent = messages[messages.length - 1]?.content || '';
     const isJsonRequested = lastContent.includes('Return ONLY valid JSON');
     
-    // Map existing Claude message format to Gemini format
-    // Note: Gemini doesn't tolerate system prompts inside the conversational messages array
-    const geminiMessages = messages.map(m => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }]
-    }));
+    // Automatic Anthropic Message Prefill hack to FORCE valid JSON without conversational wrapping.
+    const finalMessages = isJsonRequested 
+      ? [...messages, { role: 'assistant', content: '{' }] 
+      : messages;
 
-    const apiCall = getClient().models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: geminiMessages,
-        config: {
-            systemInstruction: SYSTEM_PROMPT,
-            maxOutputTokens: maxTokens,
-            responseMimeType: isJsonRequested ? 'application/json' : 'text/plain',
-        }
+    const apiCall = getClient().messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: maxTokens,
+      system: SYSTEM_PROMPT,
+      messages: finalMessages,
+      // Automatic prompt caching — system prompt + static prefix cached for 5 min
+      // Cache reads cost 90% less than uncached input. Cache writes cost 25% more (one-time).
+      cache_control: { type: 'ephemeral' },
     });
     
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Gemini API timed out after ${timeoutMs / 1000}s`)), timeoutMs)
+      setTimeout(() => reject(new Error(`Claude API timed out after ${timeoutMs / 1000}s`)), timeoutMs)
     );
     
     const msg = await Promise.race([apiCall, timeoutPromise]);
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     
-    let responseText = msg.text;
-    
-    // Safety net for json parsing
+    // Ensure we don't accidentally double the opening brace if Claude also emitted one
+    let responseText = msg.content[0].text;
     if (isJsonRequested) {
-      if (responseText.startsWith('\`\`\`json')) {
-         responseText = responseText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
-      }
       if (!responseText.trimStart().startsWith('{')) {
         responseText = '{' + responseText;
       }
     }
-    
-    console.log(`[Gemini Engine] Success. Elapsed: ${elapsed}s, Tokens: ${msg.usageMetadata?.totalTokenCount || 'unknown'}`);
+    const u = msg.usage || {};
+    console.log(`[Claude] ${elapsed}s | in:${u.input_tokens} cache_read:${u.cache_read_input_tokens||0} cache_write:${u.cache_creation_input_tokens||0} out:${u.output_tokens} | ${responseText.length} chars`);
     return responseText;
   } catch (err) {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.error(`[Gemini Engine] API call failed after ${elapsed}s:`, err.message);
-    throw new Error('Gemini API Error: ' + err.message);
+    console.error(`[Claude] API call failed after ${elapsed}s:`, err.message);
+    console.error('[Claude] Error details:', { status: err.status, type: err.error?.error?.type || err.type });
+    throw err;
   }
 }
 

@@ -10,7 +10,7 @@
     "install:all": "npm install && npm install --prefix client"
   },
   "dependencies": {
-    "@google/genai": "^1.50.1",
+    "@anthropic-ai/sdk": "^0.78.0",
     "axios": "^1.6.0",
     "connect-sqlite3": "^0.9.16",
     "cors": "^2.8.5",
