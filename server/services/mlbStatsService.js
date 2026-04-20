@@ -341,7 +341,8 @@ async function getBreakingNews() {
 async function getTwoStartPitchers() {
   const key = 'rolling_two_start_pitchers';
   const cached = cache.get(key);
-  if (cached && Date.now() - cached.ts < 2 * 60 * 60 * 1000) return cached.data; // 2 hour cache
+  // Reduce cache from 2 hours to 10 minutes so fresh probable pitchers surface immediately
+  if (cached && Date.now() - cached.ts < 10 * 60 * 1000) return cached.data; 
 
   try {
     const now = new Date();
@@ -365,11 +366,8 @@ async function getTwoStartPitchers() {
 
     // Date strings
     const cMonStr = currentMondayDate.toISOString().split('T')[0];
-    const cTueStr = new Date(currentMondayDate.getTime() + 86400000).toISOString().split('T')[0];
     const cSunStr = currentSundayDate.toISOString().split('T')[0];
-
     const nMonStr = nextMondayDate.toISOString().split('T')[0];
-    const nTueStr = new Date(nextMondayDate.getTime() + 86400000).toISOString().split('T')[0];
     const nSunStr = nextSundayDate.toISOString().split('T')[0];
 
     // Fetch BOTH weeks in parallel
@@ -384,44 +382,80 @@ async function getTwoStartPitchers() {
       }).then(res => res.data).catch(() => ({ dates: [] }))
     ]);
 
-    function processSchedule(data, monStr, tueStr) {
+    function processSchedule(data) {
       const dates = data.dates || [];
-      const teamGames = {};
-      const earlyStarters = new Set();
+      const teamGameIndex = {}; 
       
       dates.forEach(d => {
-        const dateStr = d.date; // YYYY-MM-DD
         const games = d.games || [];
         games.forEach(g => {
           const awayId = g.teams?.away?.team?.id;
           const homeId = g.teams?.home?.team?.id;
-          if (awayId) teamGames[awayId] = (teamGames[awayId] || 0) + 1;
-          if (homeId) teamGames[homeId] = (teamGames[homeId] || 0) + 1;
           
-          if (dateStr === monStr || dateStr === tueStr) {
-            if (g.teams?.away?.probablePitcher?.fullName) {
-               earlyStarters.add({ name: g.teams.away.probablePitcher.fullName, teamId: awayId });
-            }
-            if (g.teams?.home?.probablePitcher?.fullName) {
-               earlyStarters.add({ name: g.teams.home.probablePitcher.fullName, teamId: homeId });
-            }
+          if (awayId) {
+             if(!teamGameIndex[awayId]) teamGameIndex[awayId] = [];
+             teamGameIndex[awayId].push({ pitcher: g.teams.away.probablePitcher?.fullName });
+          }
+          if (homeId) {
+             if(!teamGameIndex[homeId]) teamGameIndex[homeId] = [];
+             teamGameIndex[homeId].push({ pitcher: g.teams.home.probablePitcher?.fullName });
           }
         });
       });
 
       const twoStartPitchers = [];
-      earlyStarters.forEach(p => {
-        if (teamGames[p.teamId] >= 6) {
-          twoStartPitchers.push(p.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
-        }
-      });
-      return twoStartPitchers;
+      const nextWeekLinearProjectionList = [];
+
+      for (const teamId in teamGameIndex) {
+         const games = teamGameIndex[teamId];
+         const totalGames = games.length;
+         
+         // Current Week Logic
+         if (totalGames >= 6 && games[0]?.pitcher) {
+             twoStartPitchers.push(games[0].pitcher.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+         }
+         if (totalGames >= 7 && games[1]?.pitcher) {
+             twoStartPitchers.push(games[1].pitcher.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+         }
+         if (totalGames >= 8 && games[2]?.pitcher) {
+             twoStartPitchers.push(games[2].pitcher.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+         }
+
+         // Next Week Projection Logic (based on standard 5-man rotation continuing from this week)
+         // If a team plays 6 games, their NEXT Game 1 is pitched by the guy who pitched Game 2 (index 1) of THIS week.
+         // Wait: index math: ( totalGames % 5 )
+         const nextWeekGame1Index = totalGames % 5;
+         const nextWeekGame2Index = (totalGames + 1) % 5;
+         
+         const projectedGame1Starter = games[nextWeekGame1Index]?.pitcher;
+         const projectedGame2Starter = games[nextWeekGame2Index]?.pitcher;
+
+         if (projectedGame1Starter) nextWeekLinearProjectionList.push({ teamId, name: projectedGame1Starter });
+         if (projectedGame2Starter) nextWeekLinearProjectionList.push({ teamId, name: projectedGame2Starter, isGame2: true });
+      }
+      return { twoStartPitchers: [...new Set(twoStartPitchers)], linearProjections: nextWeekLinearProjectionList, teamGameIndex };
     }
 
-    const currentWeek = processSchedule(currentData, cMonStr, cTueStr);
-    const nextWeek = processSchedule(nextData, nMonStr, nTueStr);
+    const cw = processSchedule(currentData);
+    const nw = processSchedule(nextData);
 
-    const result = { currentWeek, nextWeek };
+    const currentWeekFinal = cw.twoStartPitchers;
+    const nextWeekFinal = nw.twoStartPitchers; // Picks up any manually announced probable pitchers for next week
+    
+    // Supplement next week with linear projections (since MLB rarely provides next-week probables)
+    for (const proj of cw.linearProjections) {
+        const nextWeekGamesCount = nw.teamGameIndex[proj.teamId]?.length || 0;
+        const basicName = proj.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        if (!proj.isGame2 && nextWeekGamesCount >= 6) {
+             if (!nextWeekFinal.includes(basicName)) nextWeekFinal.push(basicName);
+        }
+        if (proj.isGame2 && nextWeekGamesCount >= 7) {
+             if (!nextWeekFinal.includes(basicName)) nextWeekFinal.push(basicName);
+        }
+    }
+
+    const result = { currentWeek: currentWeekFinal, nextWeek: nextWeekFinal };
     cache.set(key, { data: result, ts: Date.now() });
     return result;
 
