@@ -28,10 +28,10 @@ router.get('/health', async (req, res) => {
   
   try {
     const msg = await getClient().models.generateContent({
-      model: 'gemini-2.5-pro',
+      model: 'gemini-2.5-flash',
       contents: 'Say "ok"'
     });
-    res.json({ status: 'ok', keyPrefix, model: 'gemini-2.5-pro', response: msg.text });
+    res.json({ status: 'ok', keyPrefix, model: 'gemini-2.5-flash', response: msg.text });
   } catch (err) {
     res.json({ 
       status: 'error', 
@@ -120,7 +120,7 @@ async function callClaude(messages, maxTokens = 1800) {
     }));
 
     const apiCall = getClient().models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         contents: geminiMessages,
         config: {
             systemInstruction: SYSTEM_PROMPT,
