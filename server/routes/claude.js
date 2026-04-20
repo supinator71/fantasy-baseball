@@ -153,10 +153,7 @@ async function callClaude(messages, maxTokens = 1800) {
   } catch (err) {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.error(`[Gemini Engine] API call failed after ${elapsed}s:`, err.message);
-    if (err.message?.includes('429')) {
-      throw new Error("Our AI is currently overloaded with draft analysis requests. Please try again in 1 minute.");
-    }
-    throw err;
+    throw new Error('Gemini API Error: ' + err.message);
   }
 }
 
