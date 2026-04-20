@@ -415,46 +415,19 @@ router.post('/waiver', rateLimiter('waiver'), async (req, res) => {
   // ── Unified Roster Diagnosis ───────────────────────────────────────────
   const diagnosis = brain.buildRosterDiagnosis(my_roster || [], settings || {}, sharedMatchup, pitchingContext);
 
-  // Fetch MLB starting pitchers today + next week's 2-start pitchers (if it is a weekend)
-  let probablePitchers = [];
-  let twoStartPitchers = [];
-  const day = new Date().getDay();
-  // 0=Sun, 5=Fri, 6=Sat
-  const isWeekendPrep = day === 0 || day === 5 || day === 6;
-
-  try {
-    probablePitchers = await mlbStats.getLiveProbablePitchers();
-    if (isWeekendPrep) {
-      twoStartPitchers = await mlbStats.getUpcomingTwoStartPitchers();
-    }
-  } catch (e) {}
-
   // fantasyBrain: waiver priority score for each player — with category awareness from diagnosis
   const scored = (available_players || [])
     .filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
     .map(p => {
-      const wScore = brain.scoreWaiverTarget(p, diagnosis.activeRoster, settings || {}, diagnosis.categoryNeeds);
       const basicName = (p.player_name || p.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       
-      const isProbable = probablePitchers.includes(basicName);
-      const isTwoStart = isWeekendPrep && twoStartPitchers.includes(basicName);
+      const isProbable = pitchingContext.today?.includes(basicName) || false;
+      const isTwoStartCurrent = pitchingContext.currentWeekTwoStart?.includes(basicName) || false;
+      const isTwoStartNext = pitchingContext.nextWeekTwoStart?.includes(basicName) || false;
       
-      // Override: mathematically force today's confirmed starting pitchers OR next week's 2-start aces to the top
-      if (isTwoStart) {
-        wScore.score += 150;
-        wScore.priority = 'CHAMPIONSHIP STREAM';
-        wScore.reasoning = '🏆 CONFIRMED 2-START PITCHER NEXT WEEK. Critical weekend pickup.';
-      } else if (isProbable) {
-        if (diagnosis.categoryNeeds.needsPitching) {
-            wScore.score += 80;
-            wScore.priority = 'CRITICAL STREAM';
-            wScore.reasoning = '🔥 CONFIRMED STARTING PITCHER. Mathematical mismatch identified.';
-        } else {
-            wScore.score += 20;
-            wScore.reasoning += ' (Confirmed SP today)';
-        }
-      }
-      return { ...p, waiverScore: wScore, isProbable, isTwoStart };
+      const wScore = brain.scoreWaiverTarget(p, diagnosis.activeRoster, settings || {}, diagnosis.categoryNeeds, pitchingContext);
+      
+      return { ...p, waiverScore: wScore, isProbable, isTwoStartCurrent, isTwoStartNext };
     }).sort((a, b) => b.waiverScore.score - a.waiverScore.score);
 
   // Fetch real 2025 stats and breaking news for top waiver targets (non-blocking)
@@ -492,10 +465,10 @@ ${diagnosis.promptBlock}
 ${breakingNews}
 Waiver targets (pre-scored by priority engine):
 ${scored.slice(0, 12).map(p =>
-  `${p.player_name||p.name} (${p.position}, ${p.team}) ${p.isTwoStart?'[🏆 2-STARTS NEXT WEEK] ':p.isProbable?'[⚾ STARTING TODAY] ':''}— Priority: ${p.waiverScore.score}/100 [${p.waiverScore.priority}] — ${p.waiverScore.reasoning}`
+  `${p.player_name||p.name} (${p.position}, ${p.team}) ${p.isTwoStartCurrent?'[🏆 2-STARTS THIS WEEK] ':p.isTwoStartNext?'[🔮 2-STARTS NEXT WEEK] ':p.isProbable?'[⚾ STARTING TODAY] ':''}— Priority: ${p.waiverScore.score}/100 [${p.waiverScore.priority}] — ${p.waiverScore.reasoning}`
 ).join('\n')}${historicalIntel}
 
-Use the 2025 stats intelligence AND the ROSTER DIAGNOSIS above to identify the best targets. If pitching categories are weak, you MUST explicitly recommend the [⚾ STARTING TODAY] or [🏆 2-STARTS NEXT WEEK] pitchers to stream. Align your recommendations with the team's structural needs (do not recommend adding a position where the team already has a Surplus unless they are a must-add star). Give top 3 add/drop recommendations with specific reasoning.
+Use the 2025 stats intelligence AND the ROSTER DIAGNOSIS above to identify the best targets. If pitching categories are weak, you MUST explicitly recommend the [⚾ STARTING TODAY], [🏆 2-STARTS THIS WEEK], or [🔮 2-STARTS NEXT WEEK] pitchers to stream. Align your recommendations with the team's structural needs (do not recommend adding a position where the team already has a Surplus unless they are a must-add star). Give top 3 add/drop recommendations with specific reasoning.
 
 CRITICAL "SHOW YOUR WORK" RULE: Do NOT formulate paragraphs of general advice. You MUST explicitly cite the math.
 Format your recommendations using strictly formatted markdown lists with bolded metric badges.
