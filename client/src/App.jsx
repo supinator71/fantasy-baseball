@@ -228,7 +228,7 @@ function LoginPage() {
         />
         <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12, color: 'white' }}>Goin' Yard <span style={{ color: 'var(--primary)' }}>HQ</span></h1>
         <p style={{ color: 'var(--text-muted)', marginBottom: 36, lineHeight: 1.6, fontSize: 15 }}>
-          Your intelligent, extremely simple personal assistant for Yahoo Fantasy Baseball. Dominating your league has never been easier.
+          An affordable, accessible secondary fantasy assistant. Learn winning strategy in the context of actively playing Yahoo Fantasy Baseball.
         </p>
         <a href="/auth/yahoo" style={{ display: 'block', textDecoration: 'none' }}>
           <button className="btn btn-primary" style={{ width: '100%', padding: '16px', fontSize: 16, borderRadius: 12 }}>

@@ -21,10 +21,10 @@ function getStripe() {
 // Season pricing — pro-rated based on month
 function getSeasonPrice() {
   const month = new Date().getMonth(); // 0=Jan, 3=Apr, etc.
-  if (month <= 3) return 2500;   // $25 — March/April (full season)
-  if (month <= 5) return 2000;   // $20 — May/June
-  if (month <= 6) return 1500;   // $15 — July
-  return 1000;                   // $10 — Aug/Sept
+  if (month <= 3) return 1000;   // $10 — March/April (full season)
+  if (month <= 5) return 800;    // $8 — May/June
+  if (month <= 6) return 600;    // $6 — July
+  return 400;                    // $4 — Aug/Sept
 }
 
 function getSeasonPriceLabel() {
@@ -67,7 +67,7 @@ router.post('/checkout', async (req, res) => {
             name: "Goin' Yard HQ Extra League Add-On",
             description: 'Add one additional league to your Season Pass.',
           },
-          unit_amount: 800, // $8
+          unit_amount: 300, // $3
         },
         quantity: 1,
       }];
@@ -159,7 +159,7 @@ router.get('/status', (req, res) => {
     season: sub?.season || null,
     ai_usage: aiUsage,
     season_price: getSeasonPriceLabel(),
-    extra_league_price: '$8',
+    extra_league_price: '$3',
   });
 });
 
@@ -172,8 +172,8 @@ router.get('/pricing', (req, res) => {
       description: 'Pro Season Pass — 2 leagues, unlimited AI',
     },
     extra_league: {
-      price: 800,
-      label: '$8',
+      price: 300,
+      label: '$3',
       description: 'Add one extra league',
     },
     free_tier: {
