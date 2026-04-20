@@ -34,7 +34,7 @@ export default function PitchingIntel({ leagueSettings }) {
     try {
       const [rosterRes, availableRes] = await Promise.all([
         axios.get(`/api/yahoo/league/${selectedLeague}/myroster`),
-        axios.get(`/api/yahoo/league/${selectedLeague}/players`, { params: { status: 'A', force: 'true' } })
+        axios.get(`/api/yahoo/league/${selectedLeague}/players`, { params: { status: 'A', force: 'true', position: 'P' } })
       ]);
 
       const myFullRoster = rosterRes.data?.players || [];

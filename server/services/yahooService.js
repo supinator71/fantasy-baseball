@@ -197,8 +197,9 @@ async function getScoreboard(req, leagueKey) {
   return matchups;
 }
 
-async function getPlayers(req, leagueKey, status = 'A', start = 0) {
-  const data = await yahooGet(req, `/league/${leagueKey}/players;status=${status};sort=AR;start=${start};count=25/stats`);
+async function getPlayers(req, leagueKey, status = 'A', start = 0, position = null) {
+  const posFilter = position ? `;position=${position}` : '';
+  const data = await yahooGet(req, `/league/${leagueKey}/players${posFilter};status=${status};sort=AR;start=${start};count=25/stats`);
   const leagueObj = data.fantasy_content?.league;
 
   // Yahoo returns league as array [meta, data], object {0:meta,1:data}, or flat object

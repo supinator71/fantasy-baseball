@@ -287,11 +287,11 @@ router.get('/league/:leagueKey/scoreboard', requireAuth, async (req, res) => {
 
 router.get('/league/:leagueKey/players', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
-  const { status = 'A', start = 0 } = req.query
+  const { status = 'A', start = 0, position } = req.query
   const force = req.query.force === 'true'
   try {
-    const data = await withCache(req, res, `players:${leagueKey}:${status}:${start}`, TTL.PLAYERS, force,
-      () => yahoo.getPlayers(req, leagueKey, status, start))
+    const data = await withCache(req, res, `players:${leagueKey}:${status}:${start}:${position||'ALL'}`, TTL.PLAYERS, force,
+      () => yahoo.getPlayers(req, leagueKey, status, start, position))
 
     if (!Array.isArray(data) || data.length === 0) {
       console.warn(`[Yahoo/players] WARNING: returned ${Array.isArray(data) ? 0 : typeof data} players for ${leagueKey}. Sending empty array.`)
