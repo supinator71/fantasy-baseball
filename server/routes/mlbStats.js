@@ -9,6 +9,27 @@ const mlbStats = require('../services/mlbStatsService');
 const brain = require('../services/fantasyBrain');
 
 // ─────────────────────────────────────────────────────────────────────────────
+// GET /api/mlb/pitching-context — Expose probable and two-start pitchers
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get('/pitching-context', async (req, res) => {
+  try {
+    const [probablePitchers, twoStartPitchers] = await Promise.all([
+      mlbStats.getLiveProbablePitchers(),
+      mlbStats.getTwoStartPitchers(),
+    ]);
+    res.json({
+      today: probablePitchers || [],
+      currentWeekTwoStart: twoStartPitchers?.currentWeek || [],
+      nextWeekTwoStart: twoStartPitchers?.nextWeek || []
+    });
+  } catch (err) {
+    console.error('[MLB Stats] Pitching Context Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GET /api/mlb/player/:name/stats — Single player lookup with full intelligence
 // ─────────────────────────────────────────────────────────────────────────────
 

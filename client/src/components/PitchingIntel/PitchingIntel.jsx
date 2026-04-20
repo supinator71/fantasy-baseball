@@ -15,6 +15,8 @@ export default function PitchingIntel({ leagueSettings }) {
 
   const isPitcher = (pos) => ['SP', 'RP', 'P'].some(x => String(pos).toUpperCase().includes(x));
 
+  const [pitchingContext, setPitchingContext] = useState({ today: [], currentWeekTwoStart: [], nextWeekTwoStart: [] })
+
   useEffect(() => {
     axios.get('/api/yahoo/leagues').then(({ data }) => {
       setLeagues(data)
@@ -32,13 +34,15 @@ export default function PitchingIntel({ leagueSettings }) {
     setLoading(true)
     setAiRec('')
     try {
-      const [rosterRes, availableRes] = await Promise.all([
+      const [rosterRes, availableRes, contextRes] = await Promise.all([
         axios.get(`/api/yahoo/league/${selectedLeague}/myroster`),
-        axios.get(`/api/yahoo/league/${selectedLeague}/players`, { params: { status: 'A', force: 'true', position: 'P' } })
+        axios.get(`/api/yahoo/league/${selectedLeague}/players`, { params: { status: 'A', force: 'true', position: 'P' } }),
+        axios.get('/api/mlb/pitching-context')
       ]);
 
       const myFullRoster = rosterRes.data?.players || [];
       setMyRoster(myFullRoster);
+      setPitchingContext(contextRes.data);
 
       // Extract my pitchers
       setMyPitchers(myFullRoster.filter(p => isPitcher(p.position)));
@@ -97,6 +101,21 @@ export default function PitchingIntel({ leagueSettings }) {
     )
   }
 
+  const renderContextBadges = (p) => {
+    const basicName = (p.player_name || p.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const isProbable = pitchingContext.today?.includes(basicName);
+    const isCurrentTwoStart = pitchingContext.currentWeekTwoStart?.includes(basicName);
+    const isNextTwoStart = pitchingContext.nextWeekTwoStart?.includes(basicName);
+
+    return (
+      <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+        {isCurrentTwoStart && <span className="badge" style={{ background: '#d4af37', color: '#000', fontSize: 10 }}>🏆 2-Start (This Wk)</span>}
+        {isNextTwoStart && !isCurrentTwoStart && <span className="badge" style={{ background: '#4aafdb', color: '#000', fontSize: 10 }}>🔮 2-Start (Next Wk)</span>}
+        {isProbable && <span className="badge" style={{ background: '#00a86b', color: '#fff', fontSize: 10 }}>⚾ Probable Today</span>}
+      </div>
+    )
+  }
+
   return (
     <div style={{ position: 'relative', minHeight: '80vh' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
@@ -144,7 +163,10 @@ export default function PitchingIntel({ leagueSettings }) {
                 {myPitchers.map((p, i) => (
                   <tr key={i}>
                     <td data-label="Pitcher" style={{ fontWeight: 500 }}>
-                      {p.name} <span className="badge badge-util" style={{fontSize: 10}}>{p.position}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {p.name} <span className="badge badge-util" style={{fontSize: 10}}>{p.position}</span>
+                      </div>
+                      {renderContextBadges(p)}
                     </td>
                     <td data-label="Projected Stats" style={{ whiteSpace: 'nowrap' }}>{renderPitcherStats(p)}</td>
                   </tr>
@@ -182,7 +204,10 @@ export default function PitchingIntel({ leagueSettings }) {
                 {availablePitchers.filter(p => posFilter === 'ALL' || String(p.position || '').includes(posFilter)).slice(0, 15).map((p, i) => (
                   <tr key={i}>
                     <td data-label="Top Target" style={{ fontWeight: 500 }}>
-                      {p.name} <span className="badge badge-util" style={{fontSize: 10}}>{p.position}</span> 
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {p.name} <span className="badge badge-util" style={{fontSize: 10}}>{p.position}</span> 
+                      </div>
+                      {renderContextBadges(p)}
                     </td>
                     <td data-label="Projected Stats" style={{ whiteSpace: 'nowrap' }}>{renderPitcherStats(p)}</td>
                   </tr>
