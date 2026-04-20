@@ -490,6 +490,101 @@ CRITICAL LOGIC RULE: Do NOT generate a "Summary" or "After these moves your rost
   }
 });
 
+// Pitching Hub — completely isolated pitching strategy
+router.post('/pitching', rateLimiter('pitching'), async (req, res) => {
+  const { available_players, my_roster, league_key } = req.body;
+  const settings = getLeagueSettings(league_key);
+  const leagueCtx = leagueContext(settings);
+
+  const sharedMatchup = await getSharedMatchupContext(req, league_key);
+  const pitchingContext = await getSharedPitchingContext();
+
+  // ── Unified Roster Diagnosis ───────────────────────────────────────────
+  const diagnosis = brain.buildRosterDiagnosis(my_roster || [], settings || {}, sharedMatchup, pitchingContext);
+  
+  const rosterBasicNames = (my_roster || []).map(p => (p.player_name || p.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+
+  // Only evaluate pitching positions
+  const isPitcher = (pos) => ['SP', 'RP', 'P'].some(x => String(pos).toUpperCase().includes(x));
+
+  const scored = (available_players || [])
+    .filter(p => isPitcher(p.position) && (!p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1)))
+    .filter(p => {
+        const basicName = (p.player_name || p.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return !rosterBasicNames.includes(basicName);
+    })
+    .map(p => {
+      const basicName = (p.player_name || p.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      
+      const isProbable = pitchingContext.today?.includes(basicName) || false;
+      const isTwoStartCurrent = pitchingContext.currentWeekTwoStart?.includes(basicName) || false;
+      const isTwoStartNext = pitchingContext.nextWeekTwoStart?.includes(basicName) || false;
+      
+      const wScore = brain.scoreWaiverTarget(p, diagnosis.activeRoster, settings || {}, diagnosis.categoryNeeds, pitchingContext);
+      
+      return { ...p, waiverScore: wScore, isProbable, isTwoStartCurrent, isTwoStartNext };
+    }).sort((a, b) => b.waiverScore.score - a.waiverScore.score);
+
+  // Fetch real 2025 stats and breaking news
+  let historicalIntel = '';
+  let breakingNews = '';
+  try {
+    const topNames = scored.slice(0, 8).map(p => p.player_name || p.name).filter(Boolean);
+    
+    const [newsStr, bulkData] = await Promise.all([
+      mlbStats.getBreakingNews(),
+      topNames.length > 0 ? mlbStats.getBulkPlayerStats(topNames, 2025) : Promise.resolve({})
+    ]);
+
+    if (newsStr) breakingNews = `\n=== BREAKING MLB MEDICAL/ROSTER NEWS ===\n${newsStr}\n`;
+    
+    if (topNames.length > 0 && bulkData) {
+      const intelLines = [];
+      for (const [name, data] of Object.entries(bulkData)) {
+        const intel = brain.generatePlayerIntelligence(data);
+        if (intel) intelLines.push(`${name}: ${intel.summary}`);
+      }
+      if (intelLines.length > 0) {
+        historicalIntel = `\n\n=== 2025 MLB PITCHING INTELLIGENCE ===\n${intelLines.join('\n')}`;
+      }
+    }
+  } catch (e) {
+    console.log('[Claude/pitching] MLB stats lookup skipped:', e.message);
+  }
+
+  try {
+    const text = await callClaude([{
+      role: 'user',
+      content: `${leagueCtx}
+${diagnosis.promptBlock}
+${breakingNews}
+
+PITCHING TARGETS (pre-scored by priority engine):
+${scored.slice(0, 12).map(p =>
+  `${p.player_name||p.name} (${p.position}, ${p.team}) ${p.isTwoStartCurrent?'[🏆 2-STARTS THIS WEEK] ':p.isTwoStartNext?'[🔮 2-STARTS NEXT WEEK] ':p.isProbable?'[⚾ STARTING TODAY] ':''}— Priority: ${p.waiverScore.score}/100 [${p.waiverScore.priority}] — ${p.waiverScore.reasoning}`
+).join('\n')}${historicalIntel}
+
+You are a legendary Head-to-Head Points League Pitching Strategist.
+Use the 2025 stats intelligence AND the ROSTER DIAGNOSIS above to output a Pitching Strategy Playbook.
+
+CRITICAL INSTRUCTIONS:
+1. ONLY evaluate and discuss starting pitchers and relievers. NEVER discuss hitters.
+2. If the user owns a [🏆 2-STARTS THIS WEEK] or [🔮 2-STARTS NEXT WEEK] pitcher, explicitly tell them DO NOT DROP.
+3. Recommend EXACTLY the top 2 pitching pickups to make based on priority score, and explicitly dictate WHO TO DROP from the current roster (a weak pitcher or excess bench hitter).
+
+Format your recommendations using strictly formatted markdown lists with bolded metric badges.
+Example format for your answers:
+- 🟢 **ADD: [Pitcher Name]** \`[Priority Score: YY/100]\` -> *Logic:* [Brief explicit explanation]
+- 🔴 **DROP: [Player Name]** \`[VOR: XX]\` -> *Logic:* [Brief explicit explanation]
+
+Keep it concise, mathematical, and actionable. Do not add summaries at the bottom.`
+    }]);
+    res.json({ recommendations: text, scored: scored.slice(0, 10) });
+  } catch (err) {
+    res.status(500).json({ error: err.message, recommendations: 'AI unavailable.', scored: scored.slice(0, 10) });
+  }
+});
+
 // General question
 router.post('/ask', rateLimiter('ask'), async (req, res) => {
   const { question, context, league_key } = req.body;

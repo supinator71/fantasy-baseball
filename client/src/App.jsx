@@ -17,6 +17,7 @@ import TradeFinder from './components/TradeFinder/TradeFinder'
 import GamePlan from './components/GamePlan/GamePlan'
 import PlayerTrends from './components/PlayerTrends/PlayerTrends'
 import UpgradePage from './components/Upgrade/Upgrade'
+import PitchingIntel from './components/PitchingIntel/PitchingIntel'
 import TrophyCase from './components/TrophyCase/TrophyCase'
 
 import './index.css'
@@ -117,6 +118,7 @@ export default function App() {
                 <Route path="/"          element={<Dashboard leagueSettings={leagueSettings} />} />
                 <Route path="/roster"    element={<RosterManager leagueSettings={leagueSettings} />} />
                 <Route path="/waiver"    element={<WaiverWire leagueSettings={leagueSettings} />} />
+                <Route path="/pitching"  element={<PitchingIntel leagueSettings={leagueSettings} />} />
                 <Route path="/startsit"  element={<StartSit leagueSettings={leagueSettings} />} />
                 <Route path="/trade"     element={<TradeAnalyzer leagueSettings={leagueSettings} />} />
                 <Route path="/standings" element={<Standings leagueSettings={leagueSettings} />} />
@@ -142,6 +144,7 @@ function Sidebar({ authenticated, isOpen, onClose }) {
     { to: '/',            label: 'My Dashboard',             icon: '⚾' },
     { to: '/roster',      label: 'My Team',                  icon: '◈' },
     { to: '/waiver',      label: 'Free Agents / Waiver Wire', icon: '⟳' },
+    { to: '/pitching',    label: 'Pitching Intel',           icon: '🎯' },
     { to: '/startsit',    label: 'Who To Start',             icon: '⚡' },
     { to: '/trade',       label: 'Trade Analyzer',           icon: '⇌' },
     { to: '/standings',   label: 'Standings',                icon: '◎' },
