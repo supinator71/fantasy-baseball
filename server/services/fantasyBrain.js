@@ -1341,11 +1341,19 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}, sharedMatchup = null,
         }
       }
 
+      const streaming = streamingValue(p, p.opponent_stats || {}, scoringType);
+      const platoon = platoonAdvantage(p.bats || p.hand, p.pitcher_hand || 'R');
+      const weekGames = getWeeklyGameCount(p.team || '', leagueCtx.current_week || 1);
+
       return {
+        ...p,
         name: displayName,
         position: pos,
         vor: calculateVOR(p.stats || {}, pos, leagueSize, scoringType),
         scarcity: getPositionalScarcity(pos, leagueSize).tier,
+        streaming,
+        platoon,
+        weekGames
       };
     }).sort((a, b) => b.vor - a.vor);
 

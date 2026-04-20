@@ -285,15 +285,8 @@ router.post('/startsit', rateLimiter('startsit'), async (req, res) => {
   // ── Unified Roster Diagnosis ───────────────────────────────────────────
   const diagnosis = brain.buildRosterDiagnosis(players || [], settings || {}, sharedMatchup, pitchingContext);
 
-  // fantasyBrain: streaming value + platoon for each player
-  const enriched = diagnosis.activeRoster.map(p => {
-    const pos = String(p.position || '').split('/')[0].toUpperCase();
-    const vor = brain.calculateVOR(p.stats || {}, pos, leagueSize, settings?.scoring_type);
-    const platoon = brain.platoonAdvantage(p.bats || p.hand, p.pitcher_hand || 'R');
-    const streaming = brain.streamingValue(p, p.opponent_stats || {}, settings?.scoring_type);
-    const games = brain.getWeeklyGameCount(p.team || '', 1);
-    return { ...p, platoon, streaming, weekGames: games, vor };
-  });
+  // Use the canonical enriched data from the diagnosis object
+  const enriched = diagnosis.vorByPlayer;
 
   // Fetch 2025 stats, TODAY'S LIVE MATCHUPS, and BREAKING NEWS for decision context (non-blocking)
   let historicalIntel = '';

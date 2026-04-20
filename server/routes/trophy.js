@@ -14,7 +14,7 @@ const CARD_COLLECTION = [
   { id: 'gatorade', name: 'Gatorade Glitch', img: '/cyborg_gatorade_glitch.png', rarity: 'common' },
 
   // Uncommon Variations (Foil / Minor visual tweaks)
-  { id: 't2_holo', name: 'Holographic Foil Base', img: '/cyborg_card_tier2_holo.png', rarity: 'uncommon' },
+  { id: 't2_holo', name: 'Holographic Foil Base', img: '/cyborg_card_tier2_holo_premium.png', rarity: 'uncommon' },
   { id: 'coach_woman', name: 'Holographic Coach', img: '/cyborg_coach_card_woman.png', rarity: 'uncommon' },
   { id: 'unc_closer', name: 'Bullpen Closer (Refractor)', img: '/cyborg_bullpen_closer.png', rarity: 'uncommon' },
   { id: 'unc_manager', name: 'Tactical Manager (Foil)', img: '/cyborg_cyber_manager.png', rarity: 'uncommon' },
