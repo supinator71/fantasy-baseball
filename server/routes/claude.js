@@ -117,7 +117,7 @@ async function callClaude(messages, maxTokens = 1800) {
       : messages;
 
     const apiCall = getClient().messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: maxTokens,
       system: [
         {
@@ -315,7 +315,7 @@ router.post('/startsit', rateLimiter('startsit'), async (req, res) => {
         if (intel) intelLines.push(`${name}: ${intel.summary}`);
       }
       if (intelLines.length > 0) {
-        historicalIntel = `\n\n=== 2025 STATS INTELLIGENCE ===\n${intelLines.join('\n')}`;
+        historicalIntel = `\n\n=== 2026 PLAYER SCOUTING REPORTS ===\n${intelLines.join('\n')}`;
       }
     }
   } catch (e) {
@@ -337,13 +337,13 @@ ${enriched.map(p =>
 ${daily_mode ? 
   `DAILY MODE: 1) Must Starts. 2) 3-4 marginal decisions with reasoning. 3) Bench list.
 Rules: Never start IL/O/DTD. Batters: start if "Starting:Yes/?" bench if "No". SP: ONLY start if "Starting:Yes".
-Use live matchups + category weakness to weight decisions.` 
-  : 
-  `WEEKLY MODE: START or SIT each player. Flag breakouts/regression. Weight category weaknesses.`
-}
+Use live matchups + category weakness to weight decisions.
+CRITICAL: ONLY recommend dropping players listed in the MY CURRENT TEAM ROSTER section above. Double-check player names before suggesting a drop.` 
+  : `WEEKLY MODE: 1) Must Starts for the week. 2) Bench list. 3) Pitching stream priority.
+Rules: Prioritize 2-start SPs. Start high-VOR bats. ONLY recommend dropping players listed in the MY CURRENT TEAM ROSTER section above.`}
 
 Format: **Player** \`[VOR:XX | Stream:YY]\` 🟢 START / 🔴 SIT -> *Logic:* [reason]. Show the math.`
-    }]);
+    }], 1800);
     console.log('[Claude/startsit] Raw response:', text);
     res.json({ analysis: text });
   } catch (err) {
@@ -395,14 +395,14 @@ Validate and expand on this trade analysis. Use the ROSTER DIAGNOSIS above to de
 Give a concrete recommendation with counter-offer if needed.
 
 Write in clean, conversational prose. No JSON syntax, no brackets, no code formatting. Write like a fantasy analyst giving persuasive trade advice.`
-    }]);
+    }], 1800);
     res.json({ analysis: text, evaluation });
   } catch (err) {
     res.status(500).json({ error: err.message, analysis: 'AI unavailable.', evaluation });
   }
 });
 
-// Waiver wire — enriched with 2025 MLB stats + intelligence
+// Waiver wire — enriched with 2026 MLB stats + intelligence
 router.post('/waiver', rateLimiter('waiver'), async (req, res) => {
   const { available_players, my_roster, drop_candidates, league_key } = req.body;
   const settings = getLeagueSettings(league_key);
@@ -435,7 +435,7 @@ router.post('/waiver', rateLimiter('waiver'), async (req, res) => {
       return { ...p, waiverScore: wScore, isProbable, isTwoStartCurrent, isTwoStartNext };
     }).sort((a, b) => b.waiverScore.score - a.waiverScore.score);
 
-  // Fetch real 2025 stats and breaking news for top waiver targets (non-blocking)
+  // Fetch real 2026 stats and breaking news for top waiver targets (non-blocking)
   let historicalIntel = '';
   let breakingNews = '';
   try {
@@ -455,7 +455,7 @@ router.post('/waiver', rateLimiter('waiver'), async (req, res) => {
         if (intel) intelLines.push(`${name}: ${intel.summary}`);
       }
       if (intelLines.length > 0) {
-        historicalIntel = `\n\n=== 2025 MLB STATS INTELLIGENCE ===\n${intelLines.join('\n')}`;
+        historicalIntel = `\n\n=== 2026 PLAYER SCOUTING REPORTS ===\n${intelLines.join('\n')}`;
       }
     }
   } catch (e) {
@@ -473,16 +473,21 @@ ${scored.slice(0, 12).map(p =>
   `${p.player_name||p.name} (${p.position}, ${p.team}) ${p.isTwoStartCurrent?'[🏆 2-STARTS THIS WEEK] ':p.isTwoStartNext?'[🔮 2-STARTS NEXT WEEK] ':p.isProbable?'[⚾ STARTING TODAY] ':''}— Priority: ${p.waiverScore.score}/100 [${p.waiverScore.priority}] — ${p.waiverScore.reasoning}`
 ).join('\n')}${historicalIntel}
 
-Use the 2025 stats intelligence AND the ROSTER DIAGNOSIS above to identify the best targets. If pitching categories are weak, you MUST explicitly recommend the [⚾ STARTING TODAY], [🏆 2-STARTS THIS WEEK], or [🔮 2-STARTS NEXT WEEK] pitchers to stream. Align your recommendations with the team's structural needs (do not recommend adding a position where the team already has a Surplus unless they are a must-add star). Give top 3 add/drop recommendations with specific reasoning.
+Use the 2026 scouting reports AND the MY CURRENT TEAM ROSTER above to identify the best targets. If pitching categories are weak, you MUST explicitly recommend the [⚾ STARTING TODAY], [🏆 2-STARTS THIS WEEK], or [🔮 2-STARTS NEXT WEEK] pitchers to stream. Align your recommendations with the team's structural needs.
 
-CRITICAL "SHOW YOUR WORK" RULE: Do NOT formulate paragraphs of general advice. You MUST explicitly cite the math.
+CRITICAL INSTRUCTIONS:
+1. ONLY recommend adding players from the WAIVER WIRE TARGETS list.
+2. ONLY recommend dropping players from the MY CURRENT TEAM ROSTER section. Double-check that a player exists in the roster section before suggesting they be dropped.
+3. If pitching is a weakness, prioritize volume (SP) and high-K relievers.
+
+CRITICAL "SHOW YOUR WORK" RULE: Do NOT formulate paragraphs of general advice. You MUST explicitly cite the math/stats.
 Format your recommendations using strictly formatted markdown lists with bolded metric badges.
 Example format for your answers:
 - 🟢 **ADD: [Player Name]** \`[Priority Score: YY/100]\` -> *Logic:* [Brief explicit explanation of why the math demands this]
 - 🔴 **DROP: [Player Name]** \`[VOR: XX]\` -> *Logic:* [Brief explicit explanation of why their math dictates they are the drop]
 
 CRITICAL LOGIC RULE: Do NOT generate a "Summary" or "After these moves your roster will look like..." section. Only provide actionable Drop/Add recommendations.`
-    }]);
+    }], 1800);
     res.json({ recommendations: text, scored: scored.slice(0, 10) });
   } catch (err) {
     res.status(500).json({ error: err.message, recommendations: 'AI unavailable.', scored: scored.slice(0, 10) });
@@ -524,7 +529,7 @@ router.post('/pitching', rateLimiter('pitching'), async (req, res) => {
       return { ...p, waiverScore: wScore, isProbable, isTwoStartCurrent, isTwoStartNext };
     }).sort((a, b) => b.waiverScore.score - a.waiverScore.score);
 
-  // Fetch real 2025 stats and breaking news
+  // Fetch real 2026 stats and breaking news
   let historicalIntel = '';
   let breakingNews = '';
   try {
@@ -547,7 +552,7 @@ router.post('/pitching', rateLimiter('pitching'), async (req, res) => {
         }
       }
       if (intelLines.length > 0) {
-        historicalIntel = `\n\n=== SCOUTING REPORTS ON WAIVER TARGETS ===\n${intelLines.join('\n')}`;
+        historicalIntel = `\n\n=== 2026 PLAYER SCOUTING REPORTS ===\n${intelLines.join('\n')}`;
       }
     }
   } catch (e) {
@@ -583,7 +588,7 @@ Example format for your answers:
 - 🔴 **DROP: [Player Name]** \`[VOR: XX]\` -> *Logic:* [Brief explicit explanation]
 
 Keep it concise, mathematical, and actionable. Do not add summaries at the bottom.`
-    }]);
+    }], 1800);
     res.json({ recommendations: text, scored: scored.slice(0, 10) });
   } catch (err) {
     res.status(500).json({ error: err.message, recommendations: 'AI unavailable.', scored: scored.slice(0, 10) });
@@ -600,7 +605,7 @@ router.post('/ask', rateLimiter('ask'), checkQuestionAccess, async (req, res) =>
     const text = await callClaude([{
       role: 'user',
       content: `${leagueCtx}${context ? `\nAdditional context: ${context}` : ''}\n\nQuestion: ${question}`,
-    }]);
+    }], 1800);
     res.json({ answer: text });
   } catch (err) {
     res.status(500).json({ error: err.message, answer: 'AI unavailable.' });
@@ -627,7 +632,7 @@ Strategy overview: ${JSON.stringify(strategy.strategy, null, 2)}
 Expand this into a personalized draft plan covering: early round priorities, positional scarcity windows, when to target closers, pitching philosophy, and 5 specific late-round sleeper archetypes to target.
 
 Write in clean, conversational prose. No JSON syntax, no brackets, no code formatting. Write like a veteran fantasy analyst advising a friend before their draft.`,
-    }], 1500);
+    }], "claude-3-5-haiku-20241022", 1500);
     res.json({ strategy: text, strategyProfile: strategy });
   } catch (err) {
     res.status(500).json({ error: err.message, strategy: 'AI unavailable.', strategyProfile: strategy });
@@ -693,7 +698,7 @@ Return ONLY valid JSON (no markdown):
   "lineup_recommendations": "Write specific actionable moves in conversational prose",
   "categories": [{ "name": "Category Name", "my_proj": "value", "opp_proj": "value", "winner": "me", "confidence": "high", "note": "A readable sentence" }]
 }`,
-    }], 1500);
+    }], "claude-3-5-haiku-20241022", 1500);
 
     console.log('[Claude/matchup] Raw response:', text);
     const parsed = tryParseJSON(text);
@@ -749,12 +754,12 @@ router.post('/audit', rateLimiter('audit'), async (req, res) => {
   // ── Unified Roster Diagnosis ───────────────────────────────────────────
   const diagnosis = brain.buildRosterDiagnosis(roster, settings || {}, sharedMatchup, pitchingContext);
 
-  // Fetch real 2025 stats for roster players (non-blocking)
+  // Fetch real 2026 stats for roster players (non-blocking)
   let historicalIntel = '';
   try {
     const playerNames = roster.map(p => p.player_name || p.name).filter(Boolean);
     if (playerNames.length > 0) {
-      const bulkData = await mlbStats.getBulkPlayerStats(playerNames, 2025);
+      const bulkData = await mlbStats.getBulkPlayerStats(playerNames, 2026);
       const intelLines = [];
       for (const [name, data] of Object.entries(bulkData)) {
         const intel = brain.generatePlayerIntelligence(data);
@@ -763,11 +768,11 @@ router.post('/audit', rateLimiter('audit'), async (req, res) => {
           const statLine = data.type === 'hitter'
             ? `${s.AVG}/${s.HR}HR/${s.RBI}RBI/${s.SB}SB`
             : `${s.ERA}ERA/${s.WHIP}WHIP/${s.K}K/${s.SV}SV`;
-          intelLines.push(`${name} (2025: ${statLine}): ${intel.summary}`);
+          intelLines.push(`${name} (2026: ${statLine}): ${intel.summary}`);
         }
       }
       if (intelLines.length > 0) {
-        historicalIntel = `\n\n=== 2025 REAL MLB STATS + INTELLIGENCE ===\n${intelLines.join('\n')}`;
+        historicalIntel = `\n\n=== 2026 PLAYER SCOUTING REPORTS ===\n${intelLines.join('\n')}`;
       }
     }
   } catch (e) {
