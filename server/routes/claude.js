@@ -731,8 +731,9 @@ Return ONLY valid JSON (no markdown):
       raw: text 
     });
   } catch (err) {
-    console.error('[Claude] /matchup/predict error:', err.message);
-    res.status(500).json({ error: err.message });
+    console.error('[Claude] /matchup/predict error:', err.message, err.response?.data);
+    const msg = err.response?.data?.error?.message || err.message;
+    res.status(err.status || 500).json({ error: msg });
   }
 });
 

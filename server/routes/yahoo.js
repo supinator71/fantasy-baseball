@@ -56,44 +56,7 @@ router.post('/cache/clear', (req, res) => {
   res.json({ success: true })
 })
 
-// ── League routes ──────────────────────────────────────────────────────────────
-router.get('/:leagueKey/transactions', requireAuth, async (req, res) => {
-  try {
-    const raw = await yahoo.getTransactions(req, req.params.leagueKey);
-    const cleaned = [];
-    
-    if (Array.isArray(raw)) {
-      raw.forEach(txn => {
-        const playersObj = txn.players;
-        if (!playersObj) return;
-
-        const players = yahoo.toArray(playersObj);
-        players.forEach(p => {
-          const pData = p.player;
-          if (!Array.isArray(pData)) return;
-
-          // Yahoo's pData[0] is often an array of info objects
-          const pInfo = Array.isArray(pData[0]) ? Object.assign({}, ...pData[0]) : pData[0];
-          const pTxn = pData[1]?.transaction_data || pData[2]?.transaction_data || {};
-
-          if (pInfo && pInfo.name) {
-            cleaned.push({
-              player_name: pInfo.name.full || pInfo.name.ascii_first + ' ' + pInfo.name.ascii_last,
-              type: pTxn.type || txn.type, // Fallback to txn type
-              team_name: pTxn.destination_team_name || pTxn.source_team_name || 'Unknown',
-              timestamp: new Date(parseInt(txn.timestamp) * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' })
-            });
-          }
-        });
-      });
-    }
-    res.json(cleaned);
-  } catch (err) {
-    console.error('[Yahoo/transactions] Error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
+// ── Static/Global League routes ────────────────────────────────────────────────
 router.get('/leagues', requireAuth, async (req, res) => {
   const force = req.query.force === 'true'
   try {
@@ -104,6 +67,32 @@ router.get('/leagues', requireAuth, async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+
+router.get('/league/settings/local', (req, res) => {
+  const settings = db.prepare('SELECT * FROM league_settings WHERE id = 1').get()
+  if (!settings) return res.json(null)
+  settings.roster_slots = JSON.parse(settings.roster_slots || '{}')
+  settings.stat_categories = JSON.parse(settings.stat_categories || '[]')
+  res.json(settings)
+})
+
+router.post('/league/save', requireAuth, async (req, res) => {
+  try {
+    const { league_key, league_name, num_teams, scoring_type, draft_type, draft_position, roster_slots, stat_categories } = req.body
+    db.prepare(`INSERT OR REPLACE INTO league_settings
+      (id, league_key, league_name, num_teams, scoring_type, draft_type, draft_position, roster_slots, stat_categories, updated_at)
+      VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(league_key, league_name, num_teams, scoring_type, draft_type, draft_position,
+      JSON.stringify(roster_slots), JSON.stringify(stat_categories), Date.now())
+    // Clear cached data for this league so fresh data loads next time
+    cache.clear(league_key)
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Specific League routes (/:leagueKey/...) ───────────────────────────────────
 
 router.get('/league/:leagueKey', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
@@ -364,6 +353,44 @@ router.get('/league/:leagueKey/transactions', requireAuth, async (req, res) => {
   }
 })
 
+// Wildcard for transaction cleaner (must be below /leagues and /league/...)
+router.get('/:leagueKey/transactions', requireAuth, async (req, res) => {
+  try {
+    const raw = await yahoo.getTransactions(req, req.params.leagueKey);
+    const cleaned = [];
+    
+    if (Array.isArray(raw)) {
+      raw.forEach(txn => {
+        const playersObj = txn.players;
+        if (!playersObj) return;
+
+        const players = yahoo.toArray(playersObj);
+        players.forEach(p => {
+          const pData = p.player;
+          if (!Array.isArray(pData)) return;
+
+          // Yahoo's pData[0] is often an array of info objects
+          const pInfo = Array.isArray(pData[0]) ? Object.assign({}, ...pData[0]) : pData[0];
+          const pTxn = pData[1]?.transaction_data || pData[2]?.transaction_data || {};
+
+          if (pInfo && pInfo.name) {
+            cleaned.push({
+              player_name: pInfo.name.full || pInfo.name.ascii_first + ' ' + pInfo.name.ascii_last,
+              type: pTxn.type || txn.type, // Fallback to txn type
+              team_name: pTxn.destination_team_name || pTxn.source_team_name || 'Unknown',
+              timestamp: new Date(parseInt(txn.timestamp) * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' })
+            });
+          }
+        });
+      });
+    }
+    res.json(cleaned);
+  } catch (err) {
+    console.error('[Yahoo/transactions] Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/league/:leagueKey/player/:playerKey/stats', requireAuth, async (req, res) => {
   const { leagueKey, playerKey } = req.params
   const force = req.query.force === 'true'
@@ -561,30 +588,7 @@ router.get('/league/:leagueKey/trends', requireAuth, async (req, res) => {
   }
 })
 
-// ── League settings (local, no cache needed) ──────────────────────────────────
-router.post('/league/save', requireAuth, async (req, res) => {
-  try {
-    const { league_key, league_name, num_teams, scoring_type, draft_type, draft_position, roster_slots, stat_categories } = req.body
-    db.prepare(`INSERT OR REPLACE INTO league_settings
-      (id, league_key, league_name, num_teams, scoring_type, draft_type, draft_position, roster_slots, stat_categories, updated_at)
-      VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(league_key, league_name, num_teams, scoring_type, draft_type, draft_position,
-      JSON.stringify(roster_slots), JSON.stringify(stat_categories), Date.now())
-    // Clear cached data for this league so fresh data loads next time
-    cache.clear(league_key)
-    res.json({ success: true })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
-router.get('/league/settings/local', (req, res) => {
-  const settings = db.prepare('SELECT * FROM league_settings WHERE id = 1').get()
-  if (!settings) return res.json(null)
-  settings.roster_slots = JSON.parse(settings.roster_slots || '{}')
-  settings.stat_categories = JSON.parse(settings.stat_categories || '[]')
-  res.json(settings)
-})
+// Moved up to Static routes section
 
 // ── EXPORT MATCHUP PARSER ──────────────────────────────────────────────────────────
 function parseYahooMatchup(matchups, myTeamKey) {

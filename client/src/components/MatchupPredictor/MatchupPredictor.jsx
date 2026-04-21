@@ -86,7 +86,8 @@ export default function MatchupPredictor({ leagueSettings }) {
       setPrediction(data)
       checkTrophyUnlocks(data)
     } catch (err) {
-      setError('AI prediction failed. Please try again.')
+      const msg = err.response?.data?.error || err.message || 'AI prediction failed. Please try again.';
+      setError(msg);
     } finally {
       setAiLoading(false)
     }
