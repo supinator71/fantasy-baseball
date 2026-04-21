@@ -9,7 +9,7 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const MODEL = "claude-3-5-haiku-latest";
+const MODEL = "claude-4-5-haiku-20251015";
 
 async function callClaude(messages, systemPrompt, max_tokens = 1500) {
   try {
