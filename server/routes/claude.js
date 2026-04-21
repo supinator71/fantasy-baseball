@@ -24,11 +24,11 @@ router.get('/health', async (req, res) => {
   
   try {
     const msg = await getClient().messages.create({
-      model: 'claude-3-5-haiku-20241022',
+      model: 'claude-3-5-haiku-latest',
       max_tokens: 10,
       messages: [{ role: 'user', content: 'Say "ok"' }],
     });
-    res.json({ status: 'ok', keyPrefix, model: 'claude-3-5-haiku-20241022', response: msg.content[0].text });
+    res.json({ status: 'ok', keyPrefix, model: 'claude-3-5-haiku-latest', response: msg.content[0].text });
   } catch (err) {
     res.json({ 
       status: 'error', 
@@ -117,7 +117,7 @@ async function callClaude(messages, maxTokens = 1800) {
       : messages;
 
     const apiCall = getClient().messages.create({
-      model: 'claude-3-5-haiku-20241022',
+      model: 'claude-3-5-haiku-latest',
       max_tokens: maxTokens,
       system: [
         {
