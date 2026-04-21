@@ -17,7 +17,7 @@ const FORMAT = { ROTO: 'ROTO', H2H_CAT: 'H2H_CAT', H2H_POINTS: 'H2H_POINTS' }
 function detectFormat(scoringType) {
   const raw = String(scoringType || '').toLowerCase().trim()
   if (raw.includes('headpoint') || raw.includes('head_point') || raw === 'h2h_points' || raw === 'points') return FORMAT.H2H_POINTS
-  if (raw.includes('head') || raw === 'h2h' || raw === 'h2h_cat' || raw === 'h2h_categories') return FORMAT.H2H_CAT
+  if (raw.includes('head') || raw.includes('h2h') || raw.includes('categories')) return FORMAT.H2H_CAT
   return FORMAT.ROTO  // default: roto / everything else
 }
 
@@ -153,17 +153,34 @@ const POSITIONAL_DATA = {
 }
 
 function getPositionalScarcity(position, leagueSize = 12) {
-  const pos = String(position || '').split('/')[0].split(',')[0].trim().toUpperCase()
-  const data = POSITIONAL_DATA[pos] || POSITIONAL_DATA['OF']
+  const parts = String(position || '').split(/[/, ]+/).map(p => p.trim().toUpperCase()).filter(Boolean)
+  
+  // Scarcity ordering for comparison
+  const scarcityOrder = { elite: 5, scarce: 4, moderate: 3, deep: 2, replacement: 1 }
+  
+  let bestData = POSITIONAL_DATA['OF']
+  let bestScore = -1
+  
+  parts.forEach(p => {
+    const data = POSITIONAL_DATA[p]
+    if (data) {
+      const score = scarcityOrder[data.tier] || 0
+      if (score > bestScore) {
+        bestScore = score
+        bestData = data
+      }
+    }
+  })
+
   const scale = leagueSize / 12  // adjust for non-12-team leagues
 
   return {
-    tier: data.tier,
-    draftWindow: data.draftWindow,
-    replacementDropoff: data.replacementDropoff,
-    replacementLevel: data.replacementLevel,
-    notes: data.notes,
-    urgencyScore: { elite: 10, scarce: 8, moderate: 5, deep: 2, replacement: 0 }[data.tier] || 3,
+    tier: bestData.tier,
+    draftWindow: bestData.draftWindow,
+    replacementDropoff: bestData.replacementDropoff,
+    replacementLevel: bestData.replacementLevel,
+    notes: bestData.notes,
+    urgencyScore: { elite: 10, scarce: 8, moderate: 5, deep: 2, replacement: 0 }[bestData.tier] || 3,
   }
 }
 
@@ -244,22 +261,19 @@ const SGP_DENOMINATORS = {
   W: 5.5, SV: 6.5, K: 40, ERA_BASELINE: 4.00, WHIP_BASELINE: 1.30
 }
 
-function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType = 'Points', statMapping = null) {
-  if (!playerStats || Object.keys(playerStats).length === 0) return 0
-
-  const pos = String(position || '').split('/')[0].split(',')[0].trim().toUpperCase()
+/**
+ * Core calculation for VOR at a single position.
+ */
+function _computeVOR(playerStats, pos, leagueSize, scoringType, statMapping) {
   const isPitcher = pos === 'SP' || pos === 'RP' || pos === 'P'
   const fmt = detectFormat(scoringType)
 
   if (fmt === FORMAT.H2H_POINTS) {
-    // ── H2H POINTS: raw fantasy points / normalizer ────────────────────
     const rawPts = computePlayerPoints(playerStats, isPitcher, statMapping)
     if (rawPts <= 0) return 0
     return Math.round(Math.max(0, rawPts / 5))
   }
 
-  // ── ROTO or H2H CATEGORIES: SGP-based VOR ────────────────────────────
-  // Helper macro to fetch stats securely
   const getStat = (statName, ...fallbackKeys) => {
     if (statMapping && statMapping[statName]) {
       const v = playerStats[statMapping[statName]]
@@ -281,7 +295,10 @@ function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType =
     const ab = getStat('AB', '2', '5')
     const avg = getStat('AVG', '3')
     if (ab > 0) {
-      sgpTotal += ((avg - SGP_DENOMINATORS.AVG_BASELINE) * Math.min(ab, 150)) / 15
+      // Scale AVG SGP by positional scarcity — catchers/SS get more 'credit' for average than 1B
+      const scarcity = getPositionalScarcity(pos, leagueSize)
+      const baseline = scarcity.replacementLevel.AVG || SGP_DENOMINATORS.AVG_BASELINE
+      sgpTotal += ((avg - baseline) * Math.min(ab, 150)) / 15
     }
   } else {
     sgpTotal += getStat('W', '28')  / SGP_DENOMINATORS.W
@@ -296,15 +313,22 @@ function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType =
     }
   }
 
-  // H2H_CAT gets a schedule-volume bonus — more games = more chances to win counting cats
-  if (fmt === FORMAT.H2H_CAT && !isPitcher) {
-    sgpTotal *= 1.1  // slight volume premium for H2H weekly matchups
-  }
-
-  // Normalize SGP to the same VOR scale as Points mode (~0-150+)
-  // SGP of 10 ≈ elite player → VOR ~80. SGP of 5 ≈ solid → VOR ~50.
+  if (fmt === FORMAT.H2H_CAT && !isPitcher) sgpTotal *= 1.1
   if (sgpTotal <= -10) return 0
   return Math.round(Math.max(0, (sgpTotal + 2) * 7))
+}
+
+function calculateVOR(playerStats = {}, position, leagueSize = 12, scoringType = 'Points', statMapping = null) {
+  if (!playerStats || Object.keys(playerStats).length === 0) return 0
+  const parts = String(position || '').split(/[/, ]+/).map(p => p.trim().toUpperCase()).filter(Boolean)
+  if (parts.length === 0) return _computeVOR(playerStats, 'OF', leagueSize, scoringType, statMapping)
+
+  let maxVOR = 0
+  parts.forEach(pos => {
+    const v = _computeVOR(playerStats, pos, leagueSize, scoringType, statMapping)
+    if (v > maxVOR) maxVOR = v
+  })
+  return maxVOR
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -851,22 +875,36 @@ function analyzeRosterStrengths(roster = [], leagueContext = {}) {
   const statMapping = leagueContext.statMap || null
 
   // Filter out injured/suspended players before evaluating roster strengths
-  // so a 0 VOR due to injury doesn't artificially trigger a "buy low" or "void" miscalculation
   const activeRoster = roster.filter(p => !p.status || (!String(p.status).toUpperCase().includes('IL') && ['O', 'OUT', 'SUSPENDED'].indexOf(String(p.status).toUpperCase()) === -1))
 
   activeRoster.forEach(player => {
-    // Yahoo returns positions as "C,1B" or "OF/1B" — normalize both delimiters
-    const primaryPos = String(player.position || '').split(/[/,]/)[0].trim().toUpperCase() || 'OF'
-    const pos = primaryPos
-    if (!byPosition[pos]) byPosition[pos] = []
-    const vor = calculateVOR(player.stats || {}, pos, leagueSize, scoringType, statMapping)
-    byPosition[pos].push({ ...player, vor })
-    vorByPlayer.push({ name: player.player_name || player.name, position: pos, vor })
+    const rawPos = String(player.position || '').toUpperCase()
+    const parts = rawPos.split(/[/, ]+/).map(p => p.trim()).filter(Boolean)
+    
+    // Calculate VOR once (it now handles all positions and returns the best)
+    const vor = calculateVOR(player.stats || {}, rawPos, leagueSize, scoringType, statMapping)
+    
+    parts.forEach(pos => {
+      if (!byPosition[pos]) byPosition[pos] = []
+      byPosition[pos].push({ ...player, vor })
+    })
+
+    vorByPlayer.push({ 
+      name: player.player_name || player.name, 
+      position: rawPos, 
+      vor,
+      isDual: parts.length > 1
+    })
   })
 
   // Identify surpluses (2+ players at same position) and voids (0 players)
   const surpluses = Object.entries(byPosition)
-    .filter(([pos, players]) => players.length >= 2)
+    .filter(([pos, players]) => {
+      // Adjusted surplus threshold: 2 for most, but OF needs 4+, SP needs 6+, etc.
+      const slotData = POSITIONAL_DATA[pos]
+      const starters = slotData ? slotData.starterSlots : 1
+      return players.length > starters
+    })
     .map(([pos, players]) => ({
       position: pos,
       count: players.length,
@@ -896,10 +934,38 @@ function analyzeRosterStrengths(roster = [], leagueContext = {}) {
   const rosterWarnings = []
   const fmt = detectFormat(scoringType)
 
-  if (fmt === FORMAT.H2H_POINTS) {
-    // 1. Catcher check (Rule 1)
-    if (byPosition['C'] && byPosition['C'].length > 1) {
-      rosterWarnings.push(`RULE 1 VIOLATION: You are carrying ${byPosition['C'].length} catchers. In H2H points, a bench spot used on a backup catcher is completely wasted. Drop the backup for a streaming SP.`)
+  if (fmt === FORMAT.H2H_POINTS || fmt === FORMAT.H2H_CAT) {
+    // 1. Refined Catcher check (Rule 1)
+    const catchers = byPosition['C'] || []
+    if (catchers.length > 1) {
+      // Designate the highest-VOR catcher as the "Starter"
+      const sortedCatchers = [...catchers].sort((a, b) => b.vor - a.vor)
+      const starterC = sortedCatchers[0]
+      const backups = sortedCatchers.slice(1)
+
+      // Backups are wasteful if they don't provide starter-level value at a secondary position
+      const wastefulCatchers = backups.filter(c => {
+        const rawPos = String(c.position || '').toUpperCase()
+        const parts = rawPos.split(/[/, ]+/).map(p => p.trim()).filter(Boolean)
+        const secondaryPositions = parts.filter(p => p !== 'C')
+        
+        if (secondaryPositions.length === 0) return true // Pure C backup is always a waste
+        
+        // If they have secondary positions, check if they are "needed" there
+        const isNeededElsewhere = secondaryPositions.some(pos => {
+          const depth = byPosition[pos] || []
+          const betterOptions = depth.filter(opt => opt.vor > c.vor)
+          const slotData = POSITIONAL_DATA[pos]
+          const starters = slotData ? slotData.starterSlots : 1
+          return betterOptions.length < starters // They are in the starting lineup for this other position
+        })
+        
+        return !isNeededElsewhere
+      })
+
+      if (wastefulCatchers.length > 0) {
+        rosterWarnings.push(`RULE 1 VIOLATION: You are carrying ${catchers.length} catchers. In this format, backup catchers are zero-value bench clogs. ${wastefulCatchers.map(c => c.player_name || c.name).join(', ')} should be dropped for pitching depth.`)
+      }
     }
     
     // 2. Bench balance (Rule 8) - Approximation
@@ -1327,10 +1393,13 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}, sharedMatchup = null,
   const vorByPlayer = activeRoster
     .filter(p => getPlayerStatus(p) !== 'dtd' || true) // DTD stays in VOR calc
     .map(p => {
-      const pos = String(p.position || '').split(/[/,]/)[0].trim().toUpperCase();
+      const rawPos = String(p.position || '').toUpperCase();
       let displayName = p.player_name || p.name;
       
-      if (pitchingContext && ['SP', 'RP', 'P'].some(x => pos.includes(x))) {
+      const parts = rawPos.split(/[/, ]+/).map(x => x.trim()).filter(Boolean);
+      const isPitcher = parts.some(x => ['SP', 'RP', 'P'].includes(x));
+
+      if (pitchingContext && isPitcher) {
         const basicName = (displayName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         if (pitchingContext.currentWeekTwoStart?.includes(basicName)) {
            displayName += ' [🏆 2-STARTS THIS WEEK]';
@@ -1348,9 +1417,9 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}, sharedMatchup = null,
       return {
         ...p,
         name: displayName,
-        position: pos,
-        vor: calculateVOR(p.stats || {}, pos, leagueSize, scoringType),
-        scarcity: getPositionalScarcity(pos, leagueSize).tier,
+        position: rawPos,
+        vor: calculateVOR(p.stats || {}, rawPos, leagueSize, scoringType),
+        scarcity: getPositionalScarcity(rawPos, leagueSize).tier,
         streaming,
         platoon,
         weekGames
