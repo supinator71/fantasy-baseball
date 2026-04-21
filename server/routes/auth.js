@@ -163,4 +163,12 @@ router.post('/logout', (req, res) => {
   res.json({ success: true });
 });
 
+// Admin: Self-upgrade to Pro for testing
+router.get('/make-me-pro', (req, res) => {
+  const guid = req.session?.yahoo_guid;
+  if (!guid) return res.send('Please login to Yahoo first so we have your GUID.');
+  db.setSubscription(guid, { plan: 'pro', season: '2026', max_leagues: 10 });
+  res.send(`Successfully upgraded GUID: ${guid} to Pro! You can now test the AI Question Box and unlimited insights.`);
+});
+
 module.exports = router;
