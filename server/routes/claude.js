@@ -443,7 +443,7 @@ router.post('/waiver', rateLimiter('waiver'), async (req, res) => {
     
     const [newsStr, bulkData] = await Promise.all([
       mlbStats.getBreakingNews(),
-      topNames.length > 0 ? mlbStats.getBulkPlayerStats(topNames, 2025) : Promise.resolve({})
+      topNames.length > 0 ? mlbStats.getBulkPlayerStats(topNames, 2026) : Promise.resolve({})
     ]);
 
     if (newsStr) breakingNews = `\n=== BREAKING MLB MEDICAL/ROSTER NEWS ===\n${newsStr}\n`;
@@ -532,7 +532,7 @@ router.post('/pitching', rateLimiter('pitching'), async (req, res) => {
     
     const [newsStr, bulkData] = await Promise.all([
       mlbStats.getBreakingNews(),
-      topNames.length > 0 ? mlbStats.getBulkPlayerStats(topNames, 2025) : Promise.resolve({})
+      topNames.length > 0 ? mlbStats.getBulkPlayerStats(topNames, 2026) : Promise.resolve({})
     ]);
 
     if (newsStr) breakingNews = `\n=== BREAKING MLB MEDICAL/ROSTER NEWS ===\n${newsStr}\n`;
@@ -541,10 +541,13 @@ router.post('/pitching', rateLimiter('pitching'), async (req, res) => {
       const intelLines = [];
       for (const [name, data] of Object.entries(bulkData)) {
         const intel = brain.generatePlayerIntelligence(data);
-        if (intel) intelLines.push(`${name}: ${intel.summary}`);
+        if (intel) {
+           // Include key stats in the intel for Claude
+           intelLines.push(`${name}: ${intel.summary} (Stats: ERA ${data.stats?.ERA}, WHIP ${data.stats?.WHIP}, K/9 ${data.stats?.K9})`);
+        }
       }
       if (intelLines.length > 0) {
-        historicalIntel = `\n\n=== 2025 MLB PITCHING INTELLIGENCE ===\n${intelLines.join('\n')}`;
+        historicalIntel = `\n\n=== SCOUTING REPORTS ON WAIVER TARGETS ===\n${intelLines.join('\n')}`;
       }
     }
   } catch (e) {
@@ -558,18 +561,21 @@ router.post('/pitching', rateLimiter('pitching'), async (req, res) => {
 ${diagnosis.promptBlock}
 ${breakingNews}
 
-PITCHING TARGETS (pre-scored by priority engine):
+WAIVER WIRE TARGETS (AVAILABLE TO PICK UP):
 ${scored.slice(0, 12).map(p =>
   `${p.player_name||p.name} (${p.position}, ${p.team}) ${p.isTwoStartCurrent?'[🏆 2-STARTS THIS WEEK] ':p.isTwoStartNext?'[🔮 2-STARTS NEXT WEEK] ':p.isProbable?'[⚾ STARTING TODAY] ':''}— Priority: ${p.waiverScore.score}/100 [${p.waiverScore.priority}] — ${p.waiverScore.reasoning}`
 ).join('\n')}${historicalIntel}
 
 You are a legendary Head-to-Head Points League Pitching Strategist.
-Use the 2025 stats intelligence AND the ROSTER DIAGNOSIS above to output a Pitching Strategy Playbook.
+Use the Scouting Reports AND the MY CURRENT TEAM ROSTER above to output a Pitching Strategy Playbook.
 
 CRITICAL INSTRUCTIONS:
 1. ONLY evaluate and discuss starting pitchers and relievers. NEVER discuss hitters.
-2. If the user owns a [🏆 2-STARTS THIS WEEK] or [🔮 2-STARTS NEXT WEEK] pitcher, explicitly tell them DO NOT DROP.
-3. Recommend EXACTLY the top 2 pitching pickups to make based on priority score, and explicitly dictate WHO TO DROP from the current roster (a weak pitcher or excess bench hitter). You MUST only recommend dropping players that are explicitly listed in the ROSTER section of the diagnosis above.
+2. DO NOT confuse "WAIVER WIRE TARGETS" with "MY CURRENT TEAM ROSTER". 
+3. Look at "MY CURRENT TEAM ROSTER" in the Diagnosis. If a player listed THERE has a [🏆 2-STARTS THIS WEEK] or [🔮 2-STARTS NEXT WEEK] tag, explicitly tell the user DO NOT DROP them. If they are NOT in the roster section, do not say "do not drop".
+4. Recommend EXACTLY the top 2 pitching pickups to make from the WAIVER WIRE TARGETS based on priority score.
+5. For each Add, explicitly dictate WHO TO DROP from "MY CURRENT TEAM ROSTER" (a weak pitcher or excess bench hitter). You MUST only recommend dropping players that are explicitly listed in the ROSTER section of the diagnosis above.
+6. If a WAIVER WIRE TARGET has terrible stats (e.g., ERA > 5.00), acknowledge the risk even if they have 2 starts.
 
 Format your recommendations using strictly formatted markdown lists with bolded metric badges.
 Example format for your answers:

@@ -172,7 +172,7 @@ async function getPlayerSeasonStats(playerName, season = 2025) {
 // BULK LOOKUP — fetch stats for multiple players at once
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function getBulkPlayerStats(playerNames = [], season = 2025) {
+async function getBulkPlayerStats(playerNames = [], season = 2026) {
   // Process in parallel batches of 5 to avoid overwhelming the API
   const results = {};
   const batchSize = 5;
@@ -198,7 +198,7 @@ async function getBulkPlayerStats(playerNames = [], season = 2025) {
 // MULTI-SEASON — get stats across multiple years for trend analysis
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function getMultiSeasonStats(playerName, seasons = [2023, 2024, 2025]) {
+async function getMultiSeasonStats(playerName, seasons = [2024, 2025, 2026]) {
   const player = await searchPlayer(playerName);
   if (!player) return null;
 

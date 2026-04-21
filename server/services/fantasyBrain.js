@@ -581,11 +581,11 @@ function scoreWaiverTarget(player = {}, myRoster = [], leagueSettings = {}, cate
   
   if (isPitcher && pitchingContext) {
     if (pitchingContext.currentWeekTwoStart?.includes(basicName)) {
-      score += 150;
+      score += 100;
       priorityLevel = 'CHAMPIONSHIP STREAM';
       reasoning = '🏆 CONFIRMED 2-START PITCHER THIS WEEK. Mathematical mismatch identified.';
     } else if (pitchingContext.nextWeekTwoStart?.includes(basicName)) {
-      score += 150;
+      score += 80;
       priorityLevel = 'CHAMPIONSHIP STREAM';
       reasoning = '🔮 CONFIRMED 2-START PITCHER NEXT WEEK. Critical lookahead pickup.';
     } else if (pitchingContext.today?.includes(basicName)) {
@@ -622,8 +622,17 @@ function scoreWaiverTarget(player = {}, myRoster = [], leagueSettings = {}, cate
   const seasonERA = parseFloat(player.seasonStats?.['26'] || player.season_era || 0)
   if (recentERA > 0 && seasonERA > 0) {
     if (recentERA < seasonERA * 0.80) score += 15  // pitcher running hot
-    else if (recentERA > seasonERA * 1.30) score -= 10
+    else if (recentERA > seasonERA * 1.30) score -= 20 // Major penalty for blowouts
   }
+  
+  // High Ratio Penalties (ERA/WHIP)
+  const era = seasonERA || recentERA || 0;
+  const whip = parseFloat(player.seasonStats?.['27'] || player.season_whip || 0);
+  
+  if (era > 4.50) score -= 15;
+  if (era > 5.50) score -= 40;
+  if (whip > 1.45) score -= 15;
+  if (whip > 1.60) score -= 30;
 
   // Underlying metrics / regression flags
   const babip = parseFloat(player.babip || player.stats?.babip || 0)
