@@ -57,7 +57,8 @@ const DEFAULT_DATA = {
   subscriptions: {},     // map: { [yahoo_guid]: { plan, season, max_leagues, ... } }
   user_profiles: {},     // map: { [yahoo_guid]: { name, email, created_at } }
   trophy_cases: {},      // map: { [yahoo_guid]: { unlocked_cards: [{ id, unlocked_at, reason }] } }
-  ai_usage: {}           // map: { [yahoo_guid]: { count, date } }
+  ai_usage: {},           // map: { [yahoo_guid]: { count, date } }
+  leagues_used: {}        // map: { [yahoo_guid]: [league_key1, league_key2] }
 };
 
 function load() {
@@ -66,6 +67,7 @@ function load() {
       const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
       if (!data.trophy_cases) data.trophy_cases = {};
       if (!data.ai_usage) data.ai_usage = {};
+      if (!data.leagues_used) data.leagues_used = {};
       return data;
     }
   } catch {}
@@ -292,6 +294,27 @@ const db = {
     
     data.trophy_cases[yahooGuid] = tc;
     save(data);
+  },
+
+  // ── League Tracking ──────────────────────────────────────────────────
+  getLeaguesUsed(yahooGuid) {
+    if (!yahooGuid) return [];
+    const data = load();
+    if (!data.leagues_used) data.leagues_used = {};
+    return data.leagues_used[yahooGuid] || [];
+  },
+
+  trackLeagueUse(yahooGuid, leagueKey) {
+    if (!yahooGuid || !leagueKey) return;
+    const data = load();
+    if (!data.leagues_used) data.leagues_used = {};
+    
+    let used = data.leagues_used[yahooGuid] || [];
+    if (!used.includes(leagueKey)) {
+      used.push(leagueKey);
+      data.leagues_used[yahooGuid] = used;
+      save(data);
+    }
   }
 };
 

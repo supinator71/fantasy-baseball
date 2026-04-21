@@ -3,7 +3,7 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import AiQuestionBox from '../shared/AiQuestionBox'
 
-export default function TradeAnalyzer({ leagueSettings }) {
+export default function TradeAnalyzer({ leagueSettings, subscription }) {
   const [leagues, setLeagues] = useState([])
   const [selectedLeague, setSelectedLeague] = useState('')
   const [giving, setGiving] = useState('')
@@ -98,6 +98,7 @@ export default function TradeAnalyzer({ leagueSettings }) {
             title="Cross-Examine the Analyst"
             icon="⚖️"
             placeholder="Ask why this trade is a steal or how it affects your depth..."
+            isPro={subscription?.plan === 'pro'}
           />
         </div>
       )}

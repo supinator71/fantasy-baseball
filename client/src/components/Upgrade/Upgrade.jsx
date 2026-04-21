@@ -57,6 +57,7 @@ export default function UpgradePage({ subscription, onUpgradeComplete }) {
           <ul className="pricing-features">
             <li>✅ <strong>2 leagues</strong> included</li>
             <li>✅ <strong>Unlimited</strong> AI insights</li>
+            <li>✅ <strong>Interactive AI Question Box</strong> (Follow-ups)</li>
             <li>✅ All features — Start/Sit, Trades, Waivers, Game Plan</li>
             <li>✅ Priority analysis speed</li>
             <li>✅ Full season access</li>

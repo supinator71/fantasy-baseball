@@ -3,7 +3,7 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import AiQuestionBox from '../shared/AiQuestionBox'
 
-export default function PitchingIntel({ leagueSettings }) {
+export default function PitchingIntel({ leagueSettings, subscription }) {
   const [availablePitchers, setAvailablePitchers] = useState([])
   const [myRoster, setMyRoster] = useState([])
   const [myPitchers, setMyPitchers] = useState([])
@@ -151,6 +151,7 @@ export default function PitchingIntel({ leagueSettings }) {
             title="Pitching Coach Q&A"
             icon="🎯"
             placeholder="Ask about a specific pitcher or streamer..."
+            isPro={subscription?.plan === 'pro'}
           />
         </div>
       )}

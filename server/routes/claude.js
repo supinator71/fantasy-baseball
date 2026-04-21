@@ -5,6 +5,7 @@ const db = require('../services/database');
 const brain = require('../services/fantasyBrain');
 const mlbStats = require('../services/mlbStatsService');
 const { rateLimiter, getStats } = require('../middleware/rateLimiter');
+const { loadSubscription, checkAiLimit, checkQuestionAccess } = require('../middleware/subscription');
 
 let client = null;
 function getClient() {
@@ -579,7 +580,7 @@ Keep it concise, mathematical, and actionable. Do not add summaries at the botto
 });
 
 // General question
-router.post('/ask', rateLimiter('ask'), async (req, res) => {
+router.post('/ask', rateLimiter('ask'), checkQuestionAccess, async (req, res) => {
   const { question, context, league_key } = req.body;
   const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);

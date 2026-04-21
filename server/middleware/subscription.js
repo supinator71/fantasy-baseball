@@ -1,6 +1,6 @@
 const db = require('../services/database');
 
-const FREE_DAILY_AI_LIMIT = 100; // Increased to 100 for dev/QA testing
+const FREE_DAILY_AI_LIMIT = 3;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Subscription Middleware
@@ -32,14 +32,11 @@ function loadSubscription(req, res, next) {
 function checkAiLimit(req, res, next) {
   const yahooGuid = req.session?.yahoo_guid;
   
-  // No GUID = can't track usage, let them through (backward compatibility)
   if (!yahooGuid) return next();
 
-  // Pro users have unlimited access
   const sub = db.getSubscription(yahooGuid);
   if (sub && sub.plan === 'pro') return next();
 
-  // Free tier: check daily limit
   const usage = db.getAiUsage(yahooGuid);
   if (usage.count >= FREE_DAILY_AI_LIMIT) {
     return res.status(402).json({
@@ -50,10 +47,8 @@ function checkAiLimit(req, res, next) {
     });
   }
 
-  // Increment usage counter
   db.incrementAiUsage(yahooGuid);
   
-  // Add usage info to response headers so frontend can show counter
   const updated = db.getAiUsage(yahooGuid);
   res.set('X-AI-Usage', `${updated.count}/${FREE_DAILY_AI_LIMIT}`);
   
@@ -61,13 +56,56 @@ function checkAiLimit(req, res, next) {
 }
 
 /**
+ * PRO ONLY: Gate the AI Question Box (follow-up) feature.
+ */
+function checkQuestionAccess(req, res, next) {
+  const yahooGuid = req.session?.yahoo_guid;
+  const sub = db.getSubscription(yahooGuid);
+  
+  if (sub && sub.plan === 'pro') return next();
+  
+  res.status(403).json({ 
+    error: 'pro_feature', 
+    message: 'The AI Question Box is a Pro Season Pass feature. Upgrade to unlock interactive follow-up analysis!' 
+  });
+}
+
+/**
  * Gate league access: free = 1 league, pro = max_leagues.
- * Expects league_key in req.body or req.query.
  */
 function checkLeagueAccess(req, res, next) {
-  // For now, don't block — just pass through.
-  // League gating will be implemented when we add multi-league UI.
+  const yahooGuid = req.session?.yahoo_guid;
+  if (!yahooGuid) return next();
+
+  const sub = db.getSubscription(yahooGuid) || { plan: 'free', max_leagues: 1 };
+  const leagueKey = req.body?.league_key || req.query?.league_key;
+  
+  if (!leagueKey) return next();
+
+  // If user has only 1 league access (Free tier), only allow them to use their "primary" league.
+  // For simplicity, we track how many unique leagues they've used.
+  const leaguesUsed = db.getLeaguesUsed(yahooGuid);
+  
+  if (sub.plan === 'free' && leaguesUsed.length >= 1 && !leaguesUsed.includes(leagueKey)) {
+    return res.status(403).json({
+      error: 'league_limit_reached',
+      message: 'Free tier is limited to 1 league. Upgrade to Pro to manage multiple teams!',
+      upgrade: true
+    });
+  }
+
+  // If Pro, check max_leagues
+  if (sub.plan === 'pro' && leaguesUsed.length >= sub.max_leagues && !leaguesUsed.includes(leagueKey)) {
+    return res.status(403).json({
+      error: 'league_limit_reached',
+      message: `Your Season Pass covers ${sub.max_leagues} leagues. Add an 'Extra League' slot to manage more!`,
+      upgrade: true
+    });
+  }
+
+  // Track the league being used
+  db.trackLeagueUse(yahooGuid, leagueKey);
   next();
 }
 
-module.exports = { loadSubscription, checkAiLimit, checkLeagueAccess };
+module.exports = { loadSubscription, checkAiLimit, checkQuestionAccess, checkLeagueAccess };

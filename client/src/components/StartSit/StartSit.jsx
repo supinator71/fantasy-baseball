@@ -3,7 +3,7 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import AiQuestionBox from '../shared/AiQuestionBox'
 
-export default function StartSit({ leagueSettings }) {
+export default function StartSit({ leagueSettings, subscription }) {
   const [leagues, setLeagues] = useState([])
   const [selectedLeague, setSelectedLeague] = useState('')
   const [roster, setRoster] = useState([])
@@ -124,6 +124,7 @@ export default function StartSit({ leagueSettings }) {
             title="Manager's Hot Seat"
             icon="⚡"
             placeholder="Ask about a specific matchup or second-guess a benching..."
+            isPro={subscription?.plan === 'pro'}
           />
         </div>
       )}

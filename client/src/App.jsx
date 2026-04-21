@@ -117,10 +117,10 @@ export default function App() {
               <Routes>
                 <Route path="/"          element={<Dashboard leagueSettings={leagueSettings} />} />
                 <Route path="/roster"    element={<RosterManager leagueSettings={leagueSettings} />} />
-                <Route path="/waiver"    element={<WaiverWire leagueSettings={leagueSettings} />} />
-                <Route path="/pitching"  element={<PitchingIntel leagueSettings={leagueSettings} />} />
-                <Route path="/startsit"  element={<StartSit leagueSettings={leagueSettings} />} />
-                <Route path="/trade"     element={<TradeAnalyzer leagueSettings={leagueSettings} />} />
+                <Route path="/waiver"    element={<WaiverWire leagueSettings={leagueSettings} subscription={subscription} />} />
+                <Route path="/pitching"  element={<PitchingIntel leagueSettings={leagueSettings} subscription={subscription} />} />
+                <Route path="/startsit"  element={<StartSit leagueSettings={leagueSettings} subscription={subscription} />} />
+                <Route path="/trade"     element={<TradeAnalyzer leagueSettings={leagueSettings} subscription={subscription} />} />
                 <Route path="/standings" element={<Standings leagueSettings={leagueSettings} />} />
                 <Route path="/matchup"   element={<MatchupPredictor leagueSettings={leagueSettings} />} />
                 <Route path="/trends"    element={<PlayerTrends />} />

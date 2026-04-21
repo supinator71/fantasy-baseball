@@ -3,7 +3,7 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import AiQuestionBox from '../shared/AiQuestionBox'
 
-export default function WaiverWire({ leagueSettings }) {
+export default function WaiverWire({ leagueSettings, subscription }) {
   const [available, setAvailable] = useState([])
   const [myRoster, setMyRoster] = useState([])
   const [leagues, setLeagues] = useState([])
@@ -161,6 +161,7 @@ export default function WaiverWire({ leagueSettings }) {
             title="Ask the Scout"
             icon="🕵️‍♂️"
             placeholder="Ask about a specific sleeper or why to drop someone..."
+            isPro={subscription?.plan === 'pro'}
           />
         </div>
       )}
