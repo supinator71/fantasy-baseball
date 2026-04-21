@@ -16,9 +16,12 @@ const FORMAT = { ROTO: 'ROTO', H2H_CAT: 'H2H_CAT', H2H_POINTS: 'H2H_POINTS' }
 
 function detectFormat(scoringType) {
   const raw = String(scoringType || '').toLowerCase().trim()
-  if (raw.includes('headpoint') || raw.includes('head_point') || raw === 'h2h_points' || raw === 'points') return FORMAT.H2H_POINTS
-  if (raw.includes('head') || raw.includes('h2h') || raw.includes('categories')) return FORMAT.H2H_CAT
-  return FORMAT.ROTO  // default: roto / everything else
+  // 1. Check for Points variants first (prevents "H2H Points" from matching H2H_CAT)
+  if (raw.includes('point') || raw === 'h2h_pts' || raw === 'pts') return FORMAT.H2H_POINTS
+  // 2. Check for Categories/H2H variants
+  if (raw.includes('head') || raw.includes('h2h') || raw.includes('categories') || raw === 'cat') return FORMAT.H2H_CAT
+  // 3. Default to Roto
+  return FORMAT.ROTO
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -934,53 +937,54 @@ function analyzeRosterStrengths(roster = [], leagueContext = {}) {
   const rosterWarnings = []
   const fmt = detectFormat(scoringType)
 
-  if (fmt === FORMAT.H2H_POINTS || fmt === FORMAT.H2H_CAT) {
-    // 1. Refined Catcher check (Rule 1)
-    const catchers = byPosition['C'] || []
-    if (catchers.length > 1) {
-      // Designate the highest-VOR catcher as the "Starter"
-      const sortedCatchers = [...catchers].sort((a, b) => b.vor - a.vor)
-      const starterC = sortedCatchers[0]
-      const backups = sortedCatchers.slice(1)
+  // 1. Refined Catcher check (Rule 1)
+  const starterSlotsC = leagueContext?.roster_slots?.C || 1
+  const catchers = byPosition['C'] || []
+  
+  if (catchers.length > starterSlotsC) {
+    // Designate the top [starterSlotsC] catchers as "Starters"
+    const sortedCatchers = [...catchers].sort((a, b) => b.vor - a.vor)
+    const backups = sortedCatchers.slice(starterSlotsC)
 
-      // Backups are wasteful if they don't provide starter-level value at a secondary position
-      const wastefulCatchers = backups.filter(c => {
-        const rawPos = String(c.position || '').toUpperCase()
-        const parts = rawPos.split(/[/, ]+/).map(p => p.trim()).filter(Boolean)
-        const secondaryPositions = parts.filter(p => p !== 'C')
-        
-        if (secondaryPositions.length === 0) return true // Pure C backup is always a waste
-        
-        // If they have secondary positions, check if they are "needed" there
-        const isNeededElsewhere = secondaryPositions.some(pos => {
-          const depth = byPosition[pos] || []
-          const betterOptions = depth.filter(opt => opt.vor > c.vor)
-          const slotData = POSITIONAL_DATA[pos]
-          const starters = slotData ? slotData.starterSlots : 1
-          return betterOptions.length < starters // They are in the starting lineup for this other position
-        })
-        
-        return !isNeededElsewhere
+    // Backups are wasteful if they don't provide starter-level value at a secondary position
+    const wastefulCatchers = backups.filter(c => {
+      const rawPos = String(c.position || '').toUpperCase()
+      const parts = rawPos.split(/[/, ]+/).map(p => p.trim()).filter(Boolean)
+      const secondaryPositions = parts.filter(p => p !== 'C')
+      
+      if (secondaryPositions.length === 0) return true // Pure C backup is always a waste
+      
+      // If they have secondary positions, check if they are "needed" there
+      const isNeededElsewhere = secondaryPositions.some(pos => {
+        const depth = byPosition[pos] || []
+        const betterOptions = depth.filter(opt => opt.vor > c.vor)
+        const slotData = POSITIONAL_DATA[pos]
+        const starters = slotData ? slotData.starterSlots : 1
+        return betterOptions.length < starters
       })
+      
+      return !isNeededElsewhere
+    })
 
-      if (wastefulCatchers.length > 0) {
-        rosterWarnings.push(`RULE 1 VIOLATION: You are carrying ${catchers.length} catchers. In this format, backup catchers are zero-value bench clogs. ${wastefulCatchers.map(c => c.player_name || c.name).join(', ')} should be dropped for pitching depth.`)
-      }
-    }
-    
-    // 2. Bench balance (Rule 8) - Approximation
-    const numStartingPitchers = (byPosition['SP']?.length || 0) + (byPosition['RP']?.length || 0)
-    if (numStartingPitchers > 9) { // 7 active slots + maybe 2 bench
-      rosterWarnings.push(`RULE 8 WARNING: You have too many bench pitchers. Consider maintaining a strict 3-Bat / 1-Pitcher bench split to ensure daily coverage for off-days.`)
-    }
-
-    // 3. IL Spot Check (Rule 9)
-    const ilPlayers = roster.filter(p => p.status && String(p.status).toUpperCase().includes('IL'))
-    const ilSlots = leagueContext?.roster_slots?.IL || 0
-    if (ilSlots > 0 && ilPlayers.length < ilSlots) {
-      rosterWarnings.push(`RULE 9 WARNING: You have ${ilSlots - ilPlayers.length} empty IL slots. These are free roster spots! Stash injured players immediately.`)
+    if (wastefulCatchers.length > 0) {
+      rosterWarnings.push(`RULE 1 VIOLATION: You are carrying ${catchers.length} catchers (${starterSlotsC} starter slot${starterSlotsC > 1 ? 's' : ''}). ${wastefulCatchers.map(c => c.player_name || c.name).join(', ')} is redundant and should be dropped for pitching depth or hitting volume.`)
     }
   }
+  
+  // 2. Bench balance (Rule 8) - Approximation
+  const numStartingPitchers = (byPosition['SP']?.length || 0) + (byPosition['RP']?.length || 0)
+  if (numStartingPitchers > 9) { // 7 active slots + maybe 2 bench
+    rosterWarnings.push(`RULE 8 WARNING: You have a very pitcher-heavy bench (${numStartingPitchers} total). Consider a 3-Bat / 1-Pitcher bench split to maximize daily lineup flexibility.`)
+  }
+
+  // 3. IL Spot Check (Rule 9)
+  const ilPlayers = roster.filter(p => p.status && String(p.status).toUpperCase().includes('IL'))
+  const ilSlots = leagueContext?.roster_slots?.IL || 0
+  if (ilSlots > 0 && ilPlayers.length < ilSlots) {
+    const emptyCount = ilSlots - ilPlayers.length
+    rosterWarnings.push(`RULE 9 WARNING: You have ${emptyCount} empty IL slot${emptyCount > 1 ? 's' : ''}. Stash injured players now to get free roster value.`)
+  }
+
 
   return { byPosition, surpluses, voids, sellHigh, buyLow, vorByPlayer, rosterWarnings }
 }
