@@ -12,4 +12,9 @@ router.post('/', (req, res) => {
   res.json({ success: true });
 });
 
+router.get('/', (req, res) => {
+  const feedback = db.getAllFeedback();
+  res.json(feedback);
+});
+
 module.exports = router;

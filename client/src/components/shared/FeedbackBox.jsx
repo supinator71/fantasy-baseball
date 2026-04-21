@@ -36,9 +36,9 @@ export default function FeedbackBox() {
   }
 
   return (
-    <div className="card feedback-box">
-      <h4 style={{ margin: '0 0 12px 0', fontSize: 16 }}>📬 Feedback & Suggestions</h4>
-      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>Found a bug? Have a feature idea? Let us know anonymously.</p>
+    <div className="card feedback-box" style={{ padding: 12, marginBottom: 12, background: 'rgba(255,255,255,0.05)' }}>
+      <h4 style={{ margin: '0 0 8px 0', fontSize: 13 }}>📬 Suggestion Box</h4>
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>Found a bug or have an idea?</p>
       <form onSubmit={handleSubmit}>
         <textarea
           rows={3}
@@ -48,8 +48,8 @@ export default function FeedbackBox() {
           style={{ width: '100%', marginBottom: 12 }}
           disabled={loading}
         />
-        <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading || !text.trim()}>
-          {loading ? 'Sending...' : 'Submit Feedback'}
+        <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '6px', fontSize: 12 }} disabled={loading || !text.trim()}>
+          {loading ? '...' : 'Submit'}
         </button>
       </form>
     </div>

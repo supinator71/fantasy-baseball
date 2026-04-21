@@ -95,7 +95,7 @@ export default function TradeAnalyzer({ leagueSettings, subscription }) {
           <AiQuestionBox 
             context={`Trade analysis context: ${result}`}
             leagueKey={selectedLeague}
-            title="Cross-Examine the Analyst"
+            title="Cross-Examine"
             icon="⚖️"
             placeholder="Ask why this trade is a steal or how it affects your depth..."
             isPro={subscription?.plan === 'pro'}

@@ -148,7 +148,7 @@ export default function PitchingIntel({ leagueSettings, subscription }) {
           <AiQuestionBox 
             context={`Pitching strategy context: ${aiRec}`}
             leagueKey={selectedLeague}
-            title="Pitching Coach Q&A"
+            title="Ask the Pitching Coach"
             icon="🎯"
             placeholder="Ask about a specific pitcher or streamer..."
             isPro={subscription?.plan === 'pro'}

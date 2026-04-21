@@ -19,6 +19,8 @@ import PlayerTrends from './components/PlayerTrends/PlayerTrends'
 import UpgradePage from './components/Upgrade/Upgrade'
 import PitchingIntel from './components/PitchingIntel/PitchingIntel'
 import TrophyCase from './components/TrophyCase/TrophyCase'
+import FeedbackLogs from './components/shared/FeedbackLogs'
+import FeedbackBox from './components/shared/FeedbackBox'
 
 import './index.css'
 
@@ -130,6 +132,7 @@ export default function App() {
                 <Route path="/tradefinder" element={<TradeFinder leagueSettings={leagueSettings} />} />
                 <Route path="/gameplan"   element={<GamePlan leagueSettings={leagueSettings} />} />
                 <Route path="/album"      element={<TrophyCase />} />
+                <Route path="/feedback-logs" element={<FeedbackLogs />} />
                 <Route path="/upgrade"   element={<UpgradePage subscription={subscription} />} />
               </Routes>
             )}
@@ -159,17 +162,18 @@ function Sidebar({ authenticated, isOpen, onClose, subscription }) {
   const navItems = [
     { to: '/',            label: 'My Dashboard',             icon: '⚾' },
     { to: '/roster',      label: 'My Team',                  icon: '◈' },
-    { to: '/waiver',      label: 'Free Agents / Waiver Wire', icon: '⟳' },
-    { to: '/pitching',    label: 'Pitching Intel',           icon: '🎯' },
-    { to: '/startsit',    label: 'Who To Start',             icon: '⚡' },
-    { to: '/trade',       label: 'Trade Analyzer',           icon: '⇌' },
+    { to: '/waiver',      label: 'Ask the Scout (Waivers)', icon: '🕵️‍♂️' },
+    { to: '/pitching',    label: 'Pitching Coach Intel',           icon: '🎯' },
+    { to: '/startsit',    label: "Manager's Hot Seat (Start/Sit)",             icon: '⚡' },
+    { to: '/trade',       label: 'Cross Examine (Trade)',           icon: '⇌' },
     { to: '/standings',   label: 'Standings',                icon: '◎' },
-    { to: '/matchup',     label: 'Weekly Matchup',           icon: '⚔' },
+    { to: '/matchup',     label: 'Weekly Matchup Prediction',           icon: '⚔' },
     { to: '/audit',       label: 'Roster Checkup',           icon: '▣' },
     { to: '/tradefinder', label: 'Trade Finder',             icon: '◆' },
     { to: '/gameplan',    label: 'Weekly Game Plan',         icon: '▦' },
     { to: '/baseball101', label: 'Baseball 101',             icon: '🎓' },
     { to: '/album',       label: 'Trophy Case',              icon: '🏆' },
+    { to: '/feedback-logs', label: 'Suggestion Box Logs',             icon: '📬' },
     { to: '/upgrade',     label: 'Upgrade to Pro',           icon: '⭐' },
   ]
 
@@ -206,7 +210,8 @@ function Sidebar({ authenticated, isOpen, onClose, subscription }) {
       ))}
 
       {authenticated && (
-        <div style={{ marginTop: 'auto', paddingTop: 20, paddingBottom: 20 }}>
+        <div style={{ marginTop: 'auto', padding: '16px' }}>
+          <FeedbackBox />
           <button 
             onClick={async () => {
               try {

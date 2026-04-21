@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import LastUpdated from '../shared/LastUpdated'
 import PackDropModal from '../TrophyCase/PackDropModal'
+import AiQuestionBox from '../shared/AiQuestionBox'
 
 function ConfidenceBadge({ level }) {
   const styles = {
@@ -423,7 +424,16 @@ export default function MatchupPredictor({ leagueSettings }) {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 8 }}>
+          <AiQuestionBox 
+            context={`Matchup prediction context: ${prediction.summary} ${prediction.key_matchups} ${prediction.lineup_recommendations}`}
+            leagueKey={selectedLeague}
+            title="Cross-Examine the Prediction"
+            icon="⚖️"
+            placeholder="Ask why a certain category is at risk or how to swing a tie..."
+            isPro={true} // Forcing true for now as requested for testing
+          />
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             <button className="btn btn-primary" onClick={getPrediction} disabled={aiLoading}>
               {aiLoading ? '⟳ Re-analyzing...' : '↻ Regenerate Prediction'}
             </button>

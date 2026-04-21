@@ -215,6 +215,9 @@ const db = {
     const data = load();
     data.feedback.push({ yahoo_guid: yahooGuid || 'anonymous', text, created_at: Date.now() });
     save(data);
+  },
+  getAllFeedback() {
+    return load().feedback || [];
   }
 };
 
