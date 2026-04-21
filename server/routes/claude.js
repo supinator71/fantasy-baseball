@@ -6,6 +6,7 @@ const brain = require('../services/fantasyBrain');
 const mlbStats = require('../services/mlbStatsService');
 const { rateLimiter, getStats } = require('../middleware/rateLimiter');
 const { loadSubscription, checkAiLimit, checkQuestionAccess } = require('../middleware/subscription');
+const yahoo = require('../services/yahooService');
 
 let client = null;
 const MODEL_REGISTRY = [
@@ -626,16 +627,28 @@ Keep it concise, mathematical, and actionable. Do not add summaries at the botto
   }
 });
 
-// General question
+// General question — now with live roster injection
 router.post('/ask', rateLimiter('ask'), checkQuestionAccess, async (req, res) => {
   const { question, context, league_key } = req.body;
   const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
 
+  let rosterContext = '';
+  if (league_key) {
+    try {
+      const roster = await yahoo.getMyRoster(req, league_key);
+      const diagnosis = brain.buildRosterDiagnosis(roster?.players || [], settings);
+      rosterContext = `\n\n=== LIVE ROSTER DATA (Yahoo API) ===\n${diagnosis.promptBlock}`;
+    } catch (e) {
+      console.log('[Claude/ask] Roster injection failed:', e.message);
+    }
+  }
+
   try {
+    const model = await getWorkingModel();
     const text = await callClaude([{
       role: 'user',
-      content: `${leagueCtx}${context ? `\nAdditional context: ${context}` : ''}\n\nQuestion: ${question}`,
+      content: `${leagueCtx}${rosterContext}${context ? `\n\nPrevious Analysis Context: ${context}` : ''}\n\nQuestion: ${question}`,
     }], 1800);
     res.json({ answer: text });
   } catch (err) {
