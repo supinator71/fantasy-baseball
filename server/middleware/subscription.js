@@ -1,6 +1,6 @@
 const db = require('../services/database');
 
-const FREE_DAILY_AI_LIMIT = 100;
+const FREE_DAILY_AI_LIMIT = 3;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Subscription Middleware
