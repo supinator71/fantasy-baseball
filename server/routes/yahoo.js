@@ -57,32 +57,39 @@ router.post('/cache/clear', (req, res) => {
 })
 
 // ── League routes ──────────────────────────────────────────────────────────────
-router.get('/:leagueKey/transactions', async (req, res) => {
+router.get('/:leagueKey/transactions', requireAuth, async (req, res) => {
   try {
     const raw = await yahoo.getTransactions(req, req.params.leagueKey);
-    // Parse into a cleaner format
     const cleaned = [];
-    raw.forEach(txn => {
-      const type = txn.type;
-      const playersObj = txn.players;
-      if (!playersObj) return;
+    
+    if (Array.isArray(raw)) {
+      raw.forEach(txn => {
+        const playersObj = txn.players;
+        if (!playersObj) return;
 
-      const players = yahoo.toArray(playersObj);
-      players.forEach(p => {
-        const pData = p.player;
-        const pInfo = pData[0];
-        const pTxn = pData[1].transaction_data;
+        const players = yahoo.toArray(playersObj);
+        players.forEach(p => {
+          const pData = p.player;
+          if (!Array.isArray(pData)) return;
 
-        cleaned.push({
-          player_name: pInfo.name.full,
-          type: pTxn.type, // 'add' or 'drop'
-          team_name: pTxn.destination_team_name || pTxn.source_team_name || 'Unknown',
-          timestamp: new Date(parseInt(txn.timestamp) * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' })
+          // Yahoo's pData[0] is often an array of info objects
+          const pInfo = Array.isArray(pData[0]) ? Object.assign({}, ...pData[0]) : pData[0];
+          const pTxn = pData[1]?.transaction_data || pData[2]?.transaction_data || {};
+
+          if (pInfo && pInfo.name) {
+            cleaned.push({
+              player_name: pInfo.name.full || pInfo.name.ascii_first + ' ' + pInfo.name.ascii_last,
+              type: pTxn.type || txn.type, // Fallback to txn type
+              team_name: pTxn.destination_team_name || pTxn.source_team_name || 'Unknown',
+              timestamp: new Date(parseInt(txn.timestamp) * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' })
+            });
+          }
         });
       });
-    });
+    }
     res.json(cleaned);
   } catch (err) {
+    console.error('[Yahoo/transactions] Error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
