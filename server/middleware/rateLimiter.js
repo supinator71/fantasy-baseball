@@ -6,7 +6,7 @@
 // { ip: { count, windowStart } }
 const counters = new Map();
 
-const DAILY_LIMIT = 40;          // AI calls per IP per day
+const DAILY_LIMIT = 200;          // AI calls per IP per day
 const WINDOW_MS   = 24 * 60 * 60 * 1000; // 24 hours
 
 function getClientIp(req) {

@@ -119,11 +119,14 @@ async function callClaude(messages, maxTokens = 1800) {
     const apiCall = getClient().messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: maxTokens,
-      system: SYSTEM_PROMPT,
+      system: [
+        {
+          type: 'text',
+          text: SYSTEM_PROMPT,
+          cache_control: { type: 'ephemeral' }
+        }
+      ],
       messages: finalMessages,
-      // Automatic prompt caching — system prompt + static prefix cached for 5 min
-      // Cache reads cost 90% less than uncached input. Cache writes cost 25% more (one-time).
-      cache_control: { type: 'ephemeral' },
     });
     
     const timeoutPromise = new Promise((_, reject) =>
@@ -341,8 +344,10 @@ Use live matchups + category weakness to weight decisions.`
 
 Format: **Player** \`[VOR:XX | Stream:YY]\` 🟢 START / 🔴 SIT -> *Logic:* [reason]. Show the math.`
     }]);
+    console.log('[Claude/startsit] Raw response:', text);
     res.json({ analysis: text });
   } catch (err) {
+    console.error('[Claude/startsit] Route failed:', err.message);
     res.status(500).json({ error: err.message, analysis: 'AI unavailable — check streaming scores above.' });
   }
 });
@@ -667,7 +672,7 @@ Stats: ${JSON.stringify(my_team?.stats || [])}
 OPPONENT: ${opponent?.name}
 Stats: ${JSON.stringify(opponent?.stats || [])}
 
-Categories: ${JSON.stringify(stat_categories || ['W','SV','OUT','H','ER','BB','HBP','K','R','1B','2B','3B','HR','RBI','SB'])}
+Categories: ${JSON.stringify(stat_categories || ['R','HR','RBI','SB','AVG','W','SV','K','ERA','WHIP'])}
 Pre-computed matchup analysis: ${JSON.stringify(catAnalysis)}
 
 IMPORTANT: Write all text values in clean, conversational prose. No brackets, no code syntax. Write like a sports analyst breaking down a matchup.
@@ -684,6 +689,7 @@ Return ONLY valid JSON (no markdown):
 }`,
     }], 1500);
 
+    console.log('[Claude/matchup] Raw response:', text);
     const parsed = tryParseJSON(text);
     console.log('[Claude] /matchup/predict parsed:', parsed ? 'JSON OK' : 'FALLBACK to raw text');
     if (parsed) {
