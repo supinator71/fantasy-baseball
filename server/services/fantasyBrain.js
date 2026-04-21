@@ -967,7 +967,17 @@ function analyzeRosterStrengths(roster = [], leagueContext = {}) {
     })
 
     if (wastefulCatchers.length > 0) {
-      rosterWarnings.push(`RULE 1 VIOLATION: You are carrying ${catchers.length} catchers (${starterSlotsC} starter slot${starterSlotsC > 1 ? 's' : ''}). ${wastefulCatchers.map(c => c.player_name || c.name).join(', ')} is redundant and should be dropped for pitching depth or hitting volume.`)
+      const dropNames = wastefulCatchers.map(c => c.player_name || c.name)
+      const bestBackup = backups.length > wastefulCatchers.length 
+          ? backups.find(b => !wastefulCatchers.includes(b)) // The one we spared
+          : backups[0]; // The "least bad" of the wasteful ones
+
+      if (catchers.length > starterSlotsC + 1) {
+        // Tiered advice for 3+ catcher rosters
+        rosterWarnings.push(`RULE 1 CRITICAL: You are carrying ${catchers.length} catchers. This is a massive waste of bench depth. Even if you want a backup, keep your best one (${bestBackup.player_name || bestBackup.name}) and drop the others: ${dropNames.filter(n => n !== (bestBackup.player_name || bestBackup.name)).join(', ')}.`)
+      } else {
+        rosterWarnings.push(`RULE 1 VIOLATION: You are carrying ${catchers.length} catchers (${starterSlotsC} starter slot${starterSlotsC > 1 ? 's' : ''}). ${dropNames.join(', ')} is redundant and should be dropped for pitching depth.`)
+      }
     }
   }
   
