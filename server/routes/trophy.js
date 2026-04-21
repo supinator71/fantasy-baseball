@@ -105,10 +105,11 @@ router.post('/daily-pack', (req, res) => {
   if (!guid) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
+    const { clientDate } = req.body;
     const tc = db.getTrophyCase(guid);
     
     // Support both the legacy millisecond timestamp and the new date string format
-    const today = new Date().toISOString().slice(0, 10);
+    const today = clientDate || new Date().toISOString().slice(0, 10);
     let claimedToday = false;
     
     if (tc.last_daily_pack) {
@@ -121,12 +122,12 @@ router.post('/daily-pack', (req, res) => {
     }
     
     if (claimedToday) {
-      return res.status(400).json({ error: 'Daily pack not ready yet. Resets at midnight UTC.' });
+      return res.status(400).json({ error: 'Daily pack not ready yet. Resets at midnight.' });
     }
 
     const cardId = getRandomCardId();
     db.awardCard(guid, cardId, 'Daily Pack Drop');
-    db.updateDailyPackTimer(guid);
+    db.updateDailyPackTimer(guid, today);
 
     const meta = CARD_COLLECTION.find(c => c.id === cardId);
     res.json({ success: true, awarded: meta });

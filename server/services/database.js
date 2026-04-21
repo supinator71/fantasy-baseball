@@ -280,15 +280,15 @@ const db = {
     return true;
   },
 
-  updateDailyPackTimer(yahooGuid) {
+  updateDailyPackTimer(yahooGuid, dateStr) {
     if (!yahooGuid) return;
     const data = load();
     if (!data.trophy_cases) data.trophy_cases = {};
     let tc = data.trophy_cases[yahooGuid];
     if (!tc) tc = { unlocked_cards: [], last_daily_pack: null };
     
-    // Save the UTC midnight slice (YYYY-MM-DD)
-    tc.last_daily_pack = new Date().toISOString().slice(0, 10);
+    // Save the provided date string (usually local YYYY-MM-DD) or fallback to UTC
+    tc.last_daily_pack = dateStr || new Date().toISOString().slice(0, 10);
     
     data.trophy_cases[yahooGuid] = tc;
     save(data);

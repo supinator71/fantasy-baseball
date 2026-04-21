@@ -563,7 +563,7 @@ Use the 2025 stats intelligence AND the ROSTER DIAGNOSIS above to output a Pitch
 CRITICAL INSTRUCTIONS:
 1. ONLY evaluate and discuss starting pitchers and relievers. NEVER discuss hitters.
 2. If the user owns a [🏆 2-STARTS THIS WEEK] or [🔮 2-STARTS NEXT WEEK] pitcher, explicitly tell them DO NOT DROP.
-3. Recommend EXACTLY the top 2 pitching pickups to make based on priority score, and explicitly dictate WHO TO DROP from the current roster (a weak pitcher or excess bench hitter).
+3. Recommend EXACTLY the top 2 pitching pickups to make based on priority score, and explicitly dictate WHO TO DROP from the current roster (a weak pitcher or excess bench hitter). You MUST only recommend dropping players that are explicitly listed in the ROSTER section of the diagnosis above.
 
 Format your recommendations using strictly formatted markdown lists with bolded metric badges.
 Example format for your answers:

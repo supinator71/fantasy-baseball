@@ -1484,14 +1484,9 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}, sharedMatchup = null,
     promptBlock += `🟡 DTD/QUESTIONABLE (flag as risk, have backup plan): ${dtdPlayers.map(p => `${p.player_name || p.name} [${p.status}]`).join(', ')}\n`;
   }
 
-  // Active roster — top 8 + bottom 3 to save tokens on large rosters
-  const vorTop = vorByPlayer.slice(0, 8);
-  const vorBottom = vorByPlayer.length > 11 ? vorByPlayer.slice(-3) : [];
-  const vorMiddleCount = Math.max(0, vorByPlayer.length - 11);
+  // Active roster — list ALL players to ensure Claude has a complete view of the team
   promptBlock += `\nROSTER (${activeRoster.length} active, by VOR):\n`;
-  promptBlock += vorTop.map(p => `  ${p.name} (${p.position}) VOR:${p.vor}`).join('\n');
-  if (vorMiddleCount > 0) promptBlock += `\n  ...${vorMiddleCount} middle-tier players omitted...`;
-  if (vorBottom.length > 0) promptBlock += `\n` + vorBottom.map(p => `  ${p.name} (${p.position}) VOR:${p.vor}`).join('\n');
+  promptBlock += vorByPlayer.map(p => `  ${p.name} (${p.position}) VOR:${p.vor}`).join('\n');
 
   // Positional needs — compact
   promptBlock += `\nVoids: ${rosterAnalysis.voids.join(', ') || 'None'}`;

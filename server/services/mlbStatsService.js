@@ -382,48 +382,64 @@ async function getTwoStartPitchers() {
       }).then(res => res.data).catch(() => ({ dates: [] }))
     ]);
 
-    function processSchedule(data) {
+    function processSchedule(data, minDateStr = null) {
       const dates = data.dates || [];
+      const pitcherStarts = {}; // name -> count of starts >= minDateStr
       const teamGameIndex = {}; 
+      const teamGamesRemaining = {};
       
       dates.forEach(d => {
+        const isFutureOrToday = !minDateStr || d.date >= minDateStr;
         const games = d.games || [];
         games.forEach(g => {
           const awayId = g.teams?.away?.team?.id;
           const homeId = g.teams?.home?.team?.id;
+          const awayP = g.teams.away.probablePitcher?.fullName;
+          const homeP = g.teams.home.probablePitcher?.fullName;
           
           if (awayId) {
              if(!teamGameIndex[awayId]) teamGameIndex[awayId] = [];
-             teamGameIndex[awayId].push({ pitcher: g.teams.away.probablePitcher?.fullName });
+             teamGameIndex[awayId].push({ pitcher: awayP, date: d.date });
+             if (isFutureOrToday) teamGamesRemaining[awayId] = (teamGamesRemaining[awayId] || 0) + 1;
+             if (awayP && isFutureOrToday) {
+               const name = awayP.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+               pitcherStarts[name] = (pitcherStarts[name] || 0) + 1;
+             }
           }
           if (homeId) {
              if(!teamGameIndex[homeId]) teamGameIndex[homeId] = [];
-             teamGameIndex[homeId].push({ pitcher: g.teams.home.probablePitcher?.fullName });
+             teamGameIndex[homeId].push({ pitcher: homeP, date: d.date });
+             if (isFutureOrToday) teamGamesRemaining[homeId] = (teamGamesRemaining[homeId] || 0) + 1;
+             if (homeP && isFutureOrToday) {
+               const name = homeP.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+               pitcherStarts[name] = (pitcherStarts[name] || 0) + 1;
+             }
           }
         });
       });
 
-      const twoStartPitchers = [];
+      const confirmedTwoStarters = Object.keys(pitcherStarts).filter(name => pitcherStarts[name] >= 2);
+      const twoStartPitchers = [...confirmedTwoStarters];
       const nextWeekLinearProjectionList = [];
 
       for (const teamId in teamGameIndex) {
          const games = teamGameIndex[teamId];
-         const totalGames = games.length;
+         const remaining = teamGamesRemaining[teamId] || 0;
+         const futureGames = games.filter(g => !minDateStr || g.date >= minDateStr);
          
-         // Current Week Logic
-         if (totalGames >= 6 && games[0]?.pitcher) {
-             twoStartPitchers.push(games[0].pitcher.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+         // Current Week Logic: Projected two-starters based on remaining games
+         if (remaining >= 6 && futureGames[0]?.pitcher) {
+             twoStartPitchers.push(futureGames[0].pitcher.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
          }
-         if (totalGames >= 7 && games[1]?.pitcher) {
-             twoStartPitchers.push(games[1].pitcher.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+         if (remaining >= 7 && futureGames[1]?.pitcher) {
+             twoStartPitchers.push(futureGames[1].pitcher.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
          }
-         if (totalGames >= 8 && games[2]?.pitcher) {
-             twoStartPitchers.push(games[2].pitcher.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+         if (remaining >= 8 && futureGames[2]?.pitcher) {
+             twoStartPitchers.push(futureGames[2].pitcher.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
          }
 
-         // Next Week Projection Logic (based on standard 5-man rotation continuing from this week)
-         // If a team plays 6 games, their NEXT Game 1 is pitched by the guy who pitched Game 2 (index 1) of THIS week.
-         // Wait: index math: ( totalGames % 5 )
+         // Next Week Projection Logic (always uses the FULL week schedule to find the tail of the rotation)
+         const totalGames = games.length;
          const nextWeekGame1Index = totalGames % 5;
          const nextWeekGame2Index = (totalGames + 1) % 5;
          
@@ -436,7 +452,8 @@ async function getTwoStartPitchers() {
       return { twoStartPitchers: [...new Set(twoStartPitchers)], linearProjections: nextWeekLinearProjectionList, teamGameIndex };
     }
 
-    const cw = processSchedule(currentData);
+    const todayStr = now.toISOString().split('T')[0];
+    const cw = processSchedule(currentData, todayStr);
     const nw = processSchedule(nextData);
 
     const currentWeekFinal = cw.twoStartPitchers;

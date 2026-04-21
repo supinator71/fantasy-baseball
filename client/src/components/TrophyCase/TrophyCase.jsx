@@ -28,22 +28,6 @@ export default function TrophyCase() {
     }
   }
 
-  async function claimDailyPack() {
-    try {
-      setLoading(true);
-      const { data } = await axios.post('/api/trophy/daily-pack');
-      
-      // Trigger aggressive animation sequence
-      setAwardedCard(data.awarded);
-      setPackOpening(true);
-      
-      // Refresh album in background
-      fetchAlbum();
-    } catch (e) {
-      setLoading(false);
-      toast.error(e.response?.data?.error || 'Failed to claim pack');
-    }
-  }
 
   function renderCard(cardDef) {
     // Check if user has unlocked this specific card id
@@ -88,12 +72,13 @@ export default function TrophyCase() {
 
   const { all_cards, unlocked_cards, last_daily_pack } = collection || {};
   
-  // Calculate if daily pack is available (Resets at midnight UTC)
+  // Calculate if daily pack is available (Resets at local midnight)
   let canClaimDaily = true;
+  const localToday = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
+  
   if (last_daily_pack) {
-    const today = new Date().toISOString().slice(0, 10);
     if (typeof last_daily_pack === 'string') {
-      canClaimDaily = (last_daily_pack !== today);
+      canClaimDaily = (last_daily_pack !== localToday);
     } else {
       canClaimDaily = (Date.now() - last_daily_pack > 20 * 60 * 60 * 1000);
     }
@@ -102,6 +87,34 @@ export default function TrophyCase() {
   // Only count unlocked cards that still exist in the master collection library
   const validUnlockedIds = unlocked_cards?.filter(c => all_cards?.some(card => card.id === c.id)).map(c => c.id) || [];
   const uniqueUnlocked = new Set(validUnlockedIds).size;
+
+  // Sorting logic: Show collected cards first on mobile/tablet, or just as a better default
+  // We use [...all_cards] to avoid mutating the original array if it's from state
+  const sortedCards = [...(all_cards || [])].sort((a, b) => {
+    const aUnlocked = validUnlockedIds.includes(a.id);
+    const bUnlocked = validUnlockedIds.includes(b.id);
+    if (aUnlocked && !bUnlocked) return -1;
+    if (!aUnlocked && bUnlocked) return 1;
+    return 0; // maintain original order within categories
+  });
+
+  async function claimDailyPack() {
+    try {
+      setLoading(true);
+      const { data } = await axios.post('/api/trophy/daily-pack', { clientDate: localToday });
+      
+      // Trigger aggressive animation sequence
+      setAwardedCard(data.awarded);
+      setPackOpening(true);
+      
+      // Refresh album in background
+      fetchAlbum();
+    } catch (e) {
+      setLoading(true);
+      setLoading(false);
+      toast.error(e.response?.data?.error || 'Failed to claim pack');
+    }
+  }
 
   return (
     <div className="trophy-case-container">
@@ -134,7 +147,7 @@ export default function TrophyCase() {
       </div>
 
       <div className="album-grid">
-        {all_cards?.map(card => renderCard(card))}
+        {sortedCards.map(card => renderCard(card))}
       </div>
     </div>
   );
