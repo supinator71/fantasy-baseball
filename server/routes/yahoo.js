@@ -57,6 +57,36 @@ router.post('/cache/clear', (req, res) => {
 })
 
 // ── League routes ──────────────────────────────────────────────────────────────
+router.get('/:leagueKey/transactions', async (req, res) => {
+  try {
+    const raw = await yahoo.getTransactions(req, req.params.leagueKey);
+    // Parse into a cleaner format
+    const cleaned = [];
+    raw.forEach(txn => {
+      const type = txn.type;
+      const playersObj = txn.players;
+      if (!playersObj) return;
+
+      const players = yahoo.toArray(playersObj);
+      players.forEach(p => {
+        const pData = p.player;
+        const pInfo = pData[0];
+        const pTxn = pData[1].transaction_data;
+
+        cleaned.push({
+          player_name: pInfo.name.full,
+          type: pTxn.type, // 'add' or 'drop'
+          team_name: pTxn.destination_team_name || pTxn.source_team_name || 'Unknown',
+          timestamp: new Date(parseInt(txn.timestamp) * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' })
+        });
+      });
+    });
+    res.json(cleaned);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/leagues', requireAuth, async (req, res) => {
   const force = req.query.force === 'true'
   try {

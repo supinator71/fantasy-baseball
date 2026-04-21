@@ -97,6 +97,7 @@ export default function App() {
         <Sidebar
           authenticated={authStatus.authenticated}
           isOpen={sidebarOpen}
+          subscription={subscription}
           onClose={() => setSidebarOpen(false)}
         />
 
@@ -115,7 +116,7 @@ export default function App() {
               <LoginPage />
             ) : (
               <Routes>
-                <Route path="/"          element={<Dashboard leagueSettings={leagueSettings} />} />
+                <Route path="/"          element={<Dashboard leagueSettings={leagueSettings} subscription={subscription} />} />
                 <Route path="/roster"    element={<RosterManager leagueSettings={leagueSettings} />} />
                 <Route path="/waiver"    element={<WaiverWire leagueSettings={leagueSettings} subscription={subscription} />} />
                 <Route path="/pitching"  element={<PitchingIntel leagueSettings={leagueSettings} subscription={subscription} />} />
@@ -133,13 +134,28 @@ export default function App() {
               </Routes>
             )}
           </main>
+          <footer style={{ 
+            padding: '40px 20px', 
+            textAlign: 'center', 
+            borderTop: '1px solid var(--border)', 
+            marginTop: 'auto',
+            color: 'var(--text-muted)',
+            fontSize: 12
+          }}>
+            <div style={{ marginBottom: 8, fontWeight: 700, letterSpacing: '0.05em' }}>
+              © {new Date().getFullYear()} GOIN' YARD HQ. ALL RIGHTS RESERVED.
+            </div>
+            <div style={{ opacity: 0.6 }}>
+              Built for Yahoo Fantasy Baseball competitors. Not affiliated with MLB or Yahoo Inc.
+            </div>
+          </footer>
         </div>
       </div>
     </BrowserRouter>
   )
 }
 
-function Sidebar({ authenticated, isOpen, onClose }) {
+function Sidebar({ authenticated, isOpen, onClose, subscription }) {
   const navItems = [
     { to: '/',            label: 'My Dashboard',             icon: '⚾' },
     { to: '/roster',      label: 'My Team',                  icon: '◈' },
@@ -160,7 +176,14 @@ function Sidebar({ authenticated, isOpen, onClose }) {
   return (
     <nav className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div style={{ padding: '0 16px 20px', borderBottom: '1px solid var(--border)', marginBottom: 8 }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em', textShadow: '0 2px 10px rgba(0,0,0,0.5)', fontFamily: 'var(--font-heading)' }}>⚾ Goin' Yard <span style={{ color: 'var(--primary)' }}>HQ</span></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em', textShadow: '0 2px 10px rgba(0,0,0,0.5)', fontFamily: 'var(--font-heading)' }}>
+            ⚾ Goin' Yard <span style={{ color: 'var(--primary)' }}>HQ</span>
+          </div>
+          {authenticated && subscription?.plan === 'pro' && (
+            <span className="badge badge-pro" style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'linear-gradient(135deg, #d4af37 0%, #aa8b2e 100%)', color: 'black', fontWeight: 800, textTransform: 'uppercase' }}>PRO</span>
+          )}
+        </div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Fantasy Intelligence</div>
       </div>
 

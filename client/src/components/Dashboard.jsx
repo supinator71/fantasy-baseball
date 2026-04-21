@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import PlayerTrends from './PlayerTrends/PlayerTrends'
 import LastUpdated from './shared/LastUpdated'
+import LeagueIntelligence from './shared/LeagueIntelligence'
+import FeedbackBox from './shared/FeedbackBox'
 
-export default function Dashboard({ leagueSettings }) {
+export default function Dashboard({ leagueSettings, subscription }) {
   const [leagues, setLeagues] = useState([])
   const [loading, setLoading] = useState(true)
   const [fromCache, setFromCache] = useState(false)
@@ -165,6 +167,11 @@ export default function Dashboard({ leagueSettings }) {
             ))}
           </div>
         )}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, marginTop: 24 }}>
+        <LeagueIntelligence leagueKey={selectedLeague} isPro={subscription?.plan === 'pro'} />
+        <FeedbackBox />
       </div>
 
       {selectedLeague && <PlayerTrends selectedLeague={selectedLeague} />}

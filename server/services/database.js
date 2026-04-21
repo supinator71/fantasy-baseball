@@ -58,16 +58,23 @@ const DEFAULT_DATA = {
   user_profiles: {},     // map: { [yahoo_guid]: { name, email, created_at } }
   trophy_cases: {},      // map: { [yahoo_guid]: { unlocked_cards: [{ id, unlocked_at, reason }] } }
   ai_usage: {},           // map: { [yahoo_guid]: { count, date } }
-  leagues_used: {}        // map: { [yahoo_guid]: [league_key1, league_key2] }
+  leagues_used: {},       // map: { [yahoo_guid]: [league_key1, league_key2] }
+  feedback: []            // [{ yahoo_guid, text, created_at }]
 };
 
 function load() {
   try {
     if (fs.existsSync(DB_FILE)) {
       const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+      if (!data.tokens) data.tokens = {};
+      if (!data.league_settings) data.league_settings = {};
+      if (!data.draft_board) data.draft_board = [];
+      if (!data.subscriptions) data.subscriptions = {};
+      if (!data.user_profiles) data.user_profiles = {};
       if (!data.trophy_cases) data.trophy_cases = {};
       if (!data.ai_usage) data.ai_usage = {};
       if (!data.leagues_used) data.leagues_used = {};
+      if (!data.feedback) data.feedback = [];
       return data;
     }
   } catch {}
@@ -78,17 +85,12 @@ function save(data) {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-// Simple synchronous DB interface mimicking SQLite prepare/run/get/all
 const db = {
   prepare(query) {
     return {
       run(...args) {
         const data = load();
-        // League settings — stored per league_key
         if (query.includes('INSERT OR REPLACE INTO league_settings')) {
-          if (!data.league_settings || typeof data.league_settings !== 'object' || Array.isArray(data.league_settings)) {
-            data.league_settings = {};
-          }
           const leagueKey = args[0];
           data.league_settings[leagueKey] = {
             league_key: args[0], league_name: args[1], num_teams: args[2],
@@ -96,12 +98,10 @@ const db = {
             roster_slots: args[6], stat_categories: args[7], updated_at: args[8]
           };
           save(data);
-        }
-        // Draft board
-        else if (query.includes('INSERT OR IGNORE INTO draft_board')) {
+        } else if (query.includes('INSERT OR IGNORE INTO draft_board')) {
           const exists = data.draft_board.find(p => p.player_key === args[0]);
           if (!exists) {
-            data.draft_board.push({ player_key: args[0], player_name: args[1], position: args[2], team: args[3], adp: args[4], drafted: 0, drafted_by: null, draft_round: null, draft_pick: null });
+            data.draft_board.push({ player_key: args[0], player_name: args[1], position: args[2], team: args[3], adp: args[4], drafted: 0 });
           }
           save(data);
         } else if (query.includes('UPDATE draft_board SET drafted = 1')) {
@@ -110,7 +110,7 @@ const db = {
           save(data);
         } else if (query.includes('UPDATE draft_board SET drafted = 0')) {
           const p = data.draft_board.find(p => p.player_key === args[0]);
-          if (p) { p.drafted = 0; p.drafted_by = null; p.draft_round = null; p.draft_pick = null; }
+          if (p) { p.drafted = 0; p.drafted_by = null; }
           save(data);
         } else if (query.includes('DELETE FROM draft_board')) {
           data.draft_board = [];
@@ -120,201 +120,101 @@ const db = {
       get(...args) {
         const data = load();
         if (query.includes('FROM league_settings')) {
-          // Support lookup by league_key arg, or fall back to most recently updated
-          const map = data.league_settings;
-          if (!map || typeof map !== 'object' || Array.isArray(map)) return null;
           const leagueKey = args[0];
-          if (leagueKey && map[leagueKey]) return map[leagueKey];
-          // Fallback: return the most recently updated entry
-          const entries = Object.values(map);
-          if (!entries.length) return null;
-          return entries.sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0))[0];
+          return data.league_settings[leagueKey] || Object.values(data.league_settings).sort((a,b) => b.updated_at - a.updated_at)[0] || null;
         }
-        if (query.includes('COUNT(*) as count FROM draft_board WHERE drafted = 1')) return { count: data.draft_board.filter(p => p.drafted).length };
-        if (query.includes('COUNT(*) as count FROM draft_board WHERE drafted_by')) return { count: data.draft_board.filter(p => p.drafted_by === 'me').length };
-        if (query.includes('COUNT(*) as count FROM draft_board')) return { count: data.draft_board.length };
+        if (query.includes('COUNT(*) as count FROM draft_board')) {
+          return { count: data.draft_board.length };
+        }
         return null;
       },
       all(...args) {
         const data = load();
         if (query.includes('FROM draft_board WHERE drafted = 0')) {
-          let results = data.draft_board.filter(p => !p.drafted);
-          if (query.includes('position LIKE')) {
-            const match = query.match(/position LIKE '%(.+?)%'/);
-            if (match) results = results.filter(p => p.position && p.position.includes(match[1]));
-          }
-          return results.sort((a, b) => (a.adp || 0) - (b.adp || 0));
-        }
-        if (query.includes("drafted_by = 'me'")) {
-          return data.draft_board.filter(p => p.drafted_by === 'me').sort((a, b) => (a.draft_pick || 0) - (b.draft_pick || 0));
-        }
-        if (query.includes('FROM draft_board')) {
-          return data.draft_board.sort((a, b) => (a.adp || 0) - (b.adp || 0));
+          return data.draft_board.filter(p => !p.drafted).sort((a,b) => a.adp - b.adp);
         }
         return [];
       }
     };
   },
-  transaction(fn) {
-    return function(...args) {
-      return fn(...args);
-    };
-  },
+  transaction(fn) { return fn; },
   exec() {},
 
-  // ── Subscription helpers ─────────────────────────────────────────────
   async getAccessToken(req) {
     const guid = req?.session?.yahoo_guid;
-    if (!guid) throw new Error('Not authenticated (missing session guid)');
-    
+    if (!guid) throw new Error('Not authenticated');
     const row = db.getToken(guid);
-    if (!row) throw new Error('Not authenticated with Yahoo');
-
-    // Auto-refresh if naturally expired
-    if (Date.now() > row.expires_at - 60000) {
-      console.log('[Yahoo OAuth] Token naturally expired, auto-refreshing...');
-      return await forceRefreshToken(req, row.refresh_token);
-    }
+    if (!row) throw new Error('No token found');
+    if (Date.now() > row.expires_at - 60000) return await forceRefreshToken(req, row.refresh_token);
     return row.access_token;
   },
-
-  getToken(yahooGuid) {
-    if (!yahooGuid) return null;
-    const data = load();
-    return data.tokens ? data.tokens[yahooGuid] : null;
-  },
-
+  getToken(yahooGuid) { return load().tokens[yahooGuid] || null; },
   setToken(yahooGuid, tokenData) {
-    if (!yahooGuid) return;
     const data = load();
-    if (!data.tokens) data.tokens = {};
     data.tokens[yahooGuid] = tokenData;
     save(data);
   },
-
   deleteToken(yahooGuid) {
-    if (!yahooGuid) return;
     const data = load();
-    if (data.tokens && data.tokens[yahooGuid]) {
-      delete data.tokens[yahooGuid];
-      save(data);
-    }
+    delete data.tokens[yahooGuid];
+    save(data);
   },
-
-  getSubscription(yahooGuid) {
-    const data = load();
-    if (!data.subscriptions) data.subscriptions = {};
-    return data.subscriptions[yahooGuid] || null;
-  },
-
+  getSubscription(yahooGuid) { return load().subscriptions[yahooGuid] || null; },
   setSubscription(yahooGuid, sub) {
     const data = load();
-    if (!data.subscriptions) data.subscriptions = {};
     data.subscriptions[yahooGuid] = { ...sub, updated_at: Date.now() };
     save(data);
   },
-
   setUserProfile(yahooGuid, profile) {
     const data = load();
-    if (!data.user_profiles) data.user_profiles = {};
     data.user_profiles[yahooGuid] = { ...profile, updated_at: Date.now() };
     save(data);
   },
-
-  getUserProfile(yahooGuid) {
-    const data = load();
-    return data.user_profiles?.[yahooGuid] || null;
-  },
-
-  // AI usage tracking for free tier (3 calls/day)
+  getUserProfile(yahooGuid) { return load().user_profiles[yahooGuid] || null; },
   getAiUsage(yahooGuid) {
     const data = load();
-    if (!data.ai_usage) data.ai_usage = {};
-    const usage = data.ai_usage[yahooGuid];
-    if (!usage) return { count: 0, date: null };
-    // Reset if it's a new day
     const today = new Date().toISOString().slice(0, 10);
-    if (usage.date !== today) return { count: 0, date: today };
+    const usage = data.ai_usage[yahooGuid];
+    if (!usage || usage.date !== today) return { count: 0, date: today };
     return usage;
   },
-
   incrementAiUsage(yahooGuid) {
     const data = load();
-    if (!data.ai_usage) data.ai_usage = {};
     const today = new Date().toISOString().slice(0, 10);
     const current = data.ai_usage[yahooGuid];
-    if (!current || current.date !== today) {
-      data.ai_usage[yahooGuid] = { count: 1, date: today };
-    } else {
-      data.ai_usage[yahooGuid].count++;
-    }
+    if (!current || current.date !== today) data.ai_usage[yahooGuid] = { count: 1, date: today };
+    else data.ai_usage[yahooGuid].count++;
     save(data);
-    return data.ai_usage[yahooGuid];
   },
-
-  // ── Gamification / Trophy Case ───────────────────────────────────────
-  getTrophyCase(yahooGuid) {
-    if (!yahooGuid) return { unlocked_cards: [], last_daily_pack: null };
-    const data = load();
-    if (!data.trophy_cases) data.trophy_cases = {};
-    const tc = data.trophy_cases[yahooGuid];
-    return tc || { unlocked_cards: [], last_daily_pack: null };
-  },
-
+  getTrophyCase(yahooGuid) { return load().trophy_cases[yahooGuid] || { unlocked_cards: [], last_daily_pack: null }; },
   awardCard(yahooGuid, cardId, reason) {
-    if (!yahooGuid) return false;
     const data = load();
-    if (!data.trophy_cases) data.trophy_cases = {};
-    
-    let tc = data.trophy_cases[yahooGuid];
-    if (!tc) tc = { unlocked_cards: [], last_daily_pack: null };
-    
-    // Check if already unlocked to prevent duplicates of unique cards, though duplicate trading cards is a real thing. 
-    // We will allow duplicates because pulling dupes is part of card collecting!
-    tc.unlocked_cards.push({
-      id: cardId,
-      unlocked_at: Date.now(),
-      reason: reason || 'Random Drop'
-    });
-    
+    let tc = data.trophy_cases[yahooGuid] || { unlocked_cards: [], last_daily_pack: null };
+    tc.unlocked_cards.push({ id: cardId, unlocked_at: Date.now(), reason });
     data.trophy_cases[yahooGuid] = tc;
     save(data);
-    return true;
   },
-
   updateDailyPackTimer(yahooGuid, dateStr) {
-    if (!yahooGuid) return;
     const data = load();
-    if (!data.trophy_cases) data.trophy_cases = {};
-    let tc = data.trophy_cases[yahooGuid];
-    if (!tc) tc = { unlocked_cards: [], last_daily_pack: null };
-    
-    // Save the provided date string (usually local YYYY-MM-DD) or fallback to UTC
+    let tc = data.trophy_cases[yahooGuid] || { unlocked_cards: [], last_daily_pack: null };
     tc.last_daily_pack = dateStr || new Date().toISOString().slice(0, 10);
-    
     data.trophy_cases[yahooGuid] = tc;
     save(data);
   },
-
-  // ── League Tracking ──────────────────────────────────────────────────
-  getLeaguesUsed(yahooGuid) {
-    if (!yahooGuid) return [];
-    const data = load();
-    if (!data.leagues_used) data.leagues_used = {};
-    return data.leagues_used[yahooGuid] || [];
-  },
-
+  getLeaguesUsed(yahooGuid) { return load().leagues_used[yahooGuid] || []; },
   trackLeagueUse(yahooGuid, leagueKey) {
-    if (!yahooGuid || !leagueKey) return;
     const data = load();
-    if (!data.leagues_used) data.leagues_used = {};
-    
     let used = data.leagues_used[yahooGuid] || [];
     if (!used.includes(leagueKey)) {
       used.push(leagueKey);
       data.leagues_used[yahooGuid] = used;
       save(data);
     }
+  },
+  addFeedback(yahooGuid, text) {
+    const data = load();
+    data.feedback.push({ yahoo_guid: yahooGuid || 'anonymous', text, created_at: Date.now() });
+    save(data);
   }
 };
 

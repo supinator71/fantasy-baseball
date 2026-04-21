@@ -12,6 +12,7 @@ const claudeRoutes = require('./routes/claude');
 const draftRoutes = require('./routes/draft');
 const mlbStatsRoutes = require('./routes/mlbStats');
 const stripeRoutes = require('./routes/stripe');
+const feedbackRoutes = require('./routes/feedback');
 const { checkAiLimit } = require('./middleware/subscription');
 
 const app = express();
@@ -67,6 +68,7 @@ app.use('/api/draft', draftRoutes);
 app.use('/api/mlb', mlbStatsRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/trophy', trophyRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Serve React frontend in production
 if (process.env.NODE_ENV === 'production') {
