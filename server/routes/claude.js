@@ -8,12 +8,41 @@ const { rateLimiter, getStats } = require('../middleware/rateLimiter');
 const { loadSubscription, checkAiLimit, checkQuestionAccess } = require('../middleware/subscription');
 
 let client = null;
+const MODEL_REGISTRY = [
+  'claude-haiku-4-5',
+  'claude-4-5-haiku',
+  'claude-3-5-haiku-latest',
+  'claude-3-5-sonnet-latest'
+];
+let cachedActiveModel = null;
+
 function getClient() {
   if (!client) client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   return client;
 }
 
-// Health check — tests the Claude API key
+async function getWorkingModel() {
+  if (cachedActiveModel) return cachedActiveModel;
+  
+  console.log('[Claude] Finding working model from registry...');
+  for (const model of MODEL_REGISTRY) {
+    try {
+      await getClient().messages.create({
+        model,
+        max_tokens: 1,
+        messages: [{ role: 'user', content: 'ping' }]
+      });
+      console.log(`[Claude] Model confirmed: ${model}`);
+      cachedActiveModel = model;
+      return model;
+    } catch (err) {
+      console.warn(`[Claude] Model ${model} failed: ${err.message}`);
+    }
+  }
+  return MODEL_REGISTRY[0]; // Fallback to primary if all fail
+}
+
+// Health check — tests the Claude API key and model registry
 router.get('/health', async (req, res) => {
   const keySet = !!process.env.ANTHROPIC_API_KEY;
   const keyPrefix = process.env.ANTHROPIC_API_KEY?.slice(0, 10) || 'NOT SET';
@@ -23,12 +52,13 @@ router.get('/health', async (req, res) => {
   }
   
   try {
+    const model = await getWorkingModel();
     const msg = await getClient().messages.create({
-      model: 'claude-4-5-haiku-20251015',
+      model,
       max_tokens: 10,
       messages: [{ role: 'user', content: 'Say "ok"' }],
     });
-    res.json({ status: 'ok', keyPrefix, model: 'claude-4-5-haiku-20251015', response: msg.content[0].text });
+    res.json({ status: 'ok', keyPrefix, model, response: msg.content[0].text });
   } catch (err) {
     res.json({ 
       status: 'error', 
@@ -116,17 +146,18 @@ async function callClaude(messages, maxTokens = 1800) {
       ? [...messages, { role: 'assistant', content: '{' }] 
       : messages;
 
-    const apiCall = getClient().messages.create({
-      model: 'claude-4-5-haiku-20251015',
-      max_tokens: maxTokens,
-      system: [
-        {
-          type: 'text',
-          text: SYSTEM_PROMPT
-        }
-      ],
-      messages: finalMessages,
-    });
+     const model = await getWorkingModel();
+     const apiCall = getClient().messages.create({
+       model,
+       max_tokens: maxTokens,
+       system: [
+         {
+           type: 'text',
+           text: SYSTEM_PROMPT
+         }
+       ],
+       messages: finalMessages,
+     });
     
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error(`Claude API timed out after ${timeoutMs / 1000}s`)), timeoutMs)
