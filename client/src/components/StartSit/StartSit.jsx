@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import AiQuestionBox from '../shared/AiQuestionBox'
 
 export default function StartSit({ leagueSettings }) {
   const [leagues, setLeagues] = useState([])
@@ -116,6 +117,14 @@ export default function StartSit({ leagueSettings }) {
         <div className="card">
           <h3 style={{ color: '#007a7a', marginBottom: 12 }}>AI Analysis</h3>
           <div className="ai-response">{result}</div>
+          
+          <AiQuestionBox 
+            context={`Start/Sit optimization context: ${result}`}
+            leagueKey={selectedLeague}
+            title="Manager's Hot Seat"
+            icon="⚡"
+            placeholder="Ask about a specific matchup or second-guess a benching..."
+          />
         </div>
       )}
     </div>

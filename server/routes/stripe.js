@@ -21,10 +21,10 @@ function getStripe() {
 // Season pricing — pro-rated based on month
 function getSeasonPrice() {
   const month = new Date().getMonth(); // 0=Jan, 3=Apr, etc.
-  if (month <= 3) return 1000;   // $10 — March/April (full season)
-  if (month <= 5) return 800;    // $8 — May/June
-  if (month <= 6) return 600;    // $6 — July
-  return 400;                    // $4 — Aug/Sept
+  if (month <= 3) return 1500;   // $15 — March/April (full season)
+  if (month <= 5) return 1200;   // $12 — May/June
+  if (month <= 6) return 900;    // $9 — July
+  return 500;                    // $5 — Aug/Sept
 }
 
 function getSeasonPriceLabel() {

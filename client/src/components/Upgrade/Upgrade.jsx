@@ -52,7 +52,7 @@ export default function UpgradePage({ subscription, onUpgradeComplete }) {
         <div className={`pricing-card pro ${isPro ? 'current' : 'recommended'}`}>
           {!isPro && <div className="pricing-recommended">⭐ BEST VALUE</div>}
           <div className="pricing-badge pro">Pro Season Pass</div>
-          <div className="pricing-price">{pricing?.season_pass?.label || '$10'}</div>
+          <div className="pricing-price">{pricing?.season_pass?.label || '$15'}</div>
           <div className="pricing-period">one-time • through Sept 2026</div>
           <ul className="pricing-features">
             <li>✅ <strong>2 leagues</strong> included</li>
@@ -69,7 +69,7 @@ export default function UpgradePage({ subscription, onUpgradeComplete }) {
               onClick={() => handleCheckout('season_pass')}
               disabled={loading}
             >
-              {loading ? '⏳ Redirecting...' : `Get Season Pass — ${pricing?.season_pass?.label || '$10'}`}
+              {loading ? '⏳ Redirecting...' : `Get Season Pass — ${pricing?.season_pass?.label || '$15'}`}
             </button>
           )}
         </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import AiQuestionBox from '../shared/AiQuestionBox'
 
 export default function TradeAnalyzer({ leagueSettings }) {
   const [leagues, setLeagues] = useState([])
@@ -90,6 +91,14 @@ export default function TradeAnalyzer({ leagueSettings }) {
             <h3 style={{ color: '#00a86b', margin: 0 }}>Trade Analysis</h3>
           </div>
           <div className="ai-response">{result}</div>
+          
+          <AiQuestionBox 
+            context={`Trade analysis context: ${result}`}
+            leagueKey={selectedLeague}
+            title="Cross-Examine the Analyst"
+            icon="⚖️"
+            placeholder="Ask why this trade is a steal or how it affects your depth..."
+          />
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import AiQuestionBox from '../shared/AiQuestionBox'
 
 export default function PitchingIntel({ leagueSettings }) {
   const [availablePitchers, setAvailablePitchers] = useState([])
@@ -143,6 +144,14 @@ export default function PitchingIntel({ leagueSettings }) {
             <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setAiRec('')}>Dismiss</button>
           </div>
           <div className="ai-response" style={{ fontSize: 15, lineHeight: 1.6 }}>{aiRec}</div>
+          
+          <AiQuestionBox 
+            context={`Pitching strategy context: ${aiRec}`}
+            leagueKey={selectedLeague}
+            title="Pitching Coach Q&A"
+            icon="🎯"
+            placeholder="Ask about a specific pitcher or streamer..."
+          />
         </div>
       )}
 

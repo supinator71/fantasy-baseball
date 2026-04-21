@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import AiQuestionBox from '../shared/AiQuestionBox'
 
 export default function WaiverWire({ leagueSettings }) {
   const [available, setAvailable] = useState([])
@@ -153,6 +154,14 @@ export default function WaiverWire({ leagueSettings }) {
             <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setAiRec('')}>Dismiss</button>
           </div>
           <div className="ai-response">{aiRec}</div>
+          
+          <AiQuestionBox 
+            context={`Waiver analysis context: ${aiRec}`}
+            leagueKey={selectedLeague}
+            title="Ask the Scout"
+            icon="🕵️‍♂️"
+            placeholder="Ask about a specific sleeper or why to drop someone..."
+          />
         </div>
       )}
 
