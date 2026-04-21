@@ -24,11 +24,11 @@ router.get('/health', async (req, res) => {
   
   try {
     const msg = await getClient().messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 10,
       messages: [{ role: 'user', content: 'Say "ok"' }],
     });
-    res.json({ status: 'ok', keyPrefix, model: 'claude-haiku-4-5-20251001', response: msg.content[0].text });
+    res.json({ status: 'ok', keyPrefix, model: 'claude-3-5-haiku-20241022', response: msg.content[0].text });
   } catch (err) {
     res.json({ 
       status: 'error', 
@@ -56,7 +56,7 @@ RULES:
 5. H2H Points: maximize volume (ABs, IP). 2-start SPs are gold. Don't advise category-punting in points leagues.
 6. Don't overreact to one bad week. Patience is key.
 7. End every response with a 🎓 Baseball 101 tip tailored to the user's specific scoring format.
-8. CATCHER RULE: In a standard 1-catcher league, NEVER recommend rostering a backup catcher. Strongly advise the user that holding a second backup catcher is always a waste of a bench roster spot.
+8. CATCHER RULE: In a standard 1-catcher league, only one catcher should be on the roster long-term. However, for Daily Start/Sit, if the user owns two catchers and one is starting today, ALWAYS start your best active option. NEVER leave the Catcher slot empty if an active player is available. Structural roster warnings should never prevent starting a player who provides daily value.
 
 FORMATTING: Clean prose, no code syntax, no brackets. Rank recommendations clearly. Use bolded metric badges (**Player** \`[VOR: XX]\`).`;
 
@@ -122,8 +122,7 @@ async function callClaude(messages, maxTokens = 1800) {
       system: [
         {
           type: 'text',
-          text: SYSTEM_PROMPT,
-          cache_control: { type: 'ephemeral' }
+          text: SYSTEM_PROMPT
         }
       ],
       messages: finalMessages,
@@ -302,7 +301,7 @@ router.post('/startsit', rateLimiter('startsit'), async (req, res) => {
     const [scheduleStr, newsStr, bulkData] = await Promise.all([
       mlbStats.getUpcomingSchedule(),
       mlbStats.getBreakingNews(),
-      playerNames.length > 0 ? mlbStats.getBulkPlayerStats(playerNames, 2025) : Promise.resolve({})
+      playerNames.length > 0 ? mlbStats.getBulkPlayerStats(playerNames, 2026) : Promise.resolve({})
     ]);
 
     if (scheduleStr) liveMatchups = `\n\n=== TODAY'S LIVE MLB MATCHUPS ===\n${scheduleStr}`;
@@ -338,9 +337,10 @@ ${daily_mode ?
   `DAILY MODE: 1) Must Starts. 2) 3-4 marginal decisions with reasoning. 3) Bench list.
 Rules: Never start IL/O/DTD. Batters: start if "Starting:Yes/?" bench if "No". SP: ONLY start if "Starting:Yes".
 Use live matchups + category weakness to weight decisions.
-CRITICAL: ONLY recommend dropping players listed in the MY CURRENT TEAM ROSTER section above. Double-check player names before suggesting a drop.` 
+CRITICAL: ALWAYS fill all active roster slots (C, 1B, 2B, SS, 3B, OF, UTIL) if you have an active player starting today. NEVER sit an active player to leave a slot empty just because of a "Structural Warning".
+CRITICAL: ONLY recommend dropping players listed in the MY CURRENT TEAM ROSTER section above.` 
   : `WEEKLY MODE: 1) Must Starts for the week. 2) Bench list. 3) Pitching stream priority.
-Rules: Prioritize 2-start SPs. Start high-VOR bats. ONLY recommend dropping players listed in the MY CURRENT TEAM ROSTER section above.`}
+Rules: Prioritize 2-start SPs. Start high-VOR bats. ALWAYS fill all active roster slots if possible. ONLY recommend dropping players listed in the MY CURRENT TEAM ROSTER section above.`}
 
 Format: **Player** \`[VOR:XX | Stream:YY]\` 🟢 START / 🔴 SIT -> *Logic:* [reason]. Show the math.`
     }], 1800);
@@ -579,7 +579,7 @@ CRITICAL INSTRUCTIONS:
 2. DO NOT confuse "WAIVER WIRE TARGETS" with "MY CURRENT TEAM ROSTER". 
 3. Look at "MY CURRENT TEAM ROSTER" in the Diagnosis. If a player listed THERE has a [🏆 2-STARTS THIS WEEK] or [🔮 2-STARTS NEXT WEEK] tag, explicitly tell the user DO NOT DROP them. If they are NOT in the roster section, do not say "do not drop".
 4. Recommend EXACTLY the top 2 pitching pickups to make from the WAIVER WIRE TARGETS based on priority score.
-5. For each Add, explicitly dictate WHO TO DROP from "MY CURRENT TEAM ROSTER" (a weak pitcher or excess bench hitter). You MUST only recommend dropping players that are explicitly listed in the ROSTER section of the diagnosis above.
+5. For each Add, explicitly dictate WHO TO DROP from "MY CURRENT TEAM ROSTER" (a weak pitcher or excess bench hitter). You MUST only recommend dropping players that are explicitly listed in the MY CURRENT TEAM ROSTER section of the diagnosis above.
 6. If a WAIVER WIRE TARGET has terrible stats (e.g., ERA > 5.00), acknowledge the risk even if they have 2 starts.
 
 Format your recommendations using strictly formatted markdown lists with bolded metric badges.
@@ -632,7 +632,7 @@ Strategy overview: ${JSON.stringify(strategy.strategy, null, 2)}
 Expand this into a personalized draft plan covering: early round priorities, positional scarcity windows, when to target closers, pitching philosophy, and 5 specific late-round sleeper archetypes to target.
 
 Write in clean, conversational prose. No JSON syntax, no brackets, no code formatting. Write like a veteran fantasy analyst advising a friend before their draft.`,
-    }], "claude-3-5-haiku-20241022", 1500);
+    }], 1500);
     res.json({ strategy: text, strategyProfile: strategy });
   } catch (err) {
     res.status(500).json({ error: err.message, strategy: 'AI unavailable.', strategyProfile: strategy });
@@ -698,7 +698,7 @@ Return ONLY valid JSON (no markdown):
   "lineup_recommendations": "Write specific actionable moves in conversational prose",
   "categories": [{ "name": "Category Name", "my_proj": "value", "opp_proj": "value", "winner": "me", "confidence": "high", "note": "A readable sentence" }]
 }`,
-    }], "claude-3-5-haiku-20241022", 1500);
+    }], 1500);
 
     console.log('[Claude/matchup] Raw response:', text);
     const parsed = tryParseJSON(text);
@@ -789,7 +789,7 @@ ${diagnosis.promptBlock}
 LEAGUE STANDINGS CONTEXT:
 ${league_standings?.length ? JSON.stringify(league_standings.slice(0, 5)) : 'Not provided'}
 
-Use the 2025 real stats and intelligence data above to ground your analysis in actual performance. Flag breakout candidates, regression risks, age-curve concerns, and which players are contributing vs dragging each fantasy category.
+Use the 2026 real stats and intelligence data above to ground your analysis in actual performance. Flag breakout candidates, regression risks, age-curve concerns, and which players are contributing vs dragging each fantasy category.
 
 TOTAL ROSTER VOR SCORE: ${diagnosis.totalVOR} (out of a maximum ~2300 for a ${roster.length}-player roster)
 AVERAGE VOR PER PLAYER: ${diagnosis.avgVOR}

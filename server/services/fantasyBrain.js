@@ -983,9 +983,9 @@ function analyzeRosterStrengths(roster = [], leagueContext = {}) {
 
       if (catchers.length > starterSlotsC + 1) {
         // Tiered advice for 3+ catcher rosters
-        rosterWarnings.push(`RULE 1 CRITICAL: You are carrying ${catchers.length} catchers. This is a massive waste of bench depth. Even if you want a backup, keep your best one (${bestBackup.player_name || bestBackup.name}) and drop the others: ${dropNames.filter(n => n !== (bestBackup.player_name || bestBackup.name)).join(', ')}.`)
+        rosterWarnings.push(`[ROSTER DEPTH ALERT] You are carrying ${catchers.length} catchers. This is an inefficient use of bench depth in most formats. Recommend keeping only your best one (${bestBackup.player_name || bestBackup.name}) and exploring trades for the others: ${dropNames.filter(n => n !== (bestBackup.player_name || bestBackup.name)).join(', ')}.`)
       } else {
-        rosterWarnings.push(`RULE 1 VIOLATION: You are carrying ${catchers.length} catchers (${starterSlotsC} starter slot${starterSlotsC > 1 ? 's' : ''}). ${dropNames.join(', ')} is redundant and should be dropped for pitching depth.`)
+        rosterWarnings.push(`[ROSTER DEPTH ALERT] You are carrying 2 catchers. In standard leagues, holding a backup catcher is a waste of a bench spot. Consider dropping ${dropNames.join(', ')} for pitching depth, but ensure you start your best Catcher daily.`)
       }
     }
   }
@@ -1382,7 +1382,7 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}, sharedMatchup = null,
   const dtdPlayers = roster.filter(p => getPlayerStatus(p) === 'dtd');
 
   // ── 2. Positional analysis (voids, surpluses, sell/buy) ────────────────
-  const rosterAnalysis = analyzeRosterStrengths(activeRoster, { num_teams: leagueSize, scoring_type: scoringType });
+  const rosterAnalysis = analyzeRosterStrengths(activeRoster, leagueCtx);
 
   // ── 3. Category-level analysis — uses actual league stat categories ────
   const teamStats = {};
@@ -1494,8 +1494,14 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}, sharedMatchup = null,
   }
 
   // Active roster — list ALL players to ensure Claude has a complete view of the team
-  promptBlock += `\nROSTER (${activeRoster.length} active, by VOR):\n`;
-  promptBlock += vorByPlayer.map(p => `  ${p.name} (${p.position}) VOR:${p.vor}`).join('\n');
+  promptBlock += `\nMY CURRENT TEAM ROSTER (${activeRoster.length} active, by VOR):\n`;
+  promptBlock += vorByPlayer.map(p => {
+    const basicName = (p.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const isTwoStartCurrent = pitchingContext?.currentWeekTwoStart?.includes(basicName) || false;
+    const isTwoStartNext = pitchingContext?.nextWeekTwoStart?.includes(basicName) || false;
+    const tag = isTwoStartCurrent ? ' [🏆 2-STARTS THIS WEEK]' : isTwoStartNext ? ' [🔮 2-STARTS NEXT WEEK]' : '';
+    return `  ${p.name} (${p.position}) VOR:${p.vor}${tag}`;
+  }).join('\n');
 
   // Positional needs — compact
   promptBlock += `\nVoids: ${rosterAnalysis.voids.join(', ') || 'None'}`;
@@ -1518,7 +1524,7 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}, sharedMatchup = null,
   promptBlock += `Health: ${totalVOR} total VOR, ${avgVOR} avg, ${eliteCount} elite, ${replacementCount} replacement\n`;
 
   if (rosterAnalysis.rosterWarnings && rosterAnalysis.rosterWarnings.length > 0) {
-    promptBlock += `\n🚨 CRITICAL ROSTER VIOLATIONS (Must Fix):\n${rosterAnalysis.rosterWarnings.map(w => `- ${w}`).join('\n')}\n`;
+    promptBlock += `\n📋 ROSTER OPTIMIZATION SUGGESTIONS (Long-term):\n${rosterAnalysis.rosterWarnings.map(w => `- ${w}`).join('\n')}\n`;
   }
 
   return {

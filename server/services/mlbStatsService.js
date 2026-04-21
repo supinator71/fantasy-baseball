@@ -65,7 +65,7 @@ async function searchPlayer(name) {
 // PLAYER STATS — get season hitting or pitching stats
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function getPlayerStats(playerId, season = 2025, group = 'hitting') {
+async function getPlayerStats(playerId, season = 2026, group = 'hitting') {
   const key = `stats:${playerId}:${season}:${group}`;
   const cached = getCached(key);
   if (cached) return cached;
@@ -93,7 +93,7 @@ async function getPlayerStats(playerId, season = 2025, group = 'hitting') {
 // FULL PLAYER LOOKUP — search by name, return normalized fantasy stats
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function getPlayerSeasonStats(playerName, season = 2025) {
+async function getPlayerSeasonStats(playerName, season = 2026) {
   const player = await searchPlayer(playerName);
   if (!player) return null;
 
