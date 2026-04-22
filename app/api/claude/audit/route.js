@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
-import { callClaude } from '@/lib/claude';
+import { callClaudeFast } from '@/lib/claude';
 import { db } from '@/lib/database';
 import * as brain from '@/lib/fantasyBrain';
 
@@ -71,7 +71,7 @@ export async function POST(request) {
 
     const vorBlock = vorTable.map(p => `  ${p.name} (${p.position}): VOR ${p.vor} [${p.scarcity}]`).join('\n');
 
-    const raw = await callClaude([{
+    const raw = await callClaudeFast([{
       role: 'user',
       content: `You are Goin' Yard HQ — an expert fantasy baseball roster analyst.
 

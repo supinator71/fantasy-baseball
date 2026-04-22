@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
-import { callClaude } from '@/lib/claude';
+import { callClaudeFast } from '@/lib/claude';
 import { db } from '@/lib/database';
 import * as brain from '@/lib/fantasyBrain';
 
@@ -31,7 +31,7 @@ export async function POST(request) {
     const givingBlock    = vorScore(Array.isArray(giving)    ? giving    : [{ name: giving }]);
     const receivingBlock = vorScore(Array.isArray(receiving) ? receiving : [{ name: receiving }]);
 
-    const text = await callClaude([{
+    const text = await callClaudeFast([{
       role: 'user',
       content: `${STAT_GUARDRAIL}
 League Format: ${settings.scoring_type || 'Unknown'} | Teams: ${settings.num_teams || 10} | League: ${settings.name || league_key || '?'}
