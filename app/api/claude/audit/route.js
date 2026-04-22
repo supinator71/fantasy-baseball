@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { callClaude } from '@/lib/claude';
 import { db } from '@/lib/database';
+import * as brain from '@/lib/fantasyBrain';
 
 // Yahoo stat ID → human-readable name
 const STAT_MAP = {
@@ -49,6 +50,21 @@ export async function POST(request) {
       ...pitchers.map(buildPlayerLine),
     ].join('\n');
 
+    // Pre-compute real VOR for every player using fantasyBrain (not Claude guesses)
+    const vorTable = roster.map(p => {
+      const rawPos = String(p.position || '').split('/')[0].trim();
+      const vor = brain.calculateVOR(p.stats || {}, rawPos, settings.num_teams || 10, settings.scoring_type || 'headpoint');
+      const scarcity = brain.getPositionalScarcity(rawPos, settings.num_teams || 10);
+      return {
+        name: p.name,
+        position: rawPos,
+        vor: typeof vor === 'object' ? (vor.vor ?? vor.score ?? 0) : (vor ?? 0),
+        scarcity: scarcity.tier || 'moderate',
+      };
+    }).sort((a, b) => b.vor - a.vor);
+
+    const vorBlock = vorTable.map(p => `  ${p.name} (${p.position}): VOR ${p.vor} [${p.scarcity}]`).join('\n');
+
     const raw = await callClaude([{
       role: 'user',
       content: `You are Goin' Yard HQ — an expert fantasy baseball roster analyst.
@@ -60,8 +76,11 @@ Tailor ALL advice to this exact format. Do NOT apply Roto logic to H2H leagues.
 
 LEAGUE: "${settings.name || league_key}" | Teams: ${settings.num_teams || 10}
 
-MY ROSTER:
+MY ROSTER (with stats):
 ${rosterBlock}
+
+PRE-CALCULATED VOR (engine-computed, use these exact values in vorByPlayer — do NOT change them):
+${vorBlock}
 
 Perform a full team audit. Respond ONLY with valid JSON — no markdown fences:
 {
@@ -74,8 +93,8 @@ Perform a full team audit. Respond ONLY with valid JSON — no markdown fences:
     {"action": "Specific move 2", "priority": "high", "reasoning": "Why"}
   ],
   "vorByPlayer": [
-    {"name": "PlayerName", "position": "SP", "vor": 85, "scarcity": "elite"},
-    {"name": "PlayerName2", "position": "OF", "vor": 72, "scarcity": "scarce"}
+    {"name": "PlayerName", "position": "SP", "vor": 48, "scarcity": "elite"},
+    {"name": "PlayerName2", "position": "OF", "vor": 31, "scarcity": "moderate"}
   ]
 }`
     }], 1000);
@@ -89,7 +108,10 @@ Perform a full team audit. Respond ONLY with valid JSON — no markdown fences:
       parsed = { grade: '?', raw };
     }
 
-    return NextResponse.json(parsed);
+    return NextResponse.json({
+      ...parsed,
+      vorByPlayer: vorTable,  // Always use engine-computed VOR, not Claude's
+    });
   } catch (err) {
     console.error('[claude/audit]', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
