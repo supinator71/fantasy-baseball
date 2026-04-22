@@ -54,7 +54,7 @@ export default function Vault() {
                   {card.has_patch && (
                     <div className="card-patch" />
                   )}
-                  <div className="vault-card-id">#{idx + 1}</div>
+                  <div className="vault-card-id">#{card.set_num}</div>
                 </div>
                 <div className="vault-card-info">
                   <h3>{card.name}</h3>
