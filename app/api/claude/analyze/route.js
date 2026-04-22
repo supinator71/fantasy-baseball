@@ -108,27 +108,58 @@ export async function POST(request) {
     }).sort((a, b) => (b.waiverScore?.score ?? 0) - (a.waiverScore?.score ?? 0));
 
     // ── Build pitching intelligence block ───────────────────────────────────
-    const buildPitcherBlock = (names, details) =>
-      names.length === 0 ? '  None confirmed yet'
-      : names.map(n => {
-          const d = details?.[n];
-          return d ? `  • ${d.fullName}: ${d.label}` : `  • ${n}`;
-        }).join('\n');
+    // Normalize a name to lowercase ASCII for fuzzy matching across data sources
+    const normName = n => String(n || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+    // Build lookup sets: who is a free agent vs already on my roster
+    const faNameSet   = new Set(freeAgents.map(p => normName(p.name)));
+    const rosterNames = new Set(roster.map(p => normName(p.name)));
+
+    const isAvailableFA = n => faNameSet.has(normName(n));
+    const isOnMyRoster  = n => rosterNames.has(normName(n));
+
+    const buildPitcherBlock = (names, details, { faOnly = false } = {}) => {
+      const filtered = faOnly
+        ? names.filter(n => isAvailableFA(n))                           // streaming: FA only
+        : names.filter(n => isAvailableFA(n) || isOnMyRoster(n));      // roster decisions
+      if (filtered.length === 0) return faOnly ? '  None available on waivers' : '  None confirmed yet';
+      return filtered.map(n => {
+        const d     = details?.[n];
+        const label = d ? `${d.fullName}: ${d.label}` : n;
+        const tag   = isOnMyRoster(n) ? ' [ON YOUR ROSTER — start them]' : ' [FREE AGENT — add now]';
+        return `  • ${label}${tag}`;
+      }).join('\n');
+    };
 
     const nowDay = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles' });
-    const twoStartBlock = [
-      pitching.remainingTwoStarters?.length
-        ? `  FULL 2-START VALUE (both starts remaining):\n${buildPitcherBlock(pitching.remainingTwoStarters, pitching.pitcherDetails)}`
-        : '  No pitchers with 2 full starts remaining',
-      pitching.oneStartRemaining?.length
-        ? `  PARTIAL VALUE — 1 start already pitched, 1 remaining:\n${buildPitcherBlock(pitching.oneStartRemaining, pitching.pitcherDetails)}`
-        : '',
-      pitching.today?.length
-        ? `  STARTING TODAY (single start only):\n${buildPitcherBlock(pitching.today, pitching.pitcherDetails)}`
-        : '',
-    ].filter(Boolean).join('\n');
 
-    const nextWeekBlock = buildPitcherBlock(pitching.nextWeek || [], {});
+    // Separate 2-start pitchers into: available FAs to stream vs already rostered
+    const twoStartFAs = (pitching.remainingTwoStarters || []).filter(n => isAvailableFA(n));
+    const twoStartRostered = (pitching.remainingTwoStarters || []).filter(n => isOnMyRoster(n));
+
+    const twoStartBlock = [
+      '2-START STREAMERS AVAILABLE ON WAIVERS (add immediately):',
+      twoStartFAs.length
+        ? buildPitcherBlock(twoStartFAs, pitching.pitcherDetails, { faOnly: true })
+        : '  None available on waivers this week',
+      '',
+      '2-START PITCHERS ON YOUR ROSTER (start all of these):',
+      twoStartRostered.length
+        ? buildPitcherBlock(twoStartRostered, pitching.pitcherDetails)
+        : '  None on your roster with 2 starts remaining',
+      pitching.oneStartRemaining?.filter(n => isAvailableFA(n)).length
+        ? `\n1-START REMAINING — AVAILABLE ON WAIVERS:\n${buildPitcherBlock(pitching.oneStartRemaining, pitching.pitcherDetails, { faOnly: true })}`
+        : '',
+      pitching.today?.filter(n => isAvailableFA(n)).length
+        ? `\nSTARTING TODAY — AVAILABLE ON WAIVERS:\n${buildPitcherBlock(pitching.today, pitching.pitcherDetails, { faOnly: true })}`
+        : '',
+    ].filter(s => s !== '').join('\n');
+
+    // Next week: only show pitchers available as FAs (you already have your own starters)
+    const nextWeekFAs = (pitching.nextWeek || []).filter(n => isAvailableFA(n));
+    const nextWeekBlock = nextWeekFAs.length
+      ? nextWeekFAs.map(n => `  • ${n} [FREE AGENT — add now to use next week]`).join('\n')
+      : '  No confirmed 2-start pitchers next week available on waivers';
 
     const scoringLabel = SCORING_TYPE_MAP[settings.scoring_type] || settings.scoring_type || 'H2H Points';
 
@@ -161,12 +192,12 @@ MY ROSTER:
 ${rosterBlock}
 
 PITCHING INTELLIGENCE (as of ${nowDay}):
-⚠️ CRITICAL PITCHING RULE: Only recommend starting or streaming pitchers who appear in the schedule below.
-A player mentioned in breaking news (e.g., "X signs with Y team") is NOT available to start unless they
-appear as a confirmed probable pitcher in the schedule below. Newly signed players are typically on
-ramp-up/rehab and may not pitch for weeks. Do NOT recommend them.
+⚠️ CRITICAL PITCHING RULES:
+1. The lists below have ALREADY been filtered to only show pitchers who are either FREE AGENTS or on YOUR ROSTER. Do NOT recommend any pitcher not listed here.
+2. Only recommend "streaming" pitchers marked [FREE AGENT — add now]. Players marked [ON YOUR ROSTER] should appear in your startSit.starts, not in waiver adds.
+3. Do not invent pitcher names. Do not use your training data for player availability — use ONLY the filtered lists below.
 
-THIS WEEK — by remaining value:
+THIS WEEK — filtered to available/rostered only:
 ${twoStartBlock}
 
 NEXT WEEK — pitchers with 2 confirmed starts next week (add now to benefit):
