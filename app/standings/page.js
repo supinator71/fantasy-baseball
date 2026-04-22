@@ -1,41 +1,5 @@
 'use client';
-
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import Standings from '@/components/Standings/Standings';
-
+import ModulePage from '@/components/shared/ModulePage';
 export default function StandingsPage() {
-  const [leagues, setLeagues] = useState([]);
-  const [selectedLeague, setSelectedLeague] = useState('');
-
-  useEffect(() => {
-    fetchLeagues();
-  }, []);
-
-  async function fetchLeagues() {
-    try {
-      const res = await axios.get('/api/yahoo/leagues');
-      setLeagues(res.data);
-      if (res.data[0]?.league_key) setSelectedLeague(res.data[0].league_key);
-    } catch (err) {}
-  }
-
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700 }}>League Standings</h1>
-        {leagues.length > 0 && (
-          <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 240 }}>
-            {leagues.map(l => <option key={l.league_key} value={l.league_key}>{l.name}</option>)}
-          </select>
-        )}
-      </div>
-      
-      {selectedLeague ? (
-        <Standings leagueKey={selectedLeague} />
-      ) : (
-        <div className="card">Please select a league.</div>
-      )}
-    </div>
-  );
+  return <ModulePage title="League Standings">View your current league standings and AI-analyzed projections for the rest of the season.</ModulePage>;
 }

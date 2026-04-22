@@ -4,13 +4,12 @@ import PlayerTrends from './PlayerTrends/PlayerTrends'
 import LastUpdated from './shared/LastUpdated'
 import LeagueIntelligence from './shared/LeagueIntelligence'
 import FeedbackBox from './shared/FeedbackBox'
+import { useLeague } from '@/lib/context/LeagueContext'
 
-export default function Dashboard({ leagueSettings, subscription }) {
-  const [leagues, setLeagues] = useState([])
-  const [loading, setLoading] = useState(true)
+export default function Dashboard({ subscription }) {
+  const { leagues, selectedLeague, setSelectedLeague, loading } = useLeague()
   const [fromCache, setFromCache] = useState(false)
   const [syncing, setSyncing] = useState(false)
-  const [selectedLeague, setSelectedLeague] = useState('')
   const [cachedAt, setCachedAt] = useState(null)
 
   const formatScoringType = (type) => {
@@ -22,9 +21,6 @@ export default function Dashboard({ leagueSettings, subscription }) {
     return type;
   }
 
-  useEffect(() => {
-    fetchLeagues()
-  }, [])
 
   useEffect(() => {
     if (selectedLeague) {
@@ -33,22 +29,8 @@ export default function Dashboard({ leagueSettings, subscription }) {
         .catch(err => console.error('Failed to auto-sync league settings', err))
         .finally(() => setSyncing(false))
     }
-  }, [selectedLeague])
+  }, [selectedLeague, leagues])
 
-  async function fetchLeagues(force = false) {
-    setLoading(true)
-    try {
-      const res = await axios.get(`/api/yahoo/leagues${force ? '?force=true' : ''}`)
-      setLeagues(res.data)
-      if (res.data[0]?.league_key && !selectedLeague) setSelectedLeague(res.data[0].league_key)
-      setCachedAt(res.headers['x-cache-updated'] || null)
-      setFromCache(res.headers['x-cache-hit'] === 'true')
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div style={{ position: 'relative' }}>
@@ -137,7 +119,7 @@ export default function Dashboard({ leagueSettings, subscription }) {
               </select>
             )}
             <LastUpdated cachedAt={cachedAt} fromCache={fromCache} ttlLabel="5 min cache"
-              onRefresh={() => fetchLeagues(true)} loading={loading} />
+              onRefresh={() => window.location.reload()} loading={loading} />
           </div>
         </div>
         {loading ? (

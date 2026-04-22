@@ -19,6 +19,8 @@ const spaceGrotesk = Space_Grotesk({
   variable: '--font-body',
 });
 
+import { LeagueProvider } from '@/lib/context/LeagueContext';
+
 export default function RootLayout({ children }) {
   const [authStatus, setAuthStatus] = useState({ authenticated: false, loading: true });
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -44,25 +46,27 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <Toaster position="top-right" />
-        <div className="app-layout">
-          <Sidebar 
-            authenticated={authStatus.authenticated} 
-            isOpen={sidebarOpen} 
-            onClose={() => setSidebarOpen(false)}
-            subscription={authStatus.subscription}
-          />
-          <div className="app-body">
-            {authStatus.authenticated && (
-              <div className="mobile-topbar">
-                <button className="hamburger-btn" onClick={() => setSidebarOpen(true)}>☰</button>
-                <span style={{ fontWeight: 700 }}>⚾ Goin' Yard HQ</span>
-              </div>
-            )}
-            <main className="main-content">
-              {children}
-            </main>
+        <LeagueProvider>
+          <div className="app-layout">
+            <Sidebar 
+              authenticated={authStatus.authenticated} 
+              isOpen={sidebarOpen} 
+              onClose={() => setSidebarOpen(false)}
+              subscription={authStatus.subscription}
+            />
+            <div className="app-body">
+              {authStatus.authenticated && (
+                <div className="mobile-topbar">
+                  <button className="hamburger-btn" onClick={() => setSidebarOpen(true)}>☰</button>
+                  <span style={{ fontWeight: 700 }}>⚾ Goin' Yard HQ</span>
+                </div>
+              )}
+              <main className="main-content">
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
+        </LeagueProvider>
       </body>
     </html>
   );

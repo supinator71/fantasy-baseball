@@ -1,24 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React from 'react';
 import PitchingIntel from '@/components/PitchingIntel/PitchingIntel';
+import { useLeague } from '@/lib/context/LeagueContext';
 
 export default function PitchingPage() {
-  const [leagues, setLeagues] = useState([]);
-  const [selectedLeague, setSelectedLeague] = useState('');
-
-  useEffect(() => {
-    fetchLeagues();
-  }, []);
-
-  async function fetchLeagues() {
-    try {
-      const res = await axios.get('/api/yahoo/leagues');
-      setLeagues(res.data);
-      if (res.data[0]?.league_key) setSelectedLeague(res.data[0].league_key);
-    } catch (err) {}
-  }
+  const { leagues, selectedLeague, setSelectedLeague } = useLeague();
 
   return (
     <div>

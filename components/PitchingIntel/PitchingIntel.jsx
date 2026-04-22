@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import AiQuestionBox from '../shared/AiQuestionBox'
+import { useLeague } from '@/lib/context/LeagueContext'
 
-export default function PitchingIntel({ leagueSettings, subscription }) {
+export default function PitchingIntel({ subscription }) {
+  const { leagues, selectedLeague, setSelectedLeague } = useLeague()
   const [availablePitchers, setAvailablePitchers] = useState([])
   const [myRoster, setMyRoster] = useState([])
   const [myPitchers, setMyPitchers] = useState([])
-  const [leagues, setLeagues] = useState([])
-  const [selectedLeague, setSelectedLeague] = useState('')
   const [loading, setLoading] = useState(false)
   const [aiRec, setAiRec] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
@@ -18,12 +18,6 @@ export default function PitchingIntel({ leagueSettings, subscription }) {
 
   const [pitchingContext, setPitchingContext] = useState({ today: [], currentWeekTwoStart: [], nextWeekTwoStart: [] })
 
-  useEffect(() => {
-    axios.get('/api/yahoo/leagues').then(({ data }) => {
-      setLeagues(data)
-      if (data[0]?.league_key) setSelectedLeague(data[0].league_key)
-    }).catch(() => {})
-  }, [])
 
   useEffect(() => {
     if (selectedLeague) {

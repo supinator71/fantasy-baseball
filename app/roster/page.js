@@ -3,28 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { useLeague } from '@/lib/context/LeagueContext';
 
 export default function RosterPage() {
-  const [leagues, setLeagues] = useState([]);
-  const [selectedLeague, setSelectedLeague] = useState('');
+  const { leagues, selectedLeague, setSelectedLeague } = useLeague();
   const [roster, setRoster] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchLeagues();
-  }, []);
-
-  useEffect(() => {
     if (selectedLeague) fetchRoster(selectedLeague);
   }, [selectedLeague]);
-
-  async function fetchLeagues() {
-    try {
-      const res = await axios.get('/api/yahoo/leagues');
-      setLeagues(res.data);
-      if (res.data[0]?.league_key) setSelectedLeague(res.data[0].league_key);
-    } catch (err) {}
-  }
 
   async function fetchRoster(leagueKey) {
     setLoading(true);
