@@ -345,20 +345,10 @@ router.get('/league/:leagueKey/transactions', requireAuth, async (req, res) => {
   const { leagueKey } = req.params
   const force = req.query.force === 'true'
   try {
-    const data = await withCache(req, res, `txns:${leagueKey}`, TTL.TXNS, force,
+    const raw = await withCache(req, res, `txns:${leagueKey}`, TTL.TXNS, force,
       () => yahoo.getTransactions(req, leagueKey))
-    res.json(data)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
-// Wildcard for transaction cleaner (must be below /leagues and /league/...)
-router.get('/:leagueKey/transactions', requireAuth, async (req, res) => {
-  try {
-    const raw = await yahoo.getTransactions(req, req.params.leagueKey);
-    const cleaned = [];
     
+    const cleaned = [];
     if (Array.isArray(raw)) {
       raw.forEach(txn => {
         const playersObj = txn.players;
@@ -369,14 +359,13 @@ router.get('/:leagueKey/transactions', requireAuth, async (req, res) => {
           const pData = p.player;
           if (!Array.isArray(pData)) return;
 
-          // Yahoo's pData[0] is often an array of info objects
           const pInfo = Array.isArray(pData[0]) ? Object.assign({}, ...pData[0]) : pData[0];
           const pTxn = pData[1]?.transaction_data || pData[2]?.transaction_data || {};
 
           if (pInfo && pInfo.name) {
             cleaned.push({
               player_name: pInfo.name.full || pInfo.name.ascii_first + ' ' + pInfo.name.ascii_last,
-              type: pTxn.type || txn.type, // Fallback to txn type
+              type: pTxn.type || txn.type, 
               team_name: pTxn.destination_team_name || pTxn.source_team_name || 'Unknown',
               timestamp: new Date(parseInt(txn.timestamp) * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' })
             });
@@ -389,7 +378,9 @@ router.get('/:leagueKey/transactions', requireAuth, async (req, res) => {
     console.error('[Yahoo/transactions] Error:', err.message);
     res.status(500).json({ error: err.message });
   }
-});
+})
+
+// Transactions route consolidated above
 
 router.get('/league/:leagueKey/player/:playerKey/stats', requireAuth, async (req, res) => {
   const { leagueKey, playerKey } = req.params

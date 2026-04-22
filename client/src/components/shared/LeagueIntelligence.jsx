@@ -15,7 +15,7 @@ export default function LeagueIntelligence({ leagueKey, isPro }) {
   async function fetchTransactions() {
     setLoading(true);
     try {
-      const { data } = await axios.get(`/api/yahoo/${leagueKey}/transactions`);
+      const { data } = await axios.get(`/api/yahoo/league/${leagueKey}/transactions`);
       setTransactions(data.slice(0, 10)); // Show last 10
     } catch (err) {
       toast.error('Failed to fetch rival intelligence.');

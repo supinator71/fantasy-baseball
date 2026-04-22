@@ -225,7 +225,7 @@ async function getDraftResults(req, leagueKey) {
 }
 
 async function getTransactions(req, leagueKey) {
-  const data = await yahooGet(req, `/league/${leagueKey}/transactions;type=waiver`);
+  const data = await yahooGet(req, `/league/${leagueKey}/transactions`);
   const txns = data.fantasy_content?.league?.[1]?.transactions;
   return toArray(txns);
 }
