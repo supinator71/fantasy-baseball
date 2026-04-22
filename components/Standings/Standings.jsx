@@ -60,36 +60,28 @@ function parseTeamInfo(teamData) {
 }
 
 export default function Standings() {
-  const { leagues, selectedLeague: ctxLeague } = useLeague()
+  const { leagues, selectedLeague, setSelectedLeague } = useLeague()
   const [standings, setStandings] = useState([])
-  const [selectedLeague, setSelectedLeague] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Sync to context's selected league on mount
   useEffect(() => {
-    if (ctxLeague && !selectedLeague) setSelectedLeague(ctxLeague)
-  }, [ctxLeague])
-
-  useEffect(() => {
-    if (selectedLeague) fetchStandings()
+    if (selectedLeague) fetchStandings(selectedLeague)
   }, [selectedLeague])
 
-  async function fetchStandings() {
+  async function fetchStandings(leagueKey) {
     setLoading(true)
     setError('')
     try {
-      const { data } = await axios.get(`/api/yahoo/league/${selectedLeague}/standings`)
+      const { data } = await axios.get(`/api/yahoo/league/${leagueKey}/standings`)
       const teams = []
 
       if (data && Array.isArray(data)) {
-        // data is an array of team objects from toArray()
         for (const item of data) {
           const parsed = parseTeamInfo(item)
           if (parsed) teams.push(parsed)
         }
       } else if (data && typeof data === 'object') {
-        // Fallback: data is an indexed object { "0": {...}, "1": {...}, count: N }
         const count = parseInt(data['@attributes']?.count) || Object.keys(data).filter(k => /^\d+$/.test(k)).length
         for (let i = 0; i < count; i++) {
           const parsed = parseTeamInfo(data[i] || data[String(i)])
@@ -129,7 +121,7 @@ export default function Standings() {
               {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
             </select>
           </div>
-          <button className="btn btn-ghost" onClick={fetchStandings} disabled={loading}>
+          <button className="btn btn-ghost" onClick={() => fetchStandings(selectedLeague)} disabled={loading}>
             {loading ? '⟳ Refreshing...' : '⟳ Refresh'}
           </button>
         </div>

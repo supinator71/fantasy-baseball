@@ -133,10 +133,8 @@ export default function TeamAudit({ leagueSettings }) {
     setError('')
     try {
       const { data } = await axios.post('/api/claude/audit', {
-        roster,
-        league_standings: [],
-        my_stats: {},
-        league_key: selectedLeague
+        my_roster: roster,
+        league_key: selectedLeague,
       })
       setAudit(data)
       checkTrophyUnlocks(data)
