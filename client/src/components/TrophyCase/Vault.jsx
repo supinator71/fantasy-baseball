@@ -49,7 +49,7 @@ export default function Vault() {
                 <div className="vault-card-visual" data-id={card.id}>
                   <img src={card.img} alt={card.name} />
                   {card.has_signature && (
-                    <div className="card-signature">{card.signature_name}</div>
+                    <div className={`card-signature ${card.sig_style || ''}`}>{card.signature_name}</div>
                   )}
                   {card.has_patch && (
                     <div className="card-patch" />

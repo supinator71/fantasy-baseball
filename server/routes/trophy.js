@@ -35,8 +35,8 @@ const CARD_COLLECTION = [
 
   // Legendary
   { id: 'sp_closeup', set_num: '01', name: 'Rookie True Gold (Visor Edition)', img: '/cyborg_silver_prism_closeup.png', rarity: 'legendary', specialization: 'Visor Intel', lore: 'Provides a direct view into the targeting HUD of a Hall-of-Fame unit.', serial_total: 25 },
-  { id: 'arcana_hand', set_num: '777', name: 'Homerun Arcana (Signed)', img: '/cyborg_card_hand_arcana.png', rarity: 'legendary', specialization: 'Digital Soul', lore: 'Rumored to be haunted by the spirit of a pre-cyber baseball legend.', has_signature: true, signature_name: 'The Legend', serial_total: 5 },
-  { id: 'leg_walkoff', set_num: '999', name: 'Walk-Off Homer (Autograph Edition)', img: '/cyborg_walkoff_homer.png', rarity: 'legendary', specialization: 'Ink of Ages', lore: 'Personally signed with conductive liquid-gold ink by the leagues top slugger.', has_signature: true, signature_name: 'Slugger Prime', serial_total: 1 },
+  { id: 'arcana_hand', set_num: '777', name: 'Homerun Arcana (Signed)', img: '/cyborg_card_hand_arcana.png', rarity: 'legendary', specialization: 'Digital Soul', lore: 'Rumored to be haunted by the spirit of a pre-cyber baseball legend.', has_signature: true, signature_name: 'The Legend', sig_style: 'classic', serial_total: 5 },
+  { id: 'leg_walkoff', set_num: '999', name: 'Walk-Off Homer (Autograph Edition)', img: '/cyborg_walkoff_homer.png', rarity: 'legendary', specialization: 'Ink of Ages', lore: 'Personally signed with conductive liquid-gold ink by the leagues top slugger.', has_signature: true, signature_name: 'Slugger Prime', sig_style: 'aggressive', serial_total: 1 },
 
   // --- SERIES 2: TITANIUM GRAPEFRUIT LEAGUE ---
   { id: 'tgl_bk_hit', set_num: '1001', name: 'Brooklyn Biotics (Jaxson Jones)', img: '/tgl_brooklyn_hitter_v3_1776486966054.png', rarity: 'common', specialization: 'Heavy Artillery', lore: 'Known for his "Inertia Swing" that calculates ball trajectory in 0.02ms.' },
