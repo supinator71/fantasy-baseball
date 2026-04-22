@@ -709,11 +709,15 @@ function parseYahooMatchup(matchups, myTeamKey) {
           else if (managers.manager) manager = managers.manager?.nickname || '';
         }
         
+        let pointsTotal = null;
+        if (statsObj.total) pointsTotal = parseFloat(statsObj.total);
+
         parsedTeams.push({
           key: info.team_key,
           name: info.name || `Team ${j + 1}`,
           manager,
-          stats
+          stats,
+          total_points: pointsTotal
         })
       }
 

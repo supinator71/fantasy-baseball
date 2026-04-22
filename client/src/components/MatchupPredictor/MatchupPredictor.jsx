@@ -233,8 +233,10 @@ export default function MatchupPredictor({ leagueSettings }) {
                 <div style={{ fontSize: 22, fontWeight: 700 }}>{matchup.myTeam?.name}</div>
                 <div style={{ color: '#7aafc4', fontSize: 13, marginTop: 2 }}>{matchup.myTeam?.manager}</div>
                 <div style={{ marginTop: 8 }}>
-                  <span style={{ fontSize: 28, fontWeight: 800, color: myWins > oppWins ? '#00a86b' : '#e2e8f0' }}>{myWins}</span>
-                  <span style={{ fontSize: 13, color: '#7aafc4', marginLeft: 6 }}>cats</span>
+                  <span style={{ fontSize: 28, fontWeight: 800, color: (matchup.myTeam?.total_points || myWins) > (matchup.opponent?.total_points || oppWins) ? '#00a86b' : '#e2e8f0' }}>
+                    {matchup.myTeam?.total_points !== null ? Math.round(matchup.myTeam.total_points) : myWins}
+                  </span>
+                  <span style={{ fontSize: 13, color: '#7aafc4', marginLeft: 6 }}>{matchup.myTeam?.total_points !== null ? 'pts' : 'cats'}</span>
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
@@ -245,8 +247,10 @@ export default function MatchupPredictor({ leagueSettings }) {
                 <div style={{ fontSize: 22, fontWeight: 700 }}>{matchup.opponent?.name}</div>
                 <div style={{ color: '#7aafc4', fontSize: 13, marginTop: 2 }}>{matchup.opponent?.manager}</div>
                 <div style={{ marginTop: 8 }}>
-                  <span style={{ fontSize: 28, fontWeight: 800, color: oppWins > myWins ? '#00a86b' : '#e2e8f0' }}>{oppWins}</span>
-                  <span style={{ fontSize: 13, color: '#7aafc4', marginLeft: 6 }}>cats</span>
+                  <span style={{ fontSize: 28, fontWeight: 800, color: (matchup.opponent?.total_points || oppWins) > (matchup.myTeam?.total_points || myWins) ? '#00a86b' : '#e2e8f0' }}>
+                    {matchup.opponent?.total_points !== null ? Math.round(matchup.opponent.total_points) : oppWins}
+                  </span>
+                  <span style={{ fontSize: 13, color: '#7aafc4', marginLeft: 6 }}>{matchup.opponent?.total_points !== null ? 'pts' : 'cats'}</span>
                 </div>
               </div>
             </div>

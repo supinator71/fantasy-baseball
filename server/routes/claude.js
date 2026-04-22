@@ -723,9 +723,11 @@ Week ${week || 'current'} matchup prediction.
 
 MY TEAM: ${my_team?.name}
 Stats: ${JSON.stringify(my_team?.stats || [])}
+Current Total Points: ${my_team?.total_points || 'N/A'}
 
 OPPONENT: ${opponent?.name}
 Stats: ${JSON.stringify(opponent?.stats || [])}
+Current Total Points: ${opponent?.total_points || 'N/A'}
 
 Categories: ${JSON.stringify(stat_categories || ['R','HR','RBI','SB','AVG','W','SV','K','ERA','WHIP'])}
 Pre-computed matchup analysis: ${JSON.stringify(catAnalysis)}
