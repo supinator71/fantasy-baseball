@@ -42,7 +42,7 @@ function ProjectionBadge({ projection }) {
 }
 
 export default function GamePlan({ leagueSettings }) {
-  const { leagues, selectedLeague: ctxLeague, aiAnalysis, aiLoading, refreshAnalysis } = useLeague()
+  const { leagues, selectedLeague: ctxLeague, leagueData, aiAnalysis, aiLoading, refreshAnalysis } = useLeague()
   const [localLeagues, setLocalLeagues] = useState([])
   const [selectedLeague, setSelectedLeague] = useState('')
   const [roster, setRoster] = useState([])
@@ -120,7 +120,7 @@ export default function GamePlan({ leagueSettings }) {
         opponent: matchup,
         week_context: matchup?.week ? `Week ${matchup.week} matchup vs ${matchup.opponent_name || 'opponent'}` : '',
         league_key: selectedLeague,
-        leagueSettings: leagueSettings || {}  // pass format/settings directly so route doesn't depend on DB lookup
+        leagueSettings: leagueData || leagueSettings || {}  // leagueData from context has scoring_type, name, num_teams
       })
       setPlan(data)
     } catch (err) {
