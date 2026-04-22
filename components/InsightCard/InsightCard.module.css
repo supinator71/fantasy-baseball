@@ -1,0 +1,203 @@
+.card {
+  background: var(--card-bg, rgba(255,255,255,0.04));
+  border: 1px solid rgba(255,255,255,0.08);
+  border-left: 4px solid transparent;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon { font-size: 16px; }
+
+.title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.refreshBtn {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  border-width: 1px;
+  border-style: solid;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+.refreshBtn:hover { opacity: 1; }
+
+/* Loading shimmer */
+.loadingRow { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
+.shimmer {
+  height: 14px;
+  width: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.body { display: flex; flex-direction: column; gap: 10px; }
+
+.headline {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main, #f1f5f9);
+  margin: 0 0 4px;
+  line-height: 1.4;
+}
+
+.summary {
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
+  margin: 0;
+  line-height: 1.65;
+}
+
+/* Player badges */
+.actionGroup { display: flex; flex-direction: column; gap: 6px; }
+
+.playerBadge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: rgba(255,255,255,0.03);
+  transition: background 0.15s;
+}
+.playerBadge:hover { background: rgba(255,255,255,0.06); }
+
+.actionTag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #fff;
+  white-space: nowrap;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.playerInfo { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 120px; }
+.playerName  { font-size: 13px; font-weight: 600; color: var(--text-main, #f1f5f9); }
+.playerMeta  { font-size: 11px; color: var(--text-muted, #94a3b8); }
+.playerReason { font-size: 12px; color: var(--text-muted, #94a3b8); margin: 2px 0 0; width: 100%; line-height: 1.5; }
+
+/* Two-column layout for Start/Sit */
+.twoCol { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 600px) { .twoCol { grid-template-columns: 1fr; } }
+
+/* Chip row for 2-start pitchers */
+.chipRow { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.chipLabel { font-size: 11px; font-weight: 700; color: var(--text-muted, #94a3b8); margin-right: 4px; }
+.chip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  background: rgba(255,255,255,0.04);
+}
+
+/* Audit */
+.gradeRow { display: flex; align-items: center; gap: 12px; }
+.gradeBadge {
+  font-size: 26px;
+  font-weight: 800;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+}
+.topPlayerPill {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+}
+.topPlayerName { font-size: 13px; font-weight: 600; color: var(--text-main, #f1f5f9); }
+.topPlayerStat { font-size: 11px; color: var(--text-muted, #94a3b8); font-family: monospace; }
+
+.auditLine {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+  background: rgba(255,255,255,0.03);
+  font-size: 13px;
+  color: var(--text-main, #f1f5f9);
+  line-height: 1.55;
+}
+.auditIcon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+/* Gameplan */
+.priorityTag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  align-self: flex-start;
+}
+
+.stepList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.stepItem { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: var(--text-main, #f1f5f9); line-height: 1.5; }
+.stepNum {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Matchup */
+.edgeBadge {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: rgba(255,255,255,0.04);
+  align-self: flex-start;
+}

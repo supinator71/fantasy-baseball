@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLeague } from '@/lib/context/LeagueContext';
+import InsightCard from '@/components/InsightCard/InsightCard';
 import { toast } from 'react-hot-toast';
 
 // Convert the [{stat_id, name, value}] array from the API into {R: 8, HR: 2, ...}
@@ -72,15 +73,7 @@ export default function MatchupView() {
         </div>
       </div>
 
-      {/* AI Battle Plan — from shared LeagueContext analysis */}
-      {(aiAnalysis?.matchup || aiAnalysis?.gameplan) && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <h3 style={{ marginBottom: 12, color: '#00a86b' }}>⚡ AI Battle Plan</h3>
-          <div className="ai-response" style={{ fontSize: 15, lineHeight: 1.6 }}>
-            {aiAnalysis.matchup || aiAnalysis.gameplan}
-          </div>
-        </div>
-      )}
+      <InsightCard data={aiAnalysis?.matchup || aiAnalysis?.gameplan} type="matchup" />
 
       {/* Category table */}
       {matchup.stats?.length > 0 && (

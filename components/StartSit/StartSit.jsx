@@ -4,6 +4,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useLeague } from '@/lib/context/LeagueContext';
 import AiQuestionBox from '../shared/AiQuestionBox';
+import InsightCard from '@/components/InsightCard/InsightCard';
 
 export default function StartSit() {
   const { selectedLeague, leagueData, aiAnalysis, aiLoading } = useLeague();
@@ -57,18 +58,7 @@ export default function StartSit() {
         <p style={{ color: '#7aafc4' }}>AI-powered daily lineup optimizer</p>
       </div>
 
-      {/* Quick look from master analysis */}
-      {(aiLoading || aiAnalysis?.startSit) && (
-        <div className="card" style={{ marginBottom: 16, borderLeft: '4px solid #00a86b' }}>
-          <h4 style={{ color: '#00a86b', marginBottom: 8, fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 }}>
-            ⚡ AI Quick Look — Start/Sit
-          </h4>
-          {aiLoading
-            ? <p style={{ color: '#7aafc4', margin: 0, fontSize: 14 }}>Analyzing your roster...</p>
-            : <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>{aiAnalysis.startSit}</p>
-          }
-        </div>
-      )}
+      <InsightCard data={aiAnalysis?.startSit} type="startSit" loading={aiLoading} />
 
       {/* Roster + detailed analysis button */}
       {rosterLoading ? (

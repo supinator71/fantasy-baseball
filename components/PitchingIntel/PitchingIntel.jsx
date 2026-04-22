@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import AiQuestionBox from '../shared/AiQuestionBox'
+import InsightCard from '@/components/InsightCard/InsightCard'
 import { useLeague } from '@/lib/context/LeagueContext'
 
 
@@ -113,19 +114,18 @@ export default function PitchingIntel({ subscription }) {
         </div>
       </div>
 
-      {aiRec && (
+      {(aiRec || aiLoading) && (
         <div className="card" style={{ marginBottom: 24, background: 'linear-gradient(to bottom, var(--panel-bg), #0c1524)', border: '1px solid #00a86b33' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <img src="/cyborg_batflip.png" alt="Goin' Yard Scout" className="mascot-header" style={{height: 48, filter: 'hue-rotate(140deg)'}} />
               <h3 style={{ color: '#00a86b', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>The Pitching Playbook</h3>
             </div>
-            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setAiRec('')}>Dismiss</button>
+            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => refreshAnalysis()}>↻ Refresh</button>
           </div>
-          <div className="ai-response" style={{ fontSize: 15, lineHeight: 1.6 }}>{aiRec}</div>
-          
+          <InsightCard data={aiAnalysis?.pitching} type="pitching" loading={aiLoading} />
           <AiQuestionBox 
-            context={`Pitching strategy context: ${aiRec}`}
+            context={`Pitching strategy context: ${typeof aiRec === 'string' ? aiRec : aiRec?.summary || ''}`}
             leagueKey={selectedLeague}
             title="Ask the Pitching Coach"
             icon="🎯"

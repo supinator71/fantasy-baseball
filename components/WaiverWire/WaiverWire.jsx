@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useLeague } from '@/lib/context/LeagueContext';
 import { toast } from 'react-hot-toast';
 import AiQuestionBox from '@/components/shared/AiQuestionBox';
+import InsightCard from '@/components/InsightCard/InsightCard';
 
 const PRIORITY_COLORS = {
   'MUST ADD':             { bg: 'rgba(0,168,107,0.15)',  color: '#00a86b', border: 'rgba(0,168,107,0.4)' },
@@ -54,19 +55,7 @@ export default function WaiverWire() {
         </div>
       </div>
 
-      {/* Claude AI recommendation from master analysis */}
-      {(aiLoading || aiAnalysis?.waiver) && (
-        <div className="card" style={{ marginBottom: 20, borderLeft: '4px solid #00a86b' }}>
-          <h4 style={{ color: '#00a86b', marginBottom: 8, fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 }}>
-            ⚡ AI Waiver Recommendation
-          </h4>
-          {aiLoading ? (
-            <p style={{ color: '#7aafc4', margin: 0, fontSize: 14 }}>Analyzing your league...</p>
-          ) : (
-            <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>{aiAnalysis.waiver}</p>
-          )}
-        </div>
-      )}
+      <InsightCard data={aiAnalysis?.waiver} type="waiver" loading={aiLoading} />
 
       {/* Player table */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>

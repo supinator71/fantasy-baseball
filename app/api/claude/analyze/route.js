@@ -151,24 +151,77 @@ BREAKING NEWS (MLB — last 24h):
 ${newsRaw || '  No recent news available'}
 
 ---
-Respond ONLY with valid JSON — no markdown fences, no prose outside JSON:
+CONSISTENCY RULE: All 6 sections come from ONE unified analysis. Ensure zero contradictions:
+- A player recommended as ADD in waiver must NOT appear as SIT in startSit
+- A player listed in drops must NOT appear in starts or pitching.stream
+- Your audit.strength and matchup.edge must be consistent with each other
+- 2-start pitchers in pitching.twoStarters should appear in startSit.starts (if on roster)
+
+Respond ONLY with valid JSON — no markdown fences, no prose outside the JSON object.
+Be specific: name actual players from the roster and free agent list above. Reference real stats from the data provided.
+
 {
-  "waiver": "2-3 sentences. Name specific free agents to ADD and who to DROP. Reference actual free agents from the list above.",
-  "startSit": "2-3 sentences. Name specific roster players to START or BENCH this week based on their actual stats shown above.",
-  "pitching": "2-3 sentences. Name specific 2-start pitchers to stream. Mention ERA/WHIP from stats above. Note any relevant breaking news.",
-  "audit": "2-3 sentences. Identify the #1 strength and #1 weakness on this roster by player name, citing actual stat values.",
-  "gameplan": "2-3 sentences. The #1 move this week for a ${scoringLabel.split('(')[0].trim()} league. Be specific to this scoring format.",
-  "matchup": "1-2 sentences. What this team's point-scoring advantage is this week."
+  "waiver": {
+    "headline": "One punchy sentence — the single most important waiver move this week",
+    "summary": "2 sentences explaining the waiver landscape for this league format",
+    "adds": [
+      {"player": "Name", "position": "SP", "team": "XX", "reason": "specific stat-backed reason"},
+      {"player": "Name", "position": "OF", "team": "XX", "reason": "reason"}
+    ],
+    "drops": [
+      {"player": "Name", "position": "SP", "reason": "why they are droppable right now"}
+    ]
+  },
+  "startSit": {
+    "headline": "One sentence — who to start or sit that matters most this week",
+    "summary": "2 sentences on lineup decisions specific to this week's schedule",
+    "starts": [
+      {"player": "Name", "position": "SP", "reason": "schedule/stats reason"}
+    ],
+    "sits": [
+      {"player": "Name", "position": "1B", "reason": "why bench them"}
+    ]
+  },
+  "pitching": {
+    "headline": "One sentence on pitching strategy this week",
+    "summary": "2 sentences on SP streaming and rotation decisions",
+    "twoStarters": ["Name1", "Name2"],
+    "stream": {"player": "Name", "reason": "matchup/ERA reason"},
+    "avoid": {"player": "Name", "reason": "why to avoid"}
+  },
+  "audit": {
+    "grade": "B+",
+    "headline": "One sentence verdict on this roster's current state",
+    "strength": "Cite the #1 roster strength by player name and actual stat value",
+    "weakness": "Cite the #1 roster weakness by category or player name with actual stat",
+    "topPlayer": {"name": "Name", "position": "OF", "statLine": "HR:12 R:28 AVG:.290"}
+  },
+  "gameplan": {
+    "headline": "The single most important strategic move for this week",
+    "priority": "critical",
+    "summary": "2 sentences on the week's strategy specific to this scoring format",
+    "steps": [
+      "First specific action to take",
+      "Second specific action",
+      "Third specific action"
+    ]
+  },
+  "matchup": {
+    "edge": "Pitching / Hitting / Even",
+    "headline": "One sentence on this week's matchup outlook",
+    "summary": "1-2 sentences on how to win this week's matchup"
+  }
 }`;
 
-    const raw = await callClaude([{ role: 'user', content: prompt }], 900);
+    const raw = await callClaude([{ role: 'user', content: prompt }], 1400);
 
     let analysis = {};
     try {
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : { waiver: raw, startSit: '', pitching: '', audit: '', gameplan: '', matchup: '' };
+      analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
     } catch {
-      analysis = { waiver: raw, startSit: '', pitching: '', audit: '', gameplan: '', matchup: '' };
+      // Fallback: wrap raw text so modules can still display something
+      analysis = { waiver: { headline: 'Analysis unavailable', summary: raw }, startSit: {}, pitching: {}, audit: {}, gameplan: {}, matchup: {} };
     }
 
     return NextResponse.json({ analysis, scoredWaiver: scoredWaiver.slice(0, 10), lineupRecs: null });

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { useLeague } from '@/lib/context/LeagueContext'
+import InsightCard from '@/components/InsightCard/InsightCard'
 
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 const DAY_EMOJI = {
@@ -167,22 +168,7 @@ export default function GamePlan({ leagueSettings }) {
       )}
 
       {/* Quick AI Snapshot from master analysis */}
-      {(aiLoading || aiAnalysis?.gameplan) && (
-        <div className="card" style={{ marginBottom: 20, borderLeft: '4px solid #4aafdb' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <h4 style={{ color: '#4aafdb', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, margin: 0 }}>⚡ AI Quick Look</h4>
-            {!aiLoading && (
-              <button onClick={refreshAnalysis} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 4, background: 'rgba(74,175,219,0.15)', border: '1px solid #4aafdb', color: '#4aafdb', cursor: 'pointer' }}>
-                ↻ Refresh Intel
-              </button>
-            )}
-          </div>
-          {aiLoading
-            ? <p style={{ color: '#7aafc4', margin: 0, fontSize: 14 }}>Fetching latest news &amp; analyzing...</p>
-            : <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>{aiAnalysis.gameplan}</p>
-          }
-        </div>
-      )}
+      <InsightCard data={aiAnalysis?.gameplan} type="gameplan" loading={aiLoading} onRefresh={refreshAnalysis} />
 
       {/* CTA: Generate Plan */}
       {!rosterLoading && roster.length > 0 && !plan && !loading && (
