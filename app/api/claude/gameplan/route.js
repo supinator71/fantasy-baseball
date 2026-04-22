@@ -16,8 +16,10 @@ export async function POST(request) {
   if (!guid) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
   try {
-    const { my_roster, opponent, week_context, league_key } = await request.json();
-    const settings = db.getLeagueSettings(guid, league_key) || {};
+    const { my_roster, opponent, week_context, league_key, leagueSettings: clientSettings } = await request.json();
+    // Client always has fresh Yahoo league data — use it. DB entry is fallback.
+    const dbSettings = db.getLeagueSettings(guid, league_key) || {};
+    const settings = { ...dbSettings, ...clientSettings };
     const pitching = await mlbStats.getTwoStartPitchers().catch(() => ({ currentWeek: [], nextWeek: [], today: [], pitcherDetails: {} }));
 
     const nowDay = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles' });

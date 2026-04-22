@@ -17,14 +17,18 @@ export async function POST(request) {
   if (!guid) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
   try {
-    const { players, matchup_context, scoring_type, league_key } = await request.json();
-    const settings = db.getLeagueSettings(guid, league_key) || {};
+    const { players, matchup_context, scoring_type, league_key, leagueSettings: clientSettings } = await request.json();
+    const dbSettings = db.getLeagueSettings(guid, league_key) || {};
+    // Merge: client has fresh Yahoo data, DB has persisted overrides
+    const settings = { ...dbSettings, ...clientSettings, scoring_type: clientSettings?.scoring_type || dbSettings.scoring_type || scoring_type };
 
-    // Fetch 2-start schedule so we can anchor start/sit advice to real games
     const pitching = await mlbStats.getTwoStartPitchers().catch(() => ({ currentWeek: [], nextWeek: [], today: [], pitcherDetails: {} }));
 
     const twoStartNames = (pitching.remainingTwoStarters || []).join(', ') || 'None confirmed';
     const todayNames    = (pitching.today || []).join(', ') || 'None confirmed';
+
+    // Build stat-only string per player from Yahoo data; no training data
+    const scoringLabel = settings.scoring_type === 'headpoint' ? 'H2H Points' : settings.scoring_type === 'headone' ? 'H2H Categories' : settings.scoring_type === 'roto' ? 'Rotisserie' : settings.scoring_type || 'Unknown format';
 
     // Build a stat-only string for each player from the data passed in — no training data
     const rosterBlock = (players || []).map(p => {
@@ -40,8 +44,8 @@ export async function POST(request) {
     const text = await callClaude([{
       role: 'user',
       content: `${STAT_GUARDRAIL}
-League Format: ${settings.scoring_type || scoring_type || 'Unknown'}
-Scoring Label: ${settings.name || league_key || 'Unknown League'}
+League Format: ${scoringLabel}
+League: ${settings.name || league_key || 'Unknown'}
 
 MY ROSTER (2026 season stats from Yahoo — use ONLY these numbers):
 ${rosterBlock}

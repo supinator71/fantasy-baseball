@@ -117,9 +117,10 @@ export default function GamePlan({ leagueSettings }) {
     try {
       const { data } = await axios.post('/api/claude/gameplan', {
         my_roster: roster,
-        matchup: matchup,
-        week_number: matchup?.week || null,
-        league_key: selectedLeague
+        opponent: matchup,
+        week_context: matchup?.week ? `Week ${matchup.week} matchup vs ${matchup.opponent_name || 'opponent'}` : '',
+        league_key: selectedLeague,
+        leagueSettings: leagueSettings || {}  // pass format/settings directly so route doesn't depend on DB lookup
       })
       setPlan(data)
     } catch (err) {
