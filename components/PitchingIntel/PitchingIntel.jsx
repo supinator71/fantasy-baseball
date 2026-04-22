@@ -26,7 +26,6 @@ export default function PitchingIntel({ subscription }) {
 
   async function fetchData() {
     setLoading(true)
-    setAiRec('')
     try {
       const [rosterRes, availableRes, contextRes] = await Promise.all([
         axios.get(`/api/yahoo/league/${selectedLeague}/myroster`),
