@@ -60,8 +60,30 @@ export async function POST(request) {
     if (!force) {
       const cached = db.getAnalysisCache(guid, league_key);
       if (cached) {
-        console.log(`[analyze] Serving cached result for ${guid}:${league_key} (model: ${cached.model || 'unknown'})`);
-        return NextResponse.json({ ...cached, fromCache: true });
+        const used = db.getForceRefreshCount(guid);
+        const remaining = Math.max(0, db.DAILY_FORCE_LIMIT - used);
+        console.log(`[analyze] Cache hit for ${guid}:${league_key} (${remaining} force refreshes remaining today)`);
+        return NextResponse.json({ ...cached, fromCache: true, refreshesRemaining: remaining });
+      }
+    }
+
+    // ── Force-refresh rate limit check ────────────────────────────────────────
+    if (force) {
+      const used = db.getForceRefreshCount(guid);
+      if (used >= db.DAILY_FORCE_LIMIT) {
+        console.log(`[analyze] Force-refresh limit hit for ${guid} (${used}/${db.DAILY_FORCE_LIMIT} today)`);
+        // Return today's cache with a limit message rather than hard-erroring
+        const cached = db.getAnalysisCache(guid, league_key);
+        if (cached) {
+          return NextResponse.json({
+            ...cached,
+            fromCache: true,
+            refreshLimitReached: true,
+            refreshesRemaining: 0,
+            refreshesLimit: db.DAILY_FORCE_LIMIT,
+          });
+        }
+        // No cache at all yet — fall through to Haiku auto-analysis (don't block entirely)
       }
     }
 
@@ -291,6 +313,9 @@ The JSON keys below are FORMAT INSTRUCTIONS — replace ALL quoted placeholder t
       ? await callClaude([{ role: 'user', content: prompt }], 4096)
       : await callClaudeFast([{ role: 'user', content: prompt }], 4096);
 
+    // Increment Sonnet counter only on actual force-refresh calls
+    if (force) db.incrementForceRefreshCount(guid);
+
     let analysis = {};
     try {
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
@@ -299,10 +324,13 @@ The JSON keys below are FORMAT INSTRUCTIONS — replace ALL quoted placeholder t
       analysis = { waiver: { headline: 'Analysis unavailable', summary: raw }, startSit: {}, pitching: {}, audit: {}, gameplan: {}, matchup: {} };
     }
 
+    const refreshesUsed = db.getForceRefreshCount(guid);
+    const refreshesRemaining = Math.max(0, db.DAILY_FORCE_LIMIT - refreshesUsed);
+
     const payload = { analysis, scoredWaiver: scoredWaiver.slice(0, 10), lineupRecs: null, model };
     db.setAnalysisCache(guid, league_key, payload);
 
-    return NextResponse.json({ ...payload, fromCache: false });
+    return NextResponse.json({ ...payload, fromCache: false, refreshesRemaining, refreshesLimit: db.DAILY_FORCE_LIMIT });
 
   } catch (err) {
     console.error('[claude/analyze]', err.message);
