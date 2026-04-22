@@ -5,6 +5,13 @@ import { db } from '@/lib/database';
 import * as yahoo from '@/lib/yahooService';
 import * as mlbStats from '@/lib/mlbStatsService';
 
+// Yahoo scoring_type codes → human labels
+const SCORING_TYPE_MAP = {
+  'headpoint': 'H2H Points (weekly head-to-head, each stat earns points — NOT Roto, NOT categories)',
+  'headone':   'H2H Categories (weekly matchup, win/tie/lose each individual stat category)',
+  'roto':      'Rotisserie (season-long ranking in each category)',
+};
+
 // Yahoo stat ID → human-readable name
 const STAT_MAP = {
   '7': 'R', '12': 'HR', '13': 'RBI', '16': 'SB', '3': 'AVG',
@@ -18,9 +25,9 @@ const PITCHER_SLOTS = new Set(['SP', 'RP', 'P']);
 function buildPlayerLine(p) {
   const isPitcher = PITCHER_SLOTS.has(String(p.position || '').split('/')[0]);
   const stats = p.stats || {};
-  // Translate Yahoo IDs to real stat names, skip zeroes
+  // Translate Yahoo IDs to real stat names; keep zeroes (0 ERA matters!)
   const parts = Object.entries(stats)
-    .filter(([id, v]) => STAT_MAP[id] && v !== '-' && v !== '' && v !== undefined)
+    .filter(([id, v]) => STAT_MAP[id] && v !== '-' && v !== '' && v !== undefined && v !== null)
     .map(([id, v]) => `${STAT_MAP[id]}:${v}`);
   const statStr = parts.length ? parts.join(' ') : 'no stats yet this season';
   const slot = p.slot || 'BN';
@@ -91,10 +98,16 @@ export async function POST(request) {
     const twoStartThis = (pitching.currentWeek || []).slice(0, 8).join(', ') || 'None confirmed';
     const twoStartNext = (pitching.nextWeek   || []).slice(0, 6).join(', ') || 'None confirmed';
 
+    const scoringLabel = SCORING_TYPE_MAP[settings.scoring_type] || settings.scoring_type || 'H2H Points';
+
     const prompt = `You are Goin' Yard HQ — an expert fantasy baseball assistant. Be specific, data-driven, and name real players.
 
-LEAGUE: "${settings.name || league_key}"
-Format: ${settings.scoring_type || 'H2H Points'} | Teams: ${settings.num_teams || 10} | Week: ${settings.current_week || '?'}
+⚠️ SCORING FORMAT: ${scoringLabel}
+This determines ALL advice. For H2H Points: focus on maximizing total points scored this week, not category counts. Do NOT mention 5x5 categories, Roto rankings, or season-long category standing. For H2H Categories: focus on winning individual categories. For Roto: focus on season ranking.
+
+LEAGUE: "${settings.name || league_key}" | Teams: ${settings.num_teams || 10} | Week: ${settings.current_week || '?'}
+
+⚠️ USE ONLY THE STATS BELOW — do not use your training data for player performance numbers. The stats below are the current 2026 season actuals from Yahoo Fantasy.
 
 MY ROSTER:
 ${rosterBlock}
@@ -103,21 +116,21 @@ PITCHING INTELLIGENCE:
 - 2-start SPs THIS WEEK: ${twoStartThis}
 - 2-start SPs NEXT WEEK: ${twoStartNext}
 
-TOP FREE AGENTS (first available):
-${freeAgents.slice(0, 10).map(p => `  • ${p.name} (${p.position}) — team: ${p.team}`).join('\n') || '  None'}
+TOP FREE AGENTS (available now):
+${freeAgents.slice(0, 10).map(p => `  • ${p.name} (${p.position}) — ${p.team}`).join('\n') || '  None'}
 
 BREAKING NEWS (MLB — last 24h):
-${newsRaw || '  No recent news'}
+${newsRaw || '  No recent news available'}
 
 ---
-Respond ONLY with valid JSON — no markdown, no prose outside JSON:
+Respond ONLY with valid JSON — no markdown fences, no prose outside JSON:
 {
-  "waiver": "2-3 sentences naming specific free agents to ADD and who to DROP. Reference the free agent list above.",
-  "startSit": "2-3 sentences naming specific players from MY ROSTER to start or bench this week. Cite actual stats.",
-  "pitching": "2-3 sentences covering rotation strategy. Name specific 2-start pitchers to stream. Mention any relevant breaking news (signings, injuries) affecting starters.",
-  "audit": "2-3 sentences identifying the biggest strength and biggest weakness on this specific roster by name.",
-  "gameplan": "2-3 sentences with the #1 move this week and the key category to attack given this scoring format.",
-  "matchup": "1-2 sentences on what category advantage this team has this week."
+  "waiver": "2-3 sentences. Name specific free agents to ADD and who to DROP. Reference actual free agents from the list above.",
+  "startSit": "2-3 sentences. Name specific roster players to START or BENCH this week based on their actual stats shown above.",
+  "pitching": "2-3 sentences. Name specific 2-start pitchers to stream. Mention ERA/WHIP from stats above. Note any relevant breaking news.",
+  "audit": "2-3 sentences. Identify the #1 strength and #1 weakness on this roster by player name, citing actual stat values.",
+  "gameplan": "2-3 sentences. The #1 move this week for a ${scoringLabel.split('(')[0].trim()} league. Be specific to this scoring format.",
+  "matchup": "1-2 sentences. What this team's point-scoring advantage is this week."
 }`;
 
     const raw = await callClaude([{ role: 'user', content: prompt }], 900);

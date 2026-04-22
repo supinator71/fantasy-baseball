@@ -3,6 +3,7 @@ import axios from 'axios'
 import LastUpdated from '../shared/LastUpdated'
 import PackDropModal from '../TrophyCase/PackDropModal'
 import AiQuestionBox from '../shared/AiQuestionBox'
+import { useLeague } from '@/lib/context/LeagueContext'
 
 function ConfidenceBadge({ level }) {
   const styles = {
@@ -21,7 +22,7 @@ function ConfidenceBadge({ level }) {
 }
 
 export default function MatchupPredictor({ leagueSettings }) {
-  const [leagues, setLeagues] = useState([])
+  const { leagues, selectedLeague: ctxLeague } = useLeague()
   const [selectedLeague, setSelectedLeague] = useState('')
   const [matchup, setMatchup] = useState(null)
   const [prediction, setPrediction] = useState(null)
@@ -32,12 +33,10 @@ export default function MatchupPredictor({ leagueSettings }) {
   const [fromCache, setFromCache] = useState(false)
   const [awardedCard, setAwardedCard] = useState(null)
 
+  // Sync to context's selected league
   useEffect(() => {
-    axios.get('/api/yahoo/leagues').then(({ data }) => {
-      setLeagues(data)
-      if (data[0]?.league_key) setSelectedLeague(data[0].league_key)
-    }).catch(() => {})
-  }, [])
+    if (ctxLeague && !selectedLeague) setSelectedLeague(ctxLeague)
+  }, [ctxLeague])
 
   useEffect(() => {
     if (selectedLeague) fetchMatchup()

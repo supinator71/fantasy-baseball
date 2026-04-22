@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import PackDropModal from '../TrophyCase/PackDropModal'
+import { useLeague } from '@/lib/context/LeagueContext'
 
 function GradeBadge({ grade }) {
   const g = String(grade || '').charAt(0).toUpperCase()
@@ -30,8 +31,7 @@ function PriorityBadge({ priority }) {
 }
 
 export default function TeamAudit({ leagueSettings }) {
-  const [leagues, setLeagues] = useState([])
-  const [selectedLeague, setSelectedLeague] = useState('')
+  const { selectedLeague, aiAnalysis, aiLoading } = useLeague()
   const [teams, setTeams] = useState([])
   const [selectedTeam, setSelectedTeam] = useState('')
   const [currentLoadedTeam, setCurrentLoadedTeam] = useState('')
@@ -40,21 +40,10 @@ export default function TeamAudit({ leagueSettings }) {
   const [audit, setAudit] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  
-  // Trophy gamification state
   const [awardedCard, setAwardedCard] = useState(null)
 
   useEffect(() => {
-    axios.get('/api/yahoo/leagues').then(({ data }) => {
-      setLeagues(data)
-      if (data[0]?.league_key) setSelectedLeague(data[0].league_key)
-    }).catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    if (selectedLeague) {
-      loadData()
-    }
+    if (selectedLeague) loadData()
   }, [selectedLeague])
 
   useEffect(() => {
@@ -168,18 +157,23 @@ export default function TeamAudit({ leagueSettings }) {
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>▣ Team Audit</h1>
           <p style={{ color: '#7aafc4' }}>AI-powered roster analysis — grades, VOR rankings, and actionable moves</p>
         </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ minWidth: 200, padding: '8px 12px', borderRadius: 6, background: '#122840', color: '#fff', border: '1px solid #1e3d5c' }}>
-            {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
+        {teams.length > 0 && (
+          <select value={selectedTeam} onChange={e => setSelectedTeam(e.target.value)} style={{ minWidth: 200, padding: '8px 12px', borderRadius: 6, background: '#122840', color: '#fff', border: '1px solid #1e3d5c' }}>
+            {teams.map((t, i) => <option key={i} value={t.team_key}>{t.name}</option>)}
           </select>
-
-          {teams.length > 0 && (
-            <select value={selectedTeam} onChange={e => setSelectedTeam(e.target.value)} style={{ minWidth: 200, padding: '8px 12px', borderRadius: 6, background: '#122840', color: '#fff', border: '1px solid #1e3d5c' }}>
-              {teams.map((t, i) => <option key={i} value={t.team_key}>{t.name}</option>)}
-            </select>
-          )}
-        </div>
+        )}
       </div>
+
+      {/* Quick look from master AI analysis */}
+      {(aiLoading || aiAnalysis?.audit) && !audit && (
+        <div className="card" style={{ marginBottom: 16, borderLeft: '4px solid #4aafdb' }}>
+          <h4 style={{ color: '#4aafdb', marginBottom: 8, fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 }}>⚡ AI Snapshot</h4>
+          {aiLoading
+            ? <p style={{ color: '#7aafc4', margin: 0, fontSize: 14 }}>Analyzing your roster...</p>
+            : <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>{aiAnalysis.audit}</p>
+          }
+        </div>
+      )}
 
       {error && (
         <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', borderRadius: 8, padding: 16, marginBottom: 16, color: '#ef4444' }}>
