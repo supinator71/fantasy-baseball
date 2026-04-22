@@ -82,20 +82,39 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: transform 0.3s ease;
 }
 
-.card-slot.unlocked:hover {
-  transform: translateY(-8px) scale(1.02);
-  z-index: 2;
-}
-
-.card-visual-wrapper {
-  position: relative;
+/* 3D FLIP ARCHITECTURE */
+.card-wrapper-3d {
+  perspective: 1200px;
+  width: 100%;
   aspect-ratio: 3/4;
+}
+
+.card-inner-3d {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform-style: preserve-3d;
+  cursor: pointer;
+}
+
+.card-wrapper-3d.is-flipped .card-inner-3d {
+  transform: rotateY(180deg);
+}
+
+.card-front-3d, .card-back-3d {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.card-front-3d {
   background: #000;
 }
 
@@ -106,8 +125,60 @@
   display: block;
 }
 
+/* BACK FACE */
+.card-back-3d {
+  background: linear-gradient(135deg, #0c1d35 0%, #050a12 100%);
+  transform: rotateY(180deg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 2px solid var(--primary);
+}
+
+.card-back-3d .serial {
+  font-size: 10px;
+  color: var(--primary);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.card-back-3d .series {
+  font-size: 12px;
+  color: white;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.card-back-3d h4 {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  margin-top: 20px;
+}
+
+.card-back-3d p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #e2e8f0;
+  font-style: italic;
+}
+
+.card-back-3d .rarity-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+}
+
 /* Locked State Silhouette */
-.card-slot.locked .card-visual-wrapper {
+.card-slot.locked .card-front-3d {
   border: 2px dashed rgba(255, 255, 255, 0.1);
   background: rgba(0,0,0,0.3);
   box-shadow: none;
@@ -138,6 +209,7 @@
   border-radius: 20px;
   font-size: 14px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  z-index: 10;
 }
 
 .card-meta {
@@ -261,7 +333,7 @@
 }
 
 /* Legendary Gamification - Fabric Texture */
-.card-visual-wrapper.legendary::before,
+.card-wrapper-3d.legendary .card-front-3d::before,
 .pack-card-container.legendary::before {
   content: '';
   position: absolute;
