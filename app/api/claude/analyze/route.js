@@ -4,6 +4,7 @@ import { callClaude } from '@/lib/claude';
 import { db } from '@/lib/database';
 import * as yahoo from '@/lib/yahooService';
 import * as mlbStats from '@/lib/mlbStatsService';
+import * as brain from '@/lib/fantasyBrain';
 
 // Yahoo scoring_type codes → human labels
 const SCORING_TYPE_MAP = {
@@ -98,12 +99,12 @@ export async function POST(request) {
       ...(pitchers.length ? pitchers.map(buildPlayerLine) : ['  (none found)']),
     ].join('\n');
 
-    // ── Score waiver targets ───────────────────────────────────────────────────
+    // ── Score waiver targets using the real fantasyBrain engine ─────────────
+    // No hardcoded scores — all values come from scoreWaiverTarget()
+    const rosterDiag = brain.buildRosterDiagnosis(roster, settings, null, pitching);
     const scoredWaiver = freeAgents.slice(0, 25).map(p => {
-      const pos    = String(p.position || '').split('/')[0].toUpperCase();
-      const isPit  = PITCHER_SLOTS.has(pos);
-      const score  = isPit ? 55 : 45; // simple fallback score without full brain
-      return { ...p, waiverScore: { score, priority: score >= 60 ? 'High priority' : 'Speculative add', reasoning: 'Check stats' } };
+      const wScore = brain.scoreWaiverTarget(p, roster, settings, rosterDiag.categoryNeeds, pitching);
+      return { ...p, waiverScore: wScore };
     }).sort((a, b) => (b.waiverScore?.score ?? 0) - (a.waiverScore?.score ?? 0));
 
     // ── Build pitching intelligence block ───────────────────────────────────
@@ -185,7 +186,10 @@ CONSISTENCY RULE: All 6 sections come from ONE unified analysis. Ensure zero con
 - 2-start pitchers in pitching.twoStarters should appear in startSit.starts (if on roster)
 
 Respond ONLY with valid JSON — no markdown fences, no prose outside the JSON object.
-Be specific: name actual players from the roster and free agent list above. Reference real stats from the data provided.
+All player names, stats, and reasons MUST come from the roster data and free agent list provided above.
+DO NOT use your training data to supply player stats — if a stat is not in the data above, do not cite it.
+DO NOT invent player names not shown in the data above.
+The JSON keys below are FORMAT INSTRUCTIONS — replace ALL quoted placeholder text with real values from the data:
 
 {
   "waiver": {
@@ -217,11 +221,11 @@ Be specific: name actual players from the roster and free agent list above. Refe
     "avoid": {"player": "Name", "reason": "why to avoid"}
   },
   "audit": {
-    "grade": "B+",
-    "headline": "One sentence verdict on this roster's current state",
-    "strength": "Cite the #1 roster strength by player name and actual stat value",
-    "weakness": "Cite the #1 roster weakness by category or player name with actual stat",
-    "topPlayer": {"name": "Name", "position": "OF", "statLine": "HR:12 R:28 AVG:.290"}
+    "grade": "[A/B/C/D based on roster VOR]",
+    "headline": "[one sentence verdict on this roster]",
+    "strength": "[#1 roster strength — player name and stat value from the data above]",
+    "weakness": "[#1 roster weakness — category or player name with stat from the data above]",
+    "topPlayer": {"name": "[player name from roster]", "position": "[position]", "statLine": "[stat:value pairs from data above only]"}
   },
   "gameplan": {
     "headline": "The single most important strategic move for this week",

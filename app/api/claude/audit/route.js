@@ -78,30 +78,31 @@ export async function POST(request) {
 ⚠️ SCORING FORMAT: ${scoringLabel}
 Tailor ALL advice to this exact format. Do NOT apply Roto logic to H2H leagues.
 
-⚠️ USE ONLY THE STATS BELOW — do not fabricate or use training-data numbers. These are 2026 Yahoo season actuals.
+⚠️ DATA RULE: Use ONLY the stats and VOR values provided below — do NOT use training data for any player stat, ERA, AVG, HR, or VOR value.
+DO NOT cite stats not shown in the roster block below. If a stat is missing, say "stats not yet available."
 
 LEAGUE: "${settings.name || league_key}" | Teams: ${settings.num_teams || 10}
 
-MY ROSTER (with stats):
+MY ACTIVE ROSTER (2026 Yahoo season stats):
 ${rosterBlock}
 
-PRE-CALCULATED VOR (engine-computed, use these exact values in vorByPlayer — do NOT change them):
+PRE-CALCULATED VOR (engine-computed — copy these exact values into vorByPlayer, do NOT change them):
 ${vorBlock}
+
+⛔ IL PLAYERS (do NOT list as strengths or suggest starting):
+${ilPlayers.length ? ilPlayers.map(p => `  • ${p.name} (${p.position}) [${p.status || 'injured'}]`).join('\n') : '  None'}
 
 Perform a full team audit. Respond ONLY with valid JSON — no markdown fences:
 {
-  "grade": "B+",
-  "championshipPath": "One sentence on this team's path to the playoffs given the actual roster above.",
-  "strengths": ["Strength 1 citing actual player stats", "Strength 2", "Strength 3"],
-  "weaknesses": ["Weakness 1 citing actual player names", "Weakness 2", "Weakness 3"],
+  "grade": "[letter grade A-F based on roster VOR above]",
+  "championshipPath": "[one sentence on this team's path to the playoffs using the actual roster above]",
+  "strengths": ["[strength 1 — cite player name and actual stat from the roster data above]", "[strength 2]", "[strength 3]"],
+  "weaknesses": ["[weakness 1 — cite player name or category with actual stat from above]", "[weakness 2]", "[weakness 3]"],
   "moves": [
-    {"action": "Specific move — drop X, add Y", "priority": "immediate", "reasoning": "Why in 1 sentence citing stats"},
-    {"action": "Specific move 2", "priority": "high", "reasoning": "Why"}
+    {"action": "[specific move: drop X, add Y]", "priority": "immediate", "reasoning": "[why, citing actual stats from above]"},
+    {"action": "[specific move 2]", "priority": "high", "reasoning": "[why]"}
   ],
-  "vorByPlayer": [
-    {"name": "PlayerName", "position": "SP", "vor": 48, "scarcity": "elite"},
-    {"name": "PlayerName2", "position": "OF", "vor": 31, "scarcity": "moderate"}
-  ]
+  "vorByPlayer": ${JSON.stringify(vorTable.map(p => ({ name: p.name, position: p.position, vor: p.vor, scarcity: p.scarcity })))}
 }`
     }], 1000);
 

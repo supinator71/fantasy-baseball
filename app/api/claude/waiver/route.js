@@ -41,14 +41,16 @@ export async function POST(request) {
     const text = await callClaude([
       {
         role: 'user',
-        content: `
-          League Settings: ${JSON.stringify(settings)}
-          ${diagnosis.promptBlock}
-          Breaking News: ${news}
-          Waiver Targets: ${JSON.stringify(scored.slice(0, 10))}
-          
-          Provide Add/Drop recommendations based on the team's needs and the waiver talent.
-        `
+        content: `⚠️ DATA RULE: Use ONLY the player stats and scores provided below. DO NOT use training data to supply ERA, AVG, HR, or any stat values. DO NOT recommend pitchers not listed in the probable pitcher schedule in the roster diagnosis.
+
+League Settings: ${JSON.stringify(settings)}
+${diagnosis.promptBlock}
+Breaking News: ${news}
+
+AVAILABLE WAIVER TARGETS (engine-scored, 2026 Yahoo stats):
+${JSON.stringify(scored.slice(0, 10))}
+
+Provide Add/Drop recommendations based ONLY on the engine scores and stats above. Reference actual stat values shown — do not guess stats not listed.`
       }
     ]);
 
