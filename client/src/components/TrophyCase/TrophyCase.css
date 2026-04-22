@@ -425,17 +425,35 @@
   100% { transform: translateX(100%); }
 }
 
+.card-run-badge {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: #ffd700;
+  color: #000;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 900;
+  border-radius: 2px;
+  box-shadow: 2px 2px 0 #000;
+  z-index: 10;
+  text-transform: uppercase;
+}
+
 .card-back-3d .mint-stamp {
   position: absolute;
-  top: 15px;
-  right: 15px;
-  font-size: 10px;
+  bottom: 25px;
+  right: 25px;
+  background: #ff4444; /* Ink red */
+  color: #fff;
+  padding: 5px 15px;
   font-weight: 900;
-  color: rgba(255,255,255,0.2);
-  border: 1px solid rgba(255,255,255,0.1);
-  padding: 2px 6px;
-  border-radius: 3px;
-  transform: rotate(5deg);
+  transform: rotate(-15deg);
+  border: 2px solid rgba(0,0,0,0.4);
+  font-size: 18px;
+  font-family: 'Courier New', Courier, monospace;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.3);
+  mix-blend-mode: multiply; /* Authentic ink look */
   text-transform: uppercase;
 }
 

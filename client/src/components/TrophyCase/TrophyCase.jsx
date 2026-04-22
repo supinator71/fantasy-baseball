@@ -70,6 +70,9 @@ export default function TrophyCase() {
               {isUnlocked && count > 1 && (
                 <div className="dupe-badge">x{count}</div>
               )}
+              {cardDef.serial_total && (
+                <div className="card-run-badge">RUN: {cardDef.serial_total}</div>
+              )}
             </div>
 
             {/* BACK */}

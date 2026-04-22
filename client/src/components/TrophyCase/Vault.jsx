@@ -55,6 +55,9 @@ export default function Vault() {
                     <div className="card-patch" />
                   )}
                   <div className="vault-card-id">#{card.set_num}</div>
+                  {card.serial_total && (
+                    <div className="vault-run-badge">RUN: {card.serial_total}</div>
+                  )}
                 </div>
                 <div className="vault-card-info">
                   <h3>{card.name}</h3>
