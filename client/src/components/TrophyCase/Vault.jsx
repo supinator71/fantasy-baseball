@@ -67,9 +67,9 @@ export default function Vault() {
                 <div className="back-header">
                   <div className="serial">CYBORG-ID: {card.id.toUpperCase()}</div>
                   <div className="series">{getSeries(card.id)}</div>
-                  {card.serial_total && (
+                  {card.serial_total && card.mint_number && (
                     <div className="mint-stamp">
-                      MINT Run: 1/{card.serial_total}
+                      MINT Run: {card.mint_number}/{card.serial_total}
                     </div>
                   )}
                 </div>

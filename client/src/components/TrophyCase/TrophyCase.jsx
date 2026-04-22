@@ -76,9 +76,9 @@ export default function TrophyCase() {
             <div className="card-back-3d">
               <div className="serial">CYBORG-ID: {cardDef.id.toUpperCase()}</div>
               <div className="series">{getSeries(cardDef.id)}</div>
-              {isUnlocked && cardDef.serial_total && (
+              {isUnlocked && cardDef.serial_total && cardDef.mint_number && (
                 <div className="mint-stamp">
-                  MINT Run: 1/{cardDef.serial_total}
+                  MINT Run: {cardDef.mint_number}/{cardDef.serial_total}
                 </div>
               )}
               <div className="back-content">

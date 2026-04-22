@@ -5,21 +5,21 @@ const db = require('../services/database');
 // Master dictionary of all collectible cards in the application
 const CARD_COLLECTION = [
   // --- SERIES 1: CORE SET ---
-  { id: 'base_hitter', name: 'Cyber Hitter (Base)', img: '/cyborg_card_tier1_hitter.png', rarity: 'common', specialization: 'Balanced Offense', lore: 'The foundational unit of the Cyber-League. Optimized for contact and high-velocity exit speeds.', serial_total: 5000 },
-  { id: 'base_pitcher', name: 'Cyber Pitcher (Base)', img: '/cyborg_card_tier1_pitcher.png', rarity: 'common', specialization: 'Heat Sink Power', lore: 'Equipped with a liquid-cooled arm capable of sustaining 110mph fastballs for 9 innings.', serial_total: 5000 },
-  { id: 'base_closer', name: 'Bullpen Closer (Base)', img: '/cyborg_bullpen_closer.png', rarity: 'common', specialization: 'High-Stress Lock', lore: 'Designed to compute high-leverage outcomes in milliseconds. A true ninth-inning firewall.', serial_total: 2500 },
-  { id: 'base_manager', name: 'Tactical Manager (Base)', img: '/female_cyborg_manager_1776830516148.png', rarity: 'common', specialization: 'Neural Strategy', lore: 'Possesses a neural link to every player on the field, adjusting shifts based on real-time wind data.', serial_total: 1000 },
-  { id: 'base_steal', name: 'Stealing Second (Base)', img: '/cyborg_stealing_second.png', rarity: 'common', specialization: 'Kinetic Burst', lore: 'Hydraulic leg boosters allow for a 0-to-20mph burst in under two steps.', serial_total: 5000 },
-  { id: 'base_catch', name: 'Diving Catch (Base)', img: '/cyborg_diving_catch.png', rarity: 'common', specialization: 'Gravity Nullifier', lore: 'Internal gyroscopes allow for mid-air adjustments that defy traditional physics.', serial_total: 5000 },
-  { id: 'gatorade', name: 'Gatorade Glitch', img: '/cyborg_gatorade_glitch.png', rarity: 'common', specialization: 'Thermal Reset', lore: 'A rare cooling malfunction that results in a localized neon mist celebration.', serial_total: 1000 },
+  { id: 'base_hitter', name: 'Cyber Hitter (Base)', img: '/cyborg_card_tier1_hitter.png', rarity: 'common', specialization: 'Balanced Offense', lore: 'The foundational unit of the Cyber-League. Optimized for contact and high-velocity exit speeds.' },
+  { id: 'base_pitcher', name: 'Cyber Pitcher (Base)', img: '/cyborg_card_tier1_pitcher.png', rarity: 'common', specialization: 'Heat Sink Power', lore: 'Equipped with a liquid-cooled arm capable of sustaining 110mph fastballs for 9 innings.' },
+  { id: 'base_closer', name: 'Bullpen Closer (Base)', img: '/cyborg_bullpen_closer.png', rarity: 'common', specialization: 'High-Stress Lock', lore: 'Designed to compute high-leverage outcomes in milliseconds. A true ninth-inning firewall.' },
+  { id: 'base_manager', name: 'Tactical Manager (Base)', img: '/female_cyborg_manager.png', rarity: 'common', specialization: 'Neural Strategy', lore: 'Possesses a neural link to every player on the field, adjusting shifts based on real-time wind data.' },
+  { id: 'base_steal', name: 'Stealing Second (Base)', img: '/cyborg_stealing_second.png', rarity: 'common', specialization: 'Kinetic Burst', lore: 'Hydraulic leg boosters allow for a 0-to-20mph burst in under two steps.' },
+  { id: 'base_catch', name: 'Diving Catch (Base)', img: '/cyborg_diving_catch.png', rarity: 'common', specialization: 'Gravity Nullifier', lore: 'Internal gyroscopes allow for mid-air adjustments that defy traditional physics.' },
+  { id: 'gatorade', name: 'Gatorade Glitch', img: '/cyborg_gatorade_glitch.png', rarity: 'common', specialization: 'Thermal Reset', lore: 'A rare cooling malfunction that results in a localized neon mist celebration.' },
 
   // Uncommon
-  { id: 't2_holo', name: 'Holographic Foil Base', img: '/cyborg_card_tier2_holo_premium.png', rarity: 'uncommon', specialization: 'Refractive Shield', lore: 'A premium-plated unit that reflects stadium lights to distract opposing batters.', serial_total: 1000 },
-  { id: 'coach_woman', name: 'Holographic Coach', img: '/cyborg_coach_card_woman.png', rarity: 'uncommon', specialization: 'Efficiency Mentor', lore: 'Specializes in optimizing the swing-path of younger cyborg units.', serial_total: 1000 },
-  { id: 'unc_closer', name: 'Bullpen Closer (Refractor)', img: '/cyborg_bullpen_closer.png', rarity: 'uncommon', specialization: 'Pulse Save', lore: 'A specialized refractor variant of the standard firewall closer.', serial_total: 500 },
-  { id: 'unc_manager', name: 'Tactical Manager (Foil)', img: '/female_cyborg_manager_1776830516148.png', rarity: 'uncommon', specialization: 'Master Logic', lore: 'An upgraded manager unit with access to the legendary "Big Data" archives.', serial_total: 250 },
-  { id: 'unc_steal', name: 'Stealing Second (Hyper)', img: '/cyborg_stealing_second.png', rarity: 'uncommon', specialization: 'Hyper-Drive', lore: 'Equipped with illegal sub-light thrusters for impossible steal percentages.', serial_total: 1000 },
-  { id: 'unc_catch', name: 'Diving Catch (Glow Edition)', img: '/cyborg_diving_catch.png', rarity: 'uncommon', specialization: 'Photon Reach', lore: 'Glow-wire armor allows for better visibility during night-cycle games.', serial_total: 1000 },
+  { id: 't2_holo', name: 'Holographic Foil Base', img: '/cyborg_card_tier2_holo_premium.png', rarity: 'uncommon', specialization: 'Refractive Shield', lore: 'A premium-plated unit that reflects stadium lights to distract opposing batters.' },
+  { id: 'coach_woman', name: 'Holographic Coach', img: '/cyborg_coach_card_woman.png', rarity: 'uncommon', specialization: 'Efficiency Mentor', lore: 'Specializes in optimizing the swing-path of younger cyborg units.' },
+  { id: 'unc_closer', name: 'Bullpen Closer (Refractor)', img: '/cyborg_bullpen_closer.png', rarity: 'uncommon', specialization: 'Pulse Save', lore: 'A specialized refractor variant of the standard firewall closer.' },
+  { id: 'unc_manager', name: 'Tactical Manager (Foil)', img: '/female_cyborg_manager.png', rarity: 'uncommon', specialization: 'Master Logic', lore: 'An upgraded manager unit with access to the legendary "Big Data" archives.' },
+  { id: 'unc_steal', name: 'Stealing Second (Hyper)', img: '/cyborg_stealing_second.png', rarity: 'uncommon', specialization: 'Hyper-Drive', lore: 'Equipped with illegal sub-light thrusters for impossible steal percentages.' },
+  { id: 'unc_catch', name: 'Diving Catch (Glow Edition)', img: '/cyborg_diving_catch.png', rarity: 'uncommon', specialization: 'Photon Reach', lore: 'Glow-wire armor allows for better visibility during night-cycle games.' },
   
   // Rare
   { id: 't3_prism', name: 'Diamond Prism Showcase', img: '/cyborg_card_tier3_prism.png', rarity: 'rare', specialization: 'Total Spectrum', lore: 'The apex of the Series 1 manufacturing line. Flawless in every metric.', serial_total: 500 },
@@ -39,9 +39,9 @@ const CARD_COLLECTION = [
   { id: 'leg_walkoff', name: 'Walk-Off Homer (Autograph Edition)', img: '/cyborg_walkoff_homer.png', rarity: 'legendary', specialization: 'Ink of Ages', lore: 'Personally signed with conductive liquid-gold ink by the leagues top slugger.', has_signature: true, signature_name: 'Slugger Prime', serial_total: 1 },
 
   // --- SERIES 2: TITANIUM GRAPEFRUIT LEAGUE ---
-  { id: 'tgl_bk_hit', name: 'Brooklyn Biotics (Jaxson Jones)', img: '/tgl_brooklyn_hitter_v3_1776486966054.png', rarity: 'common', specialization: 'Heavy Artillery', lore: 'Known for his "Inertia Swing" that calculates ball trajectory in 0.02ms.', serial_total: 5000 },
-  { id: 'tgl_tok_stl', name: 'Tokyo Tachyons (Kenji Ryuko)', img: '/tgl_tokyo_stealer_v2_1776486720704.png', rarity: 'common', specialization: 'Warp Speed', lore: 'Kenji\'s speed is so high it often triggers stadium motion sensors incorrectly.', serial_total: 5000 },
-  { id: 'tgl_neo_inf', name: 'Neon City Sliders (Dash Maverick)', img: '/tgl_neoncity_infielder_v2_1776486734283.png', rarity: 'common', specialization: 'Flash Defense', lore: 'Dash can cover the entire left side of the infield in a single stride.', serial_total: 5000 },
+  { id: 'tgl_bk_hit', name: 'Brooklyn Biotics (Jaxson Jones)', img: '/tgl_brooklyn_hitter_v3_1776486966054.png', rarity: 'common', specialization: 'Heavy Artillery', lore: 'Known for his "Inertia Swing" that calculates ball trajectory in 0.02ms.' },
+  { id: 'tgl_tok_stl', name: 'Tokyo Tachyons (Kenji Ryuko)', img: '/tgl_tokyo_stealer_v2_1776486720704.png', rarity: 'common', specialization: 'Warp Speed', lore: 'Kenji\'s speed is so high it often triggers stadium motion sensors incorrectly.' },
+  { id: 'tgl_neo_inf', name: 'Neon City Sliders (Dash Maverick)', img: '/tgl_neoncity_infielder_v2_1776486734283.png', rarity: 'common', specialization: 'Flash Defense', lore: 'Dash can cover the entire left side of the infield in a single stride.' },
   { id: 'tgl_sv_pit', name: 'Silicon Valley Sentinels (Alan T. Turing)', img: '/tgl_siliconvalley_pitcher_v2_1776486747529.png', rarity: 'rare', specialization: 'Grav-Curve', lore: 'Alan\'s curveball is actually a calculated gravitational anomaly.', serial_total: 500 },
   { id: 'tgl_dal_cow', name: 'Dallas Tex-Mechs (Colt Smith)', img: '/tgl_dallas_cowboy_v3_1776486978084.png', rarity: 'rare', specialization: 'Rawhide Tech', lore: 'Traditional aesthetic meets state-of-the-art power-steering arms.', serial_total: 500 },
   { id: 'tgl_osa_hit', name: 'Osaka Overclockers (Daiki Moto)', img: '/tgl_osaka_hitter_v2_1776486782371.png', rarity: 'epic', specialization: 'Overdrive', lore: 'When the game is on the line, Daiki can overclock his processors by 300%.', serial_total: 50 },
@@ -52,7 +52,7 @@ const CARD_COLLECTION = [
   { id: 'tgl_atl_hit', name: 'Atlanta Aerodynamics (DeAndre Carter)', img: '/tgl_atlanta_hitter_1776487205901.png', rarity: 'rare', specialization: 'Aero-Boost', lore: 'Uses wing-fins to adjust his swing arc mid-flight for maximum elevation.', serial_total: 500 },
   { id: 'tgl_mia_stl', name: 'Miami Motherboards (Mateo Rodriguez)', img: '/tgl_miami_stealer_1776487217131.png', rarity: 'epic', specialization: 'Port-Scan', lore: 'Can predict a pitcher\'s pickoff move by scanning their frequency.', serial_total: 50 },
   { id: 'tgl_sj_inf', name: 'San Juan Synthetics (Luis Fernandez)', img: '/tgl_sanjuan_infielder_1776487227839.png', rarity: 'legendary', specialization: 'Bio-Sync', lore: 'A perfect 50/50 mix of human muscle and synthetic carbon-fiber bone.', serial_total: 5 },
-  { id: 'tgl_hav_pit', name: 'Havana Hover-Hounds (Javier Gomez)', img: '/tgl_havana_pitcher_1776487239413.png', rarity: 'common', specialization: 'Mag-Lev Slide', lore: 'Hover-tech allows Javier to pitch from a completely frictionless stance.', serial_total: 5000 }
+  { id: 'tgl_hav_pit', name: 'Havana Hover-Hounds (Javier Gomez)', img: '/tgl_havana_pitcher_1776487239413.png', rarity: 'common', specialization: 'Mag-Lev Slide', lore: 'Hover-tech allows Javier to pitch from a completely frictionless stance.' }
 ];
 
 // Helper to pull a random card based on rarity weights
@@ -84,7 +84,21 @@ router.get('/album', (req, res) => {
     // Enrich unlocked data with full card metadata
     const unlocked = tc.unlocked_cards.map(u => {
       const meta = CARD_COLLECTION.find(c => c.id === u.id);
-      return { ...u, ...meta };
+      let mintNumber = null;
+      
+      if (meta?.serial_total) {
+        if (meta.serial_total === 1) {
+          mintNumber = 1;
+        } else {
+          // Deterministic unique number based on ID and timestamp
+          const seed = u.unlocked_at || 12345;
+          // Simple hash
+          const hash = (seed * 9301 + 49297) % 233280;
+          mintNumber = (hash % meta.serial_total) + 1;
+        }
+      }
+
+      return { ...u, ...meta, mint_number: mintNumber };
     });
 
     res.json({
