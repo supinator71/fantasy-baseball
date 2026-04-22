@@ -23,15 +23,14 @@ const STAT_MAP = {
 const PITCHER_SLOTS = new Set(['SP', 'RP', 'P']);
 
 function buildPlayerLine(p) {
-  const isPitcher = PITCHER_SLOTS.has(String(p.position || '').split('/')[0]);
   const stats = p.stats || {};
-  // Translate Yahoo IDs to real stat names; keep zeroes (0 ERA matters!)
   const parts = Object.entries(stats)
     .filter(([id, v]) => STAT_MAP[id] && v !== '-' && v !== '' && v !== undefined && v !== null)
     .map(([id, v]) => `${STAT_MAP[id]}:${v}`);
   const statStr = parts.length ? parts.join(' ') : 'no stats yet this season';
   const slot = p.slot || 'BN';
-  return `  • ${p.name} (${p.position}) [${slot}] — ${statStr}`;
+  const team = p.team ? `, ${p.team}` : '';
+  return `  • ${p.name} (${p.position}${team}) [${slot}] — ${statStr}`;
 }
 
 export async function POST(request) {
