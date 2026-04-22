@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import { useLeague } from '@/lib/context/LeagueContext'
 
 function parseTeamInfo(teamData) {
   if (!teamData) return null
@@ -58,19 +59,17 @@ function parseTeamInfo(teamData) {
   }
 }
 
-export default function Standings({ leagueSettings }) {
+export default function Standings() {
+  const { leagues, selectedLeague: ctxLeague } = useLeague()
   const [standings, setStandings] = useState([])
-  const [leagues, setLeagues] = useState([])
   const [selectedLeague, setSelectedLeague] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Sync to context's selected league on mount
   useEffect(() => {
-    axios.get('/api/yahoo/leagues').then(({ data }) => {
-      setLeagues(data)
-      if (data[0]?.league_key) setSelectedLeague(data[0].league_key)
-    }).catch(() => {})
-  }, [])
+    if (ctxLeague && !selectedLeague) setSelectedLeague(ctxLeague)
+  }, [ctxLeague])
 
   useEffect(() => {
     if (selectedLeague) fetchStandings()

@@ -2,21 +2,31 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { callClaude } from '@/lib/claude';
 import { db } from '@/lib/database';
-import * as brain from '@/lib/fantasyBrain';
 import * as yahoo from '@/lib/yahooService';
 import * as mlbStats from '@/lib/mlbStatsService';
 
-/**
- * POST /api/claude/analyze
- *
- * The single master AI call for the entire app.
- * Fetches roster + waiver targets + pitching context server-side,
- * runs fantasyBrain scoring, then makes ONE Claude call.
- * Returns structured { waiver, startSit, pitching, audit, gameplan, matchup }
- * stored in LeagueContext and shared across all modules.
- *
- * Only /api/claude/ask is called again — on explicit user questions.
- */
+// Yahoo stat ID → human-readable name
+const STAT_MAP = {
+  '7': 'R', '12': 'HR', '13': 'RBI', '16': 'SB', '3': 'AVG',
+  '18': 'BB', '20': 'HBP', '28': 'W', '32': 'SV', '42': 'K',
+  '26': 'ERA', '27': 'WHIP', '50': 'IP', '83': 'QS', '85': 'HLD',
+  '9': '1B', '10': '2B', '11': '3B', '34': 'HA', '37': 'ER', '39': 'BBA'
+};
+
+const PITCHER_SLOTS = new Set(['SP', 'RP', 'P']);
+
+function buildPlayerLine(p) {
+  const isPitcher = PITCHER_SLOTS.has(String(p.position || '').split('/')[0]);
+  const stats = p.stats || {};
+  // Translate Yahoo IDs to real stat names, skip zeroes
+  const parts = Object.entries(stats)
+    .filter(([id, v]) => STAT_MAP[id] && v !== '-' && v !== '' && v !== undefined)
+    .map(([id, v]) => `${STAT_MAP[id]}:${v}`);
+  const statStr = parts.length ? parts.join(' ') : 'no stats yet this season';
+  const slot = p.slot || 'BN';
+  return `  • ${p.name} (${p.position}) [${slot}] — ${statStr}`;
+}
+
 export async function POST(request) {
   const session = await getSession();
   const guid = session.yahoo_guid;
@@ -29,10 +39,11 @@ export async function POST(request) {
     const settings = db.getLeagueSettings(guid, league_key) || {};
 
     // ── Fetch all needed data in parallel ─────────────────────────────────────
-    const [teamKey, pitching, freeAgents] = await Promise.all([
+    const [teamKey, pitching, freeAgents, newsRaw] = await Promise.all([
       yahoo.getUserTeamKey(guid, league_key),
-      mlbStats.getTwoStartPitchers().catch(() => ({ today: [], currentWeekTwoStart: [], nextWeekTwoStart: [] })),
+      mlbStats.getTwoStartPitchers().catch(() => ({ currentWeek: [], nextWeek: [] })),
       yahoo.getPlayers(guid, league_key, 'A', 0, null).catch(() => []),
+      mlbStats.getBreakingNews().catch(() => ''),
     ]);
 
     // Fetch roster (needs teamKey first)
@@ -56,50 +67,57 @@ export async function POST(request) {
       }
     }
 
-    // ── Run fantasyBrain scoring (pure compute, no Claude) ────────────────────
-    const diagnosis = brain.buildRosterDiagnosis
-      ? brain.buildRosterDiagnosis(roster, settings, null, pitching)
-      : { promptBlock: `Roster: ${roster.slice(0, 5).map(p => p.name).join(', ')}`, categoryNeeds: {} };
+    // ── Build human-readable roster summary ───────────────────────────────────
+    const hitters  = roster.filter(p => !PITCHER_SLOTS.has(String(p.position || '').split('/')[0]));
+    const pitchers = roster.filter(p =>  PITCHER_SLOTS.has(String(p.position || '').split('/')[0]));
 
-    const scoredWaiver = freeAgents.slice(0, 25).map(p => ({
-      ...p,
-      waiverScore: brain.scoreWaiverTarget
-        ? brain.scoreWaiverTarget(p, roster, settings, diagnosis.categoryNeeds, pitching)
-        : { score: 50, priority: 'Speculative add', reasoning: '' }
-    })).sort((a, b) => (b.waiverScore?.score ?? 0) - (a.waiverScore?.score ?? 0));
+    const rosterBlock = [
+      'HITTERS:',
+      ...(hitters.length ? hitters.map(buildPlayerLine) : ['  (none found)']),
+      '',
+      'PITCHERS:',
+      ...(pitchers.length ? pitchers.map(buildPlayerLine) : ['  (none found)']),
+    ].join('\n');
 
-    const lineupRecs = brain.optimizeLineup
-      ? brain.optimizeLineup(roster, {}, settings.scoring_type, settings.num_teams)
-      : { starters: [], bench: [], volumePlays: [], reasoning: '' };
+    // ── Score waiver targets ───────────────────────────────────────────────────
+    const scoredWaiver = freeAgents.slice(0, 25).map(p => {
+      const pos    = String(p.position || '').split('/')[0].toUpperCase();
+      const isPit  = PITCHER_SLOTS.has(pos);
+      const score  = isPit ? 55 : 45; // simple fallback score without full brain
+      return { ...p, waiverScore: { score, priority: score >= 60 ? 'High priority' : 'Speculative add', reasoning: 'Check stats' } };
+    }).sort((a, b) => (b.waiverScore?.score ?? 0) - (a.waiverScore?.score ?? 0));
 
     // ── Single Claude call for the entire app ─────────────────────────────────
-    const prompt = `You are Goin' Yard HQ — a friendly, expert fantasy baseball assistant for beginners.
+    const twoStartThis = (pitching.currentWeek || []).slice(0, 8).join(', ') || 'None confirmed';
+    const twoStartNext = (pitching.nextWeek   || []).slice(0, 6).join(', ') || 'None confirmed';
 
-LEAGUE: ${settings.name || league_key} | Format: ${settings.scoring_type || 'H2H Points'} | Teams: ${settings.num_teams || 10}
+    const prompt = `You are Goin' Yard HQ — an expert fantasy baseball assistant. Be specific, data-driven, and name real players.
 
-${diagnosis.promptBlock || ''}
+LEAGUE: "${settings.name || league_key}"
+Format: ${settings.scoring_type || 'H2H Points'} | Teams: ${settings.num_teams || 10} | Week: ${settings.current_week || '?'}
 
-PITCHING CONTEXT:
-- Probable starters TODAY: ${pitching.today?.slice(0, 8).join(', ') || 'None'}
-- 2-start SPs THIS WEEK: ${pitching.currentWeekTwoStart?.slice(0, 6).join(', ') || 'None'}
-- 2-start SPs NEXT WEEK: ${pitching.nextWeekTwoStart?.slice(0, 6).join(', ') || 'None'}
+MY ROSTER:
+${rosterBlock}
 
-LINEUP OPTIMIZER: ${lineupRecs.reasoning}
-Top starts: ${lineupRecs.starters?.slice(0, 5).map(p => `${p.player_name}(${p.startScore})`).join(', ') || 'N/A'}
-Volume plays: ${lineupRecs.volumePlays?.map(p => p.player_name).join(', ') || 'None'}
+PITCHING INTELLIGENCE:
+- 2-start SPs THIS WEEK: ${twoStartThis}
+- 2-start SPs NEXT WEEK: ${twoStartNext}
 
-TOP WAIVER TARGETS (scored):
-${scoredWaiver.slice(0, 8).map(p => `${p.name}(${p.position}) Score:${p.waiverScore?.score} ${p.waiverScore?.priority}`).join('\n')}
+TOP FREE AGENTS (first available):
+${freeAgents.slice(0, 10).map(p => `  • ${p.name} (${p.position}) — team: ${p.team}`).join('\n') || '  None'}
+
+BREAKING NEWS (MLB — last 24h):
+${newsRaw || '  No recent news'}
 
 ---
-Respond ONLY with valid JSON (no markdown, no prose outside JSON):
+Respond ONLY with valid JSON — no markdown, no prose outside JSON:
 {
-  "waiver": "2-3 sentence waiver recommendation naming specific players to add/drop.",
-  "startSit": "2-3 sentence start/sit advice referencing the lineup optimizer output.",
-  "pitching": "2-3 sentence pitching strategy highlighting any 2-start pitchers.",
-  "audit": "2-3 sentence team audit naming the biggest strength and biggest weakness.",
-  "gameplan": "2-3 sentence weekly game plan with the #1 priority move.",
-  "matchup": "1-2 sentence matchup preview focusing on key categories."
+  "waiver": "2-3 sentences naming specific free agents to ADD and who to DROP. Reference the free agent list above.",
+  "startSit": "2-3 sentences naming specific players from MY ROSTER to start or bench this week. Cite actual stats.",
+  "pitching": "2-3 sentences covering rotation strategy. Name specific 2-start pitchers to stream. Mention any relevant breaking news (signings, injuries) affecting starters.",
+  "audit": "2-3 sentences identifying the biggest strength and biggest weakness on this specific roster by name.",
+  "gameplan": "2-3 sentences with the #1 move this week and the key category to attack given this scoring format.",
+  "matchup": "1-2 sentences on what category advantage this team has this week."
 }`;
 
     const raw = await callClaude([{ role: 'user', content: prompt }], 900);
@@ -107,12 +125,12 @@ Respond ONLY with valid JSON (no markdown, no prose outside JSON):
     let analysis = {};
     try {
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : { waiver: raw };
+      analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : { waiver: raw, startSit: '', pitching: '', audit: '', gameplan: '', matchup: '' };
     } catch {
-      analysis = { waiver: raw };
+      analysis = { waiver: raw, startSit: '', pitching: '', audit: '', gameplan: '', matchup: '' };
     }
 
-    return NextResponse.json({ analysis, scoredWaiver: scoredWaiver.slice(0, 10), lineupRecs });
+    return NextResponse.json({ analysis, scoredWaiver: scoredWaiver.slice(0, 10), lineupRecs: null });
 
   } catch (err) {
     console.error('[claude/analyze]', err.message);

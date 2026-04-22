@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import { useLeague } from '@/lib/context/LeagueContext'
 
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 const DAY_EMOJI = {
@@ -40,7 +41,8 @@ function ProjectionBadge({ projection }) {
 }
 
 export default function GamePlan({ leagueSettings }) {
-  const [leagues, setLeagues] = useState([])
+  const { leagues, selectedLeague: ctxLeague, aiAnalysis, aiLoading } = useLeague()
+  const [localLeagues, setLocalLeagues] = useState([])
   const [selectedLeague, setSelectedLeague] = useState('')
   const [roster, setRoster] = useState([])
   const [matchup, setMatchup] = useState(null)
@@ -49,12 +51,12 @@ export default function GamePlan({ leagueSettings }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Use leagues from context, fall back to local fetch
+  const allLeagues = leagues.length ? leagues : localLeagues
+
   useEffect(() => {
-    axios.get('/api/yahoo/leagues').then(({ data }) => {
-      setLeagues(data)
-      if (data[0]?.league_key) setSelectedLeague(data[0].league_key)
-    }).catch(() => {})
-  }, [])
+    if (ctxLeague && !selectedLeague) setSelectedLeague(ctxLeague)
+  }, [ctxLeague])
 
   useEffect(() => {
     if (selectedLeague) loadRoster()
@@ -142,7 +144,7 @@ export default function GamePlan({ leagueSettings }) {
               onChange={e => setSelectedLeague(e.target.value)}
               className="league-selector"
             >
-              {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
+              {allLeagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
             </select>
           </div>
         </div>
@@ -161,6 +163,17 @@ export default function GamePlan({ leagueSettings }) {
         <div className="loading-state card">
           <div className="spinner"></div>
           <p>Scouting your roster...</p>
+        </div>
+      )}
+
+      {/* Quick AI Snapshot from master analysis */}
+      {(aiLoading || aiAnalysis?.gameplan) && (
+        <div className="card" style={{ marginBottom: 20, borderLeft: '4px solid #4aafdb' }}>
+          <h4 style={{ color: '#4aafdb', marginBottom: 8, fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 }}>⚡ AI Quick Look</h4>
+          {aiLoading
+            ? <p style={{ color: '#7aafc4', margin: 0, fontSize: 14 }}>Analyzing your league...</p>
+            : <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>{aiAnalysis.gameplan}</p>
+          }
         </div>
       )}
 

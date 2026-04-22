@@ -140,14 +140,7 @@ export async function GET(request, { params }) {
     const matchups = await getScoreboard(guid, leagueKey);
     const myTeamKey = await getUserTeamKey(guid, leagueKey);
 
-    // DEBUG: log raw structure so we can see exactly what Yahoo returns
-    console.log('[matchup DEBUG] myTeamKey:', myTeamKey);
-    console.log('[matchup DEBUG] raw matchups keys:', Object.keys(matchups || {}));
-
     const parsed = parseYahooMatchup(matchups, myTeamKey);
-    console.log('[matchup DEBUG] myTeam.total_points:', parsed?.myTeam?.total_points);
-    console.log('[matchup DEBUG] opponent.total_points:', parsed?.opponent?.total_points);
-    console.log('[matchup DEBUG] stats count:', parsed?.stats?.length);
     return NextResponse.json(parsed);
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
