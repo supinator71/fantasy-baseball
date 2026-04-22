@@ -70,10 +70,15 @@ export default function Standings() {
   }, [selectedLeague])
 
   async function fetchStandings(leagueKey) {
+    if (!leagueKey) return
     setLoading(true)
     setError('')
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000) // 15s client timeout
     try {
-      const { data } = await axios.get(`/api/yahoo/league/${leagueKey}/standings`)
+      const { data } = await axios.get(`/api/yahoo/league/${leagueKey}/standings`, {
+        signal: controller.signal
+      })
       const teams = []
 
       if (data && Array.isArray(data)) {
@@ -91,11 +96,16 @@ export default function Standings() {
 
       teams.sort((a, b) => a.rank - b.rank)
       setStandings(teams)
-      if (teams.length === 0) setError('No standings data available for this league yet.')
+      if (teams.length === 0) setError('No standings data returned — the league may not have started yet.')
     } catch (err) {
-      setError('Could not load standings. Make sure you are connected to Yahoo.')
+      if (err.name === 'CanceledError' || err.name === 'AbortError') {
+        setError('Standings timed out. Yahoo may be slow — hit Refresh to try again.')
+      } else {
+        setError('Could not load standings. Make sure you are connected to Yahoo.')
+      }
       setStandings([])
     } finally {
+      clearTimeout(timeout)
       setLoading(false)
     }
   }

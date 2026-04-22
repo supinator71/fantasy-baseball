@@ -39,19 +39,25 @@ export async function POST(request) {
     const settings = db.getLeagueSettings(guid, league_key) || {};
     const scoringLabel = SCORING_TYPE_MAP[settings.scoring_type] || settings.scoring_type || 'H2H Points';
 
-    const pitchers = roster.filter(p => ['SP','RP','P'].includes(String(p.position||'').split('/')[0]));
-    const hitters  = roster.filter(p => !['SP','RP','P'].includes(String(p.position||'').split('/')[0]));
+    const ilPlayers     = roster.filter(p =>  playerILTag(p).includes('IL'));
+    const activePlayers = roster.filter(p => !playerILTag(p).includes('IL'));
+
+    const pitchers = activePlayers.filter(p => ['SP','RP','P'].includes(String(p.position||'').split('/')[0]));
+    const hitters  = activePlayers.filter(p => !['SP','RP','P'].includes(String(p.position||'').split('/')[0]));
 
     const rosterBlock = [
-      'HITTERS:',
+      'ACTIVE HITTERS:',
       ...hitters.map(buildPlayerLine),
       '',
-      'PITCHERS:',
+      'ACTIVE PITCHERS:',
       ...pitchers.map(buildPlayerLine),
+      '',
+      'ON IL (do NOT recommend as starters, strengths, or trade targets):',
+      ...ilPlayers.map(p => `  • ${p.name} (${p.position}) [⛔IL/${p.status || '?'}]`),
     ].join('\n');
 
-    // Pre-compute real VOR for every player using fantasyBrain (not Claude guesses)
-    const vorTable = roster.map(p => {
+    // Pre-compute real VOR — active players only (IL excluded)
+    const vorTable = activePlayers.map(p => {
       const rawPos = String(p.position || '').split('/')[0].trim();
       const vor = brain.calculateVOR(p.stats || {}, rawPos, settings.num_teams || 10, settings.scoring_type || 'headpoint');
       const scarcity = brain.getPositionalScarcity(rawPos, settings.num_teams || 10);

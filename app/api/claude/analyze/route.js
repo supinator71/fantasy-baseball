@@ -22,6 +22,18 @@ const STAT_MAP = {
 
 const PITCHER_SLOTS = new Set(['SP', 'RP', 'P']);
 
+const IL_SLOTS    = new Set(['IL', 'IL+', 'IL7', 'IL10', 'IL15', 'IL60']);
+const IL_STATUSES = new Set(['IL', 'IL10', 'IL15', 'IL60', 'DL', 'O', 'OUT', 'SUSP', 'NA']);
+const DTD_STATUSES = new Set(['DTD', 'Q', 'QUESTIONABLE']);
+
+function playerILTag(p) {
+  const slot   = String(p.slot   || '').toUpperCase();
+  const status = String(p.status || '').toUpperCase();
+  if (IL_SLOTS.has(slot) || [...IL_STATUSES].some(s => status.includes(s))) return ' [⛔IL-UNAVAILABLE]';
+  if ([...DTD_STATUSES].some(s => status.includes(s))) return ' [⚠️DTD]';
+  return '';
+}
+
 function buildPlayerLine(p) {
   const stats = p.stats || {};
   const parts = Object.entries(stats)
@@ -30,7 +42,8 @@ function buildPlayerLine(p) {
   const statStr = parts.length ? parts.join(' ') : 'no stats yet this season';
   const slot = p.slot || 'BN';
   const team = p.team ? `, ${p.team}` : '';
-  return `  • ${p.name} (${p.position}${team}) [${slot}] — ${statStr}`;
+  const ilTag = playerILTag(p);
+  return `  • ${p.name} (${p.position}${team}) [${slot}]${ilTag} — ${statStr}`;
 }
 
 export async function POST(request) {
@@ -99,14 +112,30 @@ export async function POST(request) {
 
     const scoringLabel = SCORING_TYPE_MAP[settings.scoring_type] || settings.scoring_type || 'H2H Points';
 
+    // Split roster into active and IL for Claude context
+    const ilPlayers     = roster.filter(p => playerILTag(p).includes('IL-UNAVAILABLE'));
+    const activePlayers = roster.filter(p => !playerILTag(p).includes('IL-UNAVAILABLE'));
+    const activeBlock   = activePlayers.map(buildPlayerLine).join('\n') || '  (none)';
+    const ilBlock       = ilPlayers.length
+      ? ilPlayers.map(p => `  • ${p.name} (${p.position}, ${p.team || '?'}) [${p.slot}] [⛔IL] — ${p.status || 'injured'}`).join('\n')
+      : '  None';
+
     const prompt = `You are Goin' Yard HQ — an expert fantasy baseball assistant. Be specific, data-driven, and name real players.
 
 ⚠️ SCORING FORMAT: ${scoringLabel}
 This determines ALL advice. For H2H Points: focus on maximizing total points scored this week, not category counts. Do NOT mention 5x5 categories, Roto rankings, or season-long category standing. For H2H Categories: focus on winning individual categories. For Roto: focus on season ranking.
 
+⛔ IL RULE: Players listed under "ON IL" below are INJURED and UNAVAILABLE. Do NOT recommend starting them, trading for them, or treating them as active contributors this week. Do NOT mention them as strengths. If they are taking up a roster spot a healthy player could use, flag that in waiver advice.
+
 LEAGUE: "${settings.name || league_key}" | Teams: ${settings.num_teams || 10} | Week: ${settings.current_week || '?'}
 
 ⚠️ USE ONLY THE STATS BELOW — do not use your training data for player performance numbers. The stats below are the current 2026 season actuals from Yahoo Fantasy.
+
+ACTIVE ROSTER:
+${activeBlock}
+
+ON IL (do NOT start or recommend these players):
+${ilBlock}
 
 MY ROSTER:
 ${rosterBlock}
