@@ -314,6 +314,10 @@ async function getUnifiedIntelligence(req, league_key) {
 
     const diagnosis = brain.buildRosterDiagnosis(rosterData?.players || [], settings || {}, sharedMatchup, pitchingContext);
     
+    const myScore = sharedMatchup?.myTeam?.total_points || 0;
+    const oppScore = sharedMatchup?.opponent?.total_points || 0;
+    const matchupName = `${sharedMatchup?.myTeam?.name || 'My Team'} vs ${sharedMatchup?.opponent?.name || 'Opponent'}`;
+
     return {
       settings,
       roster: rosterData?.players || [],
@@ -321,7 +325,7 @@ async function getUnifiedIntelligence(req, league_key) {
       sharedMatchup,
       pitchingContext,
       diagnosis,
-      promptBlock: `\n\n=== TOTAL LEAGUE INTELLIGENCE ===\n${diagnosis.promptBlock}\n\n=== WAIVER WIRE OPPORTUNITIES ===\n${JSON.stringify((waivers || []).slice(0, 15))}`
+      promptBlock: `\n\n=== TOTAL LEAGUE INTELLIGENCE ===\n${diagnosis.promptBlock}\n\n=== CURRENT MATCHUP LIVE SCORE ===\nMATCHUP: ${matchupName}\nCURRENT WEEK SCORE: ME: ${myScore} pts | OPPONENT: ${oppScore} pts\n\n=== WAIVER WIRE OPPORTUNITIES ===\n${JSON.stringify((waivers || []).slice(0, 15))}`
     };
   } catch (e) {
     console.log('[Claude/unified] Intelligence gathering failed:', e.message);

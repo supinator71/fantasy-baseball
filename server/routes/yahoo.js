@@ -700,13 +700,20 @@ function parseYahooMatchup(matchups, myTeamKey) {
           else if (managers.manager) manager = managers.manager?.nickname || '';
         }
         
-        let pointsTotal = null;
+        let pointsTotal = 0;
         if (statsObj.total) {
-          pointsTotal = parseFloat(statsObj.total);
+          pointsTotal = parseFloat(statsObj.total) || 0;
+        } else if (statsObj.points) {
+          pointsTotal = parseFloat(statsObj.points.total || statsObj.points) || 0;
         } else {
-          // Fallback: search for a stat with name 'Total' or 'Points'
-          const totalStat = stats.find(s => s.name === 'Total' || s.name === 'Points');
-          if (totalStat) pointsTotal = parseFloat(totalStat.value);
+          // Fallback: search for a stat with name 'Total', 'Points', or id 'pts'
+          const totalStat = stats.find(s => 
+            s.name === 'Total' || 
+            s.name === 'Points' || 
+            s.stat_id === 'pts' || 
+            s.name?.toLowerCase().includes('points')
+          );
+          if (totalStat) pointsTotal = parseFloat(totalStat.value) || 0;
         }
 
         parsedTeams.push({
