@@ -8,7 +8,7 @@ const CARD_COLLECTION = [
   { id: 'base_hitter', set_num: '111', name: 'Cyber Hitter (Base)', img: '/cyborg_card_tier1_hitter.png', rarity: 'common', specialization: 'Balanced Offense', lore: 'The foundational unit of the Cyber-League. Optimized for contact and high-velocity exit speeds.' },
   { id: 'base_pitcher', set_num: '04', name: 'Cyber Pitcher (Base)', img: '/cyborg_card_tier1_pitcher.png', rarity: 'common', specialization: 'Heat Sink Power', lore: 'Equipped with a liquid-cooled arm capable of sustaining 110mph fastballs for 9 innings.' },
   { id: 'base_closer', set_num: '87', name: 'Bullpen Closer (Base)', img: '/cyborg_bullpen_closer.png', rarity: 'common', specialization: 'High-Stress Lock', lore: 'Designed to compute high-leverage outcomes in milliseconds. A true ninth-inning firewall.' },
-  { id: 'base_manager', set_num: '12', name: 'Elara (Manager)', img: '/elara_manager.png', rarity: 'common', specialization: 'Neural Strategy', lore: 'Elara possesses a neural link to every player on the field, adjusting shifts based on real-time wind data.' },
+  { id: 'base_manager', set_num: '12', name: 'Elara (Manager)', img: '/elara_clean.png', rarity: 'common', specialization: 'Neural Strategy', lore: 'Elara possesses a neural link to every player on the field, adjusting shifts based on real-time wind data.' },
   { id: 'base_steal', set_num: '215', name: 'Stealing Second (Base)', img: '/cyborg_stealing_second.png', rarity: 'common', specialization: 'Kinetic Burst', lore: 'Hydraulic leg boosters allow for a 0-to-20mph burst in under two steps.' },
   { id: 'base_catch', set_num: '33', name: 'Diving Catch (Base)', img: '/cyborg_diving_catch.png', rarity: 'common', specialization: 'Gravity Nullifier', lore: 'Internal gyroscopes allow for mid-air adjustments that defy traditional physics.' },
   { id: 'gatorade', set_num: '99', name: 'Gatorade Glitch', img: '/cyborg_gatorade_glitch.png', rarity: 'common', specialization: 'Thermal Reset', lore: 'A rare cooling malfunction that results in a localized neon mist celebration.' },
@@ -17,7 +17,7 @@ const CARD_COLLECTION = [
   { id: 't2_holo', set_num: '156', name: 'Holographic Foil Base', img: '/cyborg_card_tier2_holo_premium.png', rarity: 'uncommon', specialization: 'Refractive Shield', lore: 'A premium-plated unit that reflects stadium lights to distract opposing batters.' },
   { id: 'coach_woman', set_num: '72', name: 'Holographic Coach', img: '/cyborg_coach_card_woman.png', rarity: 'uncommon', specialization: 'Efficiency Mentor', lore: 'Specializes in optimizing the swing-path of younger cyborg units.' },
   { id: 'unc_closer', set_num: '88', name: 'Bullpen Closer (Refractor)', img: '/cyborg_bullpen_closer.png', rarity: 'uncommon', specialization: 'Pulse Save', lore: 'A specialized refractor variant of the standard firewall closer.' },
-  { id: 'unc_manager', set_num: '13', name: 'Elara (Foil)', img: '/elara_manager.png', rarity: 'uncommon', specialization: 'Master Logic', lore: 'An upgraded Elara unit with access to the legendary "Big Data" archives.' },
+  { id: 'unc_manager', set_num: '13', name: 'Elara (Foil)', img: '/elara_clean.png', rarity: 'uncommon', specialization: 'Master Logic', lore: 'An upgraded Elara unit with access to the legendary "Big Data" archives.' },
   { id: 'unc_steal', set_num: '216', name: 'Stealing Second (Hyper)', img: '/cyborg_stealing_second.png', rarity: 'uncommon', specialization: 'Hyper-Drive', lore: 'Equipped with illegal sub-light thrusters for impossible steal percentages.' },
   { id: 'unc_catch', set_num: '34', name: 'Diving Catch (Glow Edition)', img: '/cyborg_diving_catch.png', rarity: 'uncommon', specialization: 'Photon Reach', lore: 'Glow-wire armor allows for better visibility during night-cycle games.' },
   
@@ -29,13 +29,13 @@ const CARD_COLLECTION = [
   { id: 'rare_walkoff', set_num: '44', name: 'Walk-Off Homer (Silver Prizm)', img: '/cyborg_walkoff_homer.png', rarity: 'rare', specialization: 'Clutch Protocol', lore: 'The sound of the bat hitting the ball was heard three city blocks away.', serial_total: 100 },
 
   // Epic
-  { id: 'sp_hand', set_num: '303', name: 'Rookie Silver Prizm (Pack Pull)', img: '/cyborg_silver_prism_hand.png', rarity: 'epic', specialization: 'Haptic Touch', lore: 'This card features a piece of authentic synthetic jersey material from the draft day.', has_patch: true, serial_total: 50 },
+  { id: 'sp_hand', set_num: '303', name: 'Rookie Silver Prizm (Patch)', img: '/rookie_prizm_clean.png', rarity: 'epic', specialization: 'Haptic Touch', lore: 'This card features a piece of authentic synthetic jersey material from the draft day.', has_patch: true, serial_total: 50 },
   { id: 'epic_catch', set_num: '35', name: 'Diving Catch (Gold /10)', img: '/cyborg_diving_catch.png', rarity: 'epic', specialization: 'Precious Metal', lore: 'Only 10 of these units were ever manufactured. A masterpiece of engineering.', serial_total: 10 },
   { id: 'epic_closer', set_num: '89', name: 'Closer (Ruby Wave)', img: '/cyborg_bullpen_closer.png', rarity: 'epic', specialization: 'Red Line Drive', lore: 'Optimized for high-heat environments where standard units often melt down.', serial_total: 50 },
 
   // Legendary
   { id: 'sp_closeup', set_num: '01', name: 'Rookie True Gold (Visor Edition)', img: '/cyborg_silver_prism_closeup.png', rarity: 'legendary', specialization: 'Visor Intel', lore: 'Provides a direct view into the targeting HUD of a Hall-of-Fame unit.', serial_total: 25 },
-  { id: 'arcana_hand', set_num: '777', name: 'Homerun Arcana (Signed)', img: '/cyborg_card_hand_arcana.png', rarity: 'legendary', specialization: 'Digital Soul', lore: 'Rumored to be haunted by the spirit of a pre-cyber baseball legend.', has_signature: true, signature_name: 'The Legend', sig_style: 'classic', serial_total: 5 },
+  { id: 'arcana_hand', set_num: '777', name: 'Homerun Arcana (Signed)', img: '/arcana_clean.png', rarity: 'legendary', specialization: 'Digital Soul', lore: 'Rumored to be haunted by the spirit of a pre-cyber baseball legend.', has_signature: true, signature_name: 'The Legend', sig_style: 'classic', serial_total: 5 },
   { id: 'leg_walkoff', set_num: '999', name: 'Walk-Off Homer (Autograph Edition)', img: '/cyborg_walkoff_homer.png', rarity: 'legendary', specialization: 'Ink of Ages', lore: 'Personally signed with conductive liquid-gold ink by the leagues top slugger.', has_signature: true, signature_name: 'Slugger Prime', sig_style: 'aggressive', serial_total: 1 },
 
   // --- SERIES 2: TITANIUM GRAPEFRUIT LEAGUE ---

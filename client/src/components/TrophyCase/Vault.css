@@ -200,13 +200,22 @@
 }
 
 /* PREMIUM OVERLAYS */
+/* Clean Card Face Style */
+.vault-card-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* Preserve the card aspect ratio without backgrounds */
+  background: #000;
+  border-radius: 8px;
+}
+
 .vault-card-visual .card-signature {
   position: absolute;
-  bottom: 18%;
+  bottom: 25%; /* Anchored to the bottom half of the card face */
   left: 50%;
   transform: translateX(-50%) rotate(-5deg);
   font-family: 'Caveat', cursive;
-  font-size: 36px;
+  font-size: 32px;
   background: linear-gradient(135deg, #FFD700 0%, #FFF5CC 50%, #FFD700 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -220,35 +229,28 @@
 
 .vault-card-visual .card-signature.classic {
   font-family: 'Mrs Saint Delafield', cursive;
-  font-size: 48px;
+  font-size: 42px;
   transform: translateX(-50%) rotate(-2deg);
 }
 
 .vault-card-visual .card-signature.aggressive {
   font-family: 'Homemade Apple', cursive;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: bold;
-}
-
-/* Specific fix for Arcana cards */
-.vault-card-visual[data-id*="arcana"] .card-signature {
-  bottom: 35%; 
 }
 
 .vault-card-visual .card-patch {
   position: absolute;
-  bottom: 12%;
-  right: 10%;
-  width: 58px;
-  height: 58px;
-  background: radial-gradient(circle at center, #333, #111);
-  border: 1px solid rgba(255, 215, 0, 0.4);
-  /* The "Recessed" Look: Dark inner shadow + light outer ring */
+  bottom: 15%;
+  right: 15%;
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle at center, #222, #000);
+  border: 1px solid rgba(255, 215, 0, 0.5);
   box-shadow: 
-    inset 0 4px 15px rgba(0,0,0,0.9), 
-    0 1px 1px rgba(255,255,255,0.1),
-    0 0 0 3px #1a1a1a,
-    0 0 0 4px #ffd700;
+    inset 0 6px 20px rgba(0,0,0,1), 
+    0 1px 1px rgba(255,255,255,0.2),
+    0 0 0 4px #111;
   border-radius: 4px;
   z-index: 90;
   overflow: hidden;
