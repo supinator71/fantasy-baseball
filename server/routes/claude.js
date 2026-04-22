@@ -300,6 +300,36 @@ async function getSharedPitchingContext() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// UNIFIED INTELLIGENCE HELPER
+// ─────────────────────────────────────────────────────────────────────────────
+async function getUnifiedIntelligence(req, league_key) {
+  const settings = getLeagueSettings(league_key);
+  try {
+    const [rosterData, waivers, sharedMatchup, pitchingContext] = await Promise.all([
+      yahoo.getMyRoster(req, league_key).catch(() => null),
+      yahoo.getPlayers(req, league_key, 'A').catch(() => []), 
+      getSharedMatchupContext(req, league_key),
+      getSharedPitchingContext()
+    ]);
+
+    const diagnosis = brain.buildRosterDiagnosis(rosterData?.players || [], settings || {}, sharedMatchup, pitchingContext);
+    
+    return {
+      settings,
+      roster: rosterData?.players || [],
+      waivers: (waivers || []).slice(0, 15),
+      sharedMatchup,
+      pitchingContext,
+      diagnosis,
+      promptBlock: `\n\n=== TOTAL LEAGUE INTELLIGENCE ===\n${diagnosis.promptBlock}\n\n=== WAIVER WIRE OPPORTUNITIES ===\n${JSON.stringify((waivers || []).slice(0, 15))}`
+    };
+  } catch (e) {
+    console.log('[Claude/unified] Intelligence gathering failed:', e.message);
+    return { settings, roster: [], waivers: [], sharedMatchup: null, pitchingContext: null, diagnosis: null, promptBlock: '' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // EXISTING ENDPOINTS — ENHANCED WITH fantasyBrain
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -312,81 +342,26 @@ router.post('/draft/recommend', (req, res) => {
 
 // Start/Sit analysis — enriched with 2025 stats
 router.post('/startsit', rateLimiter('startsit'), async (req, res) => {
-  const { players, matchup_context, scoring_type, daily_mode, league_key } = req.body;
-  const settings = getLeagueSettings(league_key);
-  const leagueCtx = leagueContext(settings);
-  const leagueSize = settings?.num_teams || 12;
-  
-  const sharedMatchup = await getSharedMatchupContext(req, league_key);
-  const pitchingContext = await getSharedPitchingContext();
-
-  // ── Unified Roster Diagnosis ───────────────────────────────────────────
-  const diagnosis = brain.buildRosterDiagnosis(players || [], settings || {}, sharedMatchup, pitchingContext);
-
-  const enriched = diagnosis.vorByPlayer.map(p => {
-    const basicName = (p.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const isProbable = pitchingContext?.today?.includes(basicName);
-    return { ...p, is_starting: isProbable ? 'YES' : p.is_starting };
-  });
-
-  // Fetch 2025 stats, TODAY'S LIVE MATCHUPS, and BREAKING NEWS for decision context (non-blocking)
-  let historicalIntel = '';
-  let liveMatchups = '';
-  let breakingNews = '';
-  try {
-    const playerNames = diagnosis.activeRoster.map(p => p.name || p.player_name).filter(Boolean);
-    
-    const [scheduleStr, newsStr, bulkData] = await Promise.all([
-      mlbStats.getUpcomingSchedule(),
-      mlbStats.getBreakingNews(),
-      playerNames.length > 0 ? mlbStats.getBulkPlayerStats(playerNames, 2026) : Promise.resolve({})
-    ]);
-
-    if (scheduleStr) liveMatchups = `\n\n=== TODAY'S LIVE MLB MATCHUPS ===\n${scheduleStr}`;
-    if (newsStr) breakingNews = `\n\n=== BREAKING MLB MEDICAL/ROSTER NEWS ===\n${newsStr}`;
-
-    if (playerNames.length > 0 && bulkData) {
-      const intelLines = [];
-      for (const [name, data] of Object.entries(bulkData)) {
-        const intel = brain.generatePlayerIntelligence(data);
-        if (intel) intelLines.push(`${name}: ${intel.summary}`);
-      }
-      if (intelLines.length > 0) {
-        historicalIntel = `\n\n=== 2026 PLAYER SCOUTING REPORTS ===\n${intelLines.join('\n')}`;
-      }
-    }
-  } catch (e) {
-    console.log('[Claude/startsit] MLB stats lookup skipped:', e.message);
-  }
+  const { players, matchup_context, league_key } = req.body;
+  const intel = await getUnifiedIntelligence(req, league_key);
+  const leagueCtx = leagueContext(intel.settings);
 
   try {
+    const model = await getWorkingModel();
     const text = await callClaude([{
       role: 'user',
-      content: `${leagueCtx}
-${diagnosis.promptBlock}
-Context: ${matchup_context || 'Daily optimization'}
+      content: `${leagueCtx}${intel.promptBlock}
+=== START/SIT DECISION MATRIX ===
+The user needs help choosing between these specific players for today:
+${JSON.stringify(players)}
 
-Players:
-${enriched.map(p =>
-  `${p.name} (${p.position}, ${p.team}) Status:${p.status || 'Active'} Starting:${p.is_starting || '?'} VOR:${p.vor} Games:${p.weekGames} Stream:${p.streaming?.score}/100`
-).join('\n')}${liveMatchups}${breakingNews}${historicalIntel}
+${matchup_context ? `Matchup Context: ${matchup_context}` : ''}
 
-${daily_mode ? 
-  `DAILY MODE: 1) Must Starts. 2) 3-4 marginal decisions with reasoning. 3) Bench list.
-Rules: Never start IL/O/DTD. Batters: start if "Starting:Yes/?" bench if "No". SP: ONLY start if "Starting:Yes".
-Use live matchups + category weakness to weight decisions.
-CRITICAL: ALWAYS fill all active roster slots (C, 1B, 2B, SS, 3B, OF, UTIL) if you have an active player starting today. NEVER sit an active player to leave a slot empty just because of a "Structural Warning".
-CRITICAL: ONLY recommend dropping players listed in the MY CURRENT TEAM ROSTER section above.` 
-  : `WEEKLY MODE: 1) Must Starts for the week. 2) Bench list. 3) Pitching stream priority.
-Rules: Prioritize 2-start SPs. Start high-VOR bats. ALWAYS fill all active roster slots if possible. ONLY recommend dropping players listed in the MY CURRENT TEAM ROSTER section above.`}
-
-Format: **Player** \`[VOR:XX | Stream:YY]\` 🟢 START / 🔴 SIT -> *Logic:* [reason]. Show the math.`
+Provide a clear recommendation for each slot. Use the total league intelligence provided above to factor in current categories or points needed. If a player listed above already played today, reflect their actual performance (score/results) in your advice.`,
     }], 1800);
-    console.log('[Claude/startsit] Raw response:', text);
     res.json({ analysis: text });
   } catch (err) {
-    console.error('[Claude/startsit] Route failed:', err.message);
-    res.status(500).json({ error: err.message, analysis: 'AI unavailable — check streaming scores above.' });
+    res.status(500).json({ error: err.message, analysis: 'AI unavailable.' });
   }
 });
 
@@ -636,31 +611,14 @@ Keep it concise, mathematical, and actionable. Do not add summaries at the botto
 // General question — now with live roster injection
 router.post('/ask', rateLimiter('ask'), checkQuestionAccess, async (req, res) => {
   const { question, context, league_key } = req.body;
-  const settings = getLeagueSettings(league_key);
-  const leagueCtx = leagueContext(settings);
-
-  let integratedContext = '';
-  if (league_key) {
-    try {
-      const [rosterData, waivers, sharedMatchup, pitchingContext] = await Promise.all([
-        yahoo.getMyRoster(req, league_key),
-        yahoo.getPlayers(req, league_key, 'A').catch(() => []), // Top waivers
-        getSharedMatchupContext(req, league_key),
-        getSharedPitchingContext()
-      ]);
-
-      const diagnosis = brain.buildRosterDiagnosis(rosterData?.players || [], settings, sharedMatchup, pitchingContext);
-      integratedContext = `\n\n=== TOTAL LEAGUE INTELLIGENCE ===\n${diagnosis.promptBlock}\n\n=== WAIVER WIRE OPPORTUNITIES ===\n${JSON.stringify((waivers || []).slice(0, 15))}`;
-    } catch (e) {
-      console.log('[Claude/ask] Full context integration failed:', e.message);
-    }
-  }
+  const intel = await getUnifiedIntelligence(req, league_key);
+  const leagueCtx = leagueContext(intel.settings);
 
   try {
     const model = await getWorkingModel();
     const text = await callClaude([{
       role: 'user',
-      content: `${leagueCtx}${integratedContext}${context ? `\n\nPrevious Analysis Context: ${context}` : ''}\n\nQuestion: ${question}`,
+      content: `${leagueCtx}${intel.promptBlock}${context ? `\n\nPrevious Analysis Context: ${context}` : ''}\n\nQuestion: ${question}`,
     }], 1800);
     res.json({ answer: text });
   } catch (err) {
@@ -697,16 +655,16 @@ Write in clean, conversational prose. No JSON syntax, no brackets, no code forma
 
 // Matchup prediction
 router.post('/matchup/predict', rateLimiter('matchup'), async (req, res) => {
-  const { my_team, opponent, stat_categories, week, league_key, available_players } = req.body;
-  const settings = getLeagueSettings(league_key);
-  const leagueCtx = leagueContext(settings);
+  const { my_team, opponent, stat_categories, week, league_key } = req.body;
+  const intel = await getUnifiedIntelligence(req, league_key);
+  const leagueCtx = leagueContext(intel.settings);
 
   // Category analysis
   const myStats = {};
   const oppStats = {};
   (my_team?.stats || []).forEach(s => { if (s.name) myStats[s.name] = s.my_value ?? s.value; });
   (opponent?.stats || my_team?.stats || []).forEach(s => { if (s.name) oppStats[s.name] = s.opp_value ?? s.value; });
-  const catAnalysis = brain.analyzeCategories(myStats, [{ stats: oppStats }], settings?.scoring_type || 'H2H');
+  const catAnalysis = brain.analyzeCategories(myStats, [{ stats: oppStats }], intel.settings?.scoring_type || 'H2H');
 
   const safeCats = stat_categories || ['W','SV','OUT','H','ER','BB','HBP','K','R','1B','2B','3B','HR','RBI','SB'];
   const mathCategories = safeCats.map((cat, i) => {
@@ -726,34 +684,23 @@ router.post('/matchup/predict', rateLimiter('matchup'), async (req, res) => {
   const mathProjectedLosses = mathCategories.filter(c => c.winner === 'opponent').length;
   const mathProjectedTies = mathCategories.filter(c => c.winner === 'tie').length;
 
-
-  const isPoints = brain.detectFormat(settings?.scoring_type) === brain.FORMAT.H2H_POINTS;
+  const isPoints = brain.detectFormat(intel.settings?.scoring_type) === brain.FORMAT.H2H_POINTS;
 
   try {
     const model = await getWorkingModel();
     const text = await callClaude([{
       role: 'user',
-      content: `${leagueCtx}
-Week ${week || 'current'} matchup prediction.
+      content: `${leagueCtx}${intel.promptBlock}
+=== MATCHUP ANALYSIS ===
+Week ${week || 'current'} vs ${opponent?.name || 'opponent'}.
 
-MY TEAM: ${my_team?.name}
-Stats: ${JSON.stringify(my_team?.stats || [])}
-Current Total Points: ${my_team?.total_points || 0}
+MY TEAM CURRENT STATS: ${JSON.stringify(my_team?.stats || [])}
+OPPONENT CURRENT STATS: ${JSON.stringify(opponent?.stats || [])}
 
-OPPONENT: ${opponent?.name}
-Stats: ${JSON.stringify(opponent?.stats || [])}
-Current Total Points: ${opponent?.total_points || 0}
-
-Categories: ${JSON.stringify(stat_categories || ['R','HR','RBI','SB','AVG','W','SV','K','ERA','WHIP'])}
-Pre-computed matchup analysis: ${JSON.stringify(catAnalysis)}
-
-TOP AVAILABLE WAIVER TARGETS:
-${JSON.stringify(available_players || [])}
+Pre-computed matchup comparison: ${JSON.stringify(catAnalysis)}
 
 IMPORTANT: ${isPoints ? 'This is a POINTS league. Ignore wins/losses in categories. Focus ONLY on total point projections.' : 'This is a CATEGORIES league. Focus on winning 6+ categories.'}
-Write all text values in clean, conversational prose. No brackets, no code syntax. Write like a sports analyst breaking down a matchup.
 
-CRITICAL JSON ESCAPING RULES: You MUST use double quotes for all JSON keys and string values. Do NOT use single quotes for JSON properties. If you need to use a quote inside your text prose, use single quotes (e.g., "He is a 'must-start' player"). You MUST NOT use raw newlines inside string values; use the literal sequence \\n.
 Return ONLY valid JSON (no markdown):
 {
   "projected_wins": ${isPoints ? 0 : 5}, "projected_losses": ${isPoints ? 0 : 4}, "projected_ties": 0,
@@ -761,7 +708,7 @@ Return ONLY valid JSON (no markdown):
   "overall_confidence": "medium",
   "summary": "A clear, readable summary of the matchup projection",
   "key_matchups": "Describe the 2-3 swing categories and how to win them in plain English",
-  "lineup_recommendations": "Suggest specific moves. Use the TOP AVAILABLE WAIVER TARGETS list to name 1-2 players the user should pick up immediately to help win specific swing categories or maximize point volume.",
+  "lineup_recommendations": "Suggest specific moves using the WAIVER WIRE OPPORTUNITIES provided above.",
   "categories": [{ "name": "Category Name", "my_proj": "value", "opp_proj": "value", "winner": "me", "confidence": "high", "note": "A readable sentence" }]
 }`,
     }], 1500);
