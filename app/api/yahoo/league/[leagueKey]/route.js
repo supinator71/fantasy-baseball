@@ -13,20 +13,32 @@ export async function GET(request, { params }) {
   }
 
   try {
-    const data = await getLeague(guid, leagueKey);
-    // Save to DB
+    const raw = await getLeague(guid, leagueKey);
+
+    // Yahoo returns league as an array: [settingsObj, metadataObj]
+    // or sometimes a plain object. Normalize both cases.
+    const info = Array.isArray(raw) ? (raw[0] || {}) : (raw || {});
+
     const settings = {
       league_key: leagueKey,
-      name: data.name,
-      num_teams: data.num_teams,
-      scoring_type: data.scoring_type,
-      current_week: data.current_week,
-      // Parse more as needed
+      name: info.name || leagueKey,
+      num_teams: info.num_teams,
+      scoring_type: info.scoring_type,
+      current_week: info.current_week,
+      draft_status: info.draft_status,
+      season: info.season,
+      start_week: info.start_week,
+      end_week: info.end_week,
     };
+
+    // Persist to DB
     db.saveLeagueSettings(guid, leagueKey, settings);
-    
+    db.trackLeagueUse(guid, leagueKey);
+
     return NextResponse.json(settings);
   } catch (err) {
+    console.error('[league route]', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+

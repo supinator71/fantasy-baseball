@@ -21,14 +21,10 @@ export async function POST() {
 
   const cardId = 'random_dynamic';
   
-  const awardedData = db.awardCard(guid, cardId, 'daily_pack');
+  const awardedData = await db.awardCard(guid, cardId, 'daily_pack');
   db.updateDailyPackTimer(guid, today);
 
-  const cardDef = CARD_COLLECTION.find(c => c.id === cardId);
   return NextResponse.json({
-    awarded: {
-      ...cardDef,
-      ...awardedData
-    }
+    awarded: awardedData
   });
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
-import { getRoster, getUserTeamKey } from '@/lib/yahooService';
+import { getRoster, getUserTeamKey, getBatchPlayerStats } from '@/lib/yahooService';
+import { getLiveProbablePitchers } from '@/lib/mlbStatsService';
 
 export async function GET(request, { params }) {
   const { leagueKey } = await params;
@@ -17,7 +18,42 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
-    const players = await getRoster(guid, leagueKey, teamKey);
+    const rosterData = await getRoster(guid, leagueKey, teamKey);
+    const playerKeys = [];
+    for (const rosterItem of (rosterData || [])) {
+      const p = rosterItem?.player;
+      if (p && Array.isArray(p)) {
+        const infoArray = Array.isArray(p[0]) ? p[0] : [];
+        const info = Object.assign({}, ...infoArray);
+        if (info.player_key) playerKeys.push(info.player_key);
+      }
+    }
+
+    if (!playerKeys.length) {
+      return NextResponse.json({ players: [] });
+    }
+
+    let players = await getBatchPlayerStats(guid, leagueKey, playerKeys, null);
+
+    // MLB Stats API Override for Probable Pitchers
+    try {
+      const probablePitchers = await getLiveProbablePitchers();
+      if (probablePitchers.length > 0) {
+        players.forEach(p => {
+          if (p.position === 'SP' || String(p.position).includes('SP/')) {
+            const normName = (p.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            if (probablePitchers.includes(normName)) {
+              p.is_starting = 'Yes';
+            } else {
+              p.is_starting = 'No';
+            }
+          }
+        });
+      }
+    } catch (err) {
+      console.error('[Yahoo Roster] Failed to override probable pitchers:', err.message);
+    }
+
     return NextResponse.json({ players });
   } catch (err) {
     console.error('[Pitching Hub] Roster fetch failed:', err.message);

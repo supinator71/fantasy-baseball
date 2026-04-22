@@ -6,7 +6,7 @@ export async function GET(request, { params }) {
   const { leagueKey } = await params;
   const { searchParams } = new URL(request.url);
   const status = searchParams.get('status') || 'A';
-  const position = searchParams.get('position') || 'P';
+  const position = searchParams.get('position') || null;
   const start = parseInt(searchParams.get('start') || '0', 10);
 
   const session = await getSession();
