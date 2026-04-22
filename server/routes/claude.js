@@ -110,14 +110,15 @@ function leagueContext(settings) {
   if (!settings) return '';
   const rawType = (settings.scoring_type || '').toLowerCase();
   
-  let format = 'Rotisserie (Roto)';
+  const fmt = brain.detectFormat(rawType);
+  let formatLabel = 'Rotisserie (Roto)';
   let rule = 'DO NOT talk about weekly head-to-head matchups. Focus on long-term categorical accumulation over the whole 162-game season.\\n- PITCHING STRATEGY: Protect ERA and WHIP ratios at all costs. DO NOT aggressively stream mediocre pitchers for counting stats. Stick to 5-6 elite, reliable starting pitchers.\\n- OFFENSE: Never completely punt a category. Balance is key.';
   
-  if (rawType.includes('headpoint')) {
-    format = 'Head-to-Head Points';
+  if (fmt === brain.FORMAT.H2H_POINTS) {
+    formatLabel = 'Head-to-Head Points';
     rule = 'DO NOT give 5x5 Roto advice. Ignore balancing categories. Give advice explicitly tailored for maximizing raw total points in a weekly matchup!\\n- PITCHING STRATEGY: Maximize Innings Pitched and Strikeout volume. Stream 2-start pitchers relentlessly. You want 7+ Starting Pitchers active.\\n- OFFENSIVE STRATEGY: Volume is everything. 7-game weeks always start over 4-game weeks. Power > Contact. Strikeouts DO NOT count against you. Walks are scored identically to Singles, so OBP is extremely valuable.\\n- ROSTER RULES: UTIL slots should always hold the highest projected scorers, regardless of position. Never carry a backup Catcher. Target a 3-Bat / 1-Pitcher bench split. Use all IL slots.';
-  } else if (rawType.includes('head')) {
-    format = 'Head-to-Head Categories';
+  } else if (fmt === brain.FORMAT.H2H_CAT) {
+    formatLabel = 'Head-to-Head Categories';
     rule = 'DO NOT focus solely on total points. You MUST consider how a player balances and wins specific stat categories against a weekly opponent.\\n- PITCHING STRATEGY: Balance gathering counting stats (W, K) with protecting ratios (ERA, WHIP). Strategic streaming is necessary if trailing in W/K, but warn against blowing up ratios with bad pitchers.\\n- OFFENSE: It is okay to punt 1-2 weak categories to guarantee winning the other 4-5.';
   }
   
@@ -127,8 +128,8 @@ function leagueContext(settings) {
     ? '\\n- TIME LEVER (WEEKEND): The matchup ends tomorrow! Activate DESPERATION MODE if trailing. Ignore 2-start pitchers; focus ONLY on pitchers starting today or tomorrow.' 
     : '\\n- TIME LEVER (EARLY WEEK): It is early/mid week. Focus on maximizing volume with 2-start pitchers and long-term holds.';
 
-  return `League Rules: ${settings.num_teams || 12} teams, **${format} scoring**. 
-(CRITICAL RULE: The user is playing ${format}. ${rule}${timeLever})
+  return `League Rules: ${settings.num_teams || 12} teams, **${formatLabel} scoring**. 
+(CRITICAL RULE: The user is playing ${formatLabel}. ${rule}${timeLever})
 Scoring Events/Categories: ${(settings.stat_categories || []).join(', ')}.
 📅 TODAY IS: ${today}. Calibrate all logic to how many days are left before Sunday!`;
 }
@@ -715,7 +716,10 @@ router.post('/matchup/predict', rateLimiter('matchup'), async (req, res) => {
   const mathProjectedTies = mathCategories.filter(c => c.winner === 'tie').length;
 
 
+  const isPoints = brain.detectFormat(settings?.scoring_type) === brain.FORMAT.H2H_POINTS;
+
   try {
+    const model = await getWorkingModel();
     const text = await callClaude([{
       role: 'user',
       content: `${leagueCtx}
@@ -723,21 +727,23 @@ Week ${week || 'current'} matchup prediction.
 
 MY TEAM: ${my_team?.name}
 Stats: ${JSON.stringify(my_team?.stats || [])}
-Current Total Points: ${my_team?.total_points || 'N/A'}
+Current Total Points: ${my_team?.total_points || 0}
 
 OPPONENT: ${opponent?.name}
 Stats: ${JSON.stringify(opponent?.stats || [])}
-Current Total Points: ${opponent?.total_points || 'N/A'}
+Current Total Points: ${opponent?.total_points || 0}
 
 Categories: ${JSON.stringify(stat_categories || ['R','HR','RBI','SB','AVG','W','SV','K','ERA','WHIP'])}
 Pre-computed matchup analysis: ${JSON.stringify(catAnalysis)}
 
-IMPORTANT: Write all text values in clean, conversational prose. No brackets, no code syntax. Write like a sports analyst breaking down a matchup.
+IMPORTANT: ${isPoints ? 'This is a POINTS league. Ignore wins/losses in categories. Focus ONLY on total point projections.' : 'This is a CATEGORIES league. Focus on winning 6+ categories.'}
+Write all text values in clean, conversational prose. No brackets, no code syntax. Write like a sports analyst breaking down a matchup.
 
 CRITICAL JSON ESCAPING RULES: You MUST use double quotes for all JSON keys and string values. Do NOT use single quotes for JSON properties. If you need to use a quote inside your text prose, use single quotes (e.g., "He is a 'must-start' player"). You MUST NOT use raw newlines inside string values; use the literal sequence \\n.
 Return ONLY valid JSON (no markdown):
 {
-  "projected_wins": 5, "projected_losses": 4, "projected_ties": 1,
+  "projected_wins": ${isPoints ? 0 : 5}, "projected_losses": ${isPoints ? 0 : 4}, "projected_ties": 0,
+  "projected_my_points": 450, "projected_opp_points": 380,
   "overall_confidence": "medium",
   "summary": "A clear, readable summary of the matchup projection",
   "key_matchups": "Describe the 2-3 swing categories and how to win them in plain English",

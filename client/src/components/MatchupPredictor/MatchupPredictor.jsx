@@ -342,17 +342,17 @@ export default function MatchupPredictor({ leagueSettings }) {
               <div>
                 <div style={{ fontSize: 13, color: '#7aafc4', marginBottom: 2 }}>{matchup?.myTeam?.name}</div>
                 <div style={{ fontSize: 52, fontWeight: 800, lineHeight: 1,
-                  color: (prediction.projected_wins || 0) >= (prediction.projected_losses || 0) ? '#00a86b' : '#ef4444'
-                }}>{prediction.projected_wins ?? '?'}</div>
+                  color: (prediction.projected_my_points || prediction.projected_wins || 0) >= (prediction.projected_opp_points || prediction.projected_losses || 0) ? '#00a86b' : '#ef4444'
+                }}>{prediction.projected_my_points || prediction.projected_wins ?? '?'}</div>
               </div>
               <div style={{ fontSize: 28, color: '#4a7a94', fontWeight: 300 }}>–</div>
               <div>
                 <div style={{ fontSize: 13, color: '#7aafc4', marginBottom: 2 }}>{matchup?.opponent?.name}</div>
                 <div style={{ fontSize: 52, fontWeight: 800, lineHeight: 1,
-                  color: (prediction.projected_losses || 0) >= (prediction.projected_wins || 0) ? '#00a86b' : '#ef4444'
-                }}>{prediction.projected_losses ?? '?'}</div>
+                  color: (prediction.projected_opp_points || prediction.projected_losses || 0) >= (prediction.projected_my_points || prediction.projected_wins || 0) ? '#00a86b' : '#ef4444'
+                }}>{prediction.projected_opp_points || prediction.projected_losses ?? '?'}</div>
               </div>
-              {prediction.projected_ties > 0 && (
+              {!prediction.projected_my_points && prediction.projected_ties > 0 && (
                 <div>
                   <div style={{ fontSize: 13, color: '#7aafc4', marginBottom: 2 }}>Ties</div>
                   <div style={{ fontSize: 52, fontWeight: 800, lineHeight: 1, color: '#f59e0b' }}>{prediction.projected_ties}</div>
