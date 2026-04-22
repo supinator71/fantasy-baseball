@@ -38,78 +38,21 @@ const CARD_COLLECTION = [
   { id: 'arcana_hand', name: 'Homerun Arcana (Signed)', img: '/cyborg_card_hand_arcana.png', rarity: 'legendary' },
   { id: 'leg_walkoff', name: 'Walk-Off Homer (Autograph Edition)', img: '/cyborg_walkoff_homer.png', rarity: 'legendary' },
 
-  // --- SERIES 2: TITANIUM GRAPEFRUIT LEAGUE (TGL) ---
-  // Brooklyn Biotics
+  // --- SERIES 2: TITANIUM GRAPEFRUIT LEAGUE ---
   { id: 'tgl_bk_hit', name: 'Brooklyn Biotics (Jaxson Jones)', img: '/tgl_brooklyn_hitter_v3_1776486966054.png', rarity: 'common' },
-  { id: 'tgl_bk_pit', name: 'Brooklyn Biotics (Vax Volkov)', img: '/cyborg_card_tier1_pitcher.png', rarity: 'common' },
-  { id: 'tgl_bk_inf', name: 'Brooklyn Biotics (Circuit CID)', img: '/tgl_neoncity_infielder_v2_1776486734283.png', rarity: 'uncommon' },
-  { id: 'tgl_bk_spc', name: 'Brooklyn Biotics (Neon Nix)', img: '/cyborg_stealing_second.png', rarity: 'rare' },
-
-  // Tokyo Tachyons
   { id: 'tgl_tok_stl', name: 'Tokyo Tachyons (Kenji Ryuko)', img: '/tgl_tokyo_stealer_v2_1776486720704.png', rarity: 'common' },
-  { id: 'tgl_tok_hit', name: 'Tokyo Tachyons (Satoshi Speed)', img: '/tgl_osaka_hitter_v2_1776486782371.png', rarity: 'common' },
-  { id: 'tgl_tok_pit', name: 'Tokyo Tachyons (Glitch Goro)', img: '/tgl_kyoto_kaiju_pitcher_v2_1776486797035.png', rarity: 'uncommon' },
-  { id: 'tgl_tok_c',   name: 'Tokyo Tachyons (Byte Bakura)', img: '/cyborg_card_tier1_hitter.png', rarity: 'rare' },
-
-  // Neon City Sliders
   { id: 'tgl_neo_inf', name: 'Neon City Sliders (Dash Maverick)', img: '/tgl_neoncity_infielder_v2_1776486734283.png', rarity: 'common' },
-  { id: 'tgl_neo_pit', name: 'Neon City Sliders (Static Sam)', img: '/tgl_siliconvalley_pitcher_v2_1776486747529.png', rarity: 'uncommon' },
-  { id: 'tgl_neo_hit', name: 'Neon City Sliders (Voltage Val)', img: '/tgl_atlanta_hitter_1776487205901.png', rarity: 'uncommon' },
-  { id: 'tgl_neo_spc', name: 'Neon City Sliders (Ampere Alex)', img: '/tgl_miami_stealer_1776487217131.png', rarity: 'rare' },
-
-  // Silicon Valley Sentinels
   { id: 'tgl_sv_pit', name: 'Silicon Valley Sentinels (Alan T. Turing)', img: '/tgl_siliconvalley_pitcher_v2_1776486747529.png', rarity: 'rare' },
-  { id: 'tgl_sv_inf', name: 'Silicon Valley Sentinels (Kernel Kim)', img: '/tgl_roswell_infielder_v2_1776486811710.png', rarity: 'uncommon' },
-  { id: 'tgl_sv_hit', name: 'Silicon Valley Sentinels (Cache Cooper)', img: '/tgl_brooklyn_hitter_v3_1776486966054.png', rarity: 'common' },
-  { id: 'tgl_sv_c',   name: 'Silicon Valley Sentinels (Buffer Bob)', img: '/cyborg_card_tier1_hitter.png', rarity: 'common' },
-
-  // Dallas Tex-Mechs
   { id: 'tgl_dal_cow', name: 'Dallas Tex-Mechs (Colt Smith)', img: '/tgl_dallas_cowboy_v3_1776486978084.png', rarity: 'rare' },
-  { id: 'tgl_dal_pit', name: 'Dallas Tex-Mechs (Rusty Rig)', img: '/cyborg_card_tier1_pitcher.png', rarity: 'common' },
-  { id: 'tgl_dal_inf', name: 'Dallas Tex-Mechs (Spur Spike)', img: '/tgl_neoncity_infielder_v2_1776486734283.png', rarity: 'common' },
-  { id: 'tgl_dal_spc', name: 'Dallas Tex-Mechs (Grit Gable)', img: '/cyborg_bullpen_closer.png', rarity: 'uncommon' },
-
-  // Osaka Overclockers
   { id: 'tgl_osa_hit', name: 'Osaka Overclockers (Daiki Moto)', img: '/tgl_osaka_hitter_v2_1776486782371.png', rarity: 'epic' },
-  { id: 'tgl_osa_pit', name: 'Osaka Overclockers (Zen Zero)', img: '/tgl_kyoto_kaiju_pitcher_v2_1776486797035.png', rarity: 'rare' },
-  { id: 'tgl_osa_inf', name: 'Osaka Overclockers (Haze Hiro)', img: '/tgl_sanjuan_infielder_1776487227839.png', rarity: 'uncommon' },
-  { id: 'tgl_osa_spc', name: 'Osaka Overclockers (Bolt Ban)', img: '/tgl_tokyo_stealer_v2_1776486720704.png', rarity: 'common' },
-
-  // Kyoto Kaiju
   { id: 'tgl_kyo_kai', name: 'Kyoto Kaiju (Ryu Tanaka)', img: '/tgl_kyoto_kaiju_pitcher_v2_1776486797035.png', rarity: 'epic' },
-  { id: 'tgl_kyo_hit', name: 'Kyoto Kaiju (Giga Gen)', img: '/tgl_osaka_hitter_v2_1776486782371.png', rarity: 'rare' },
-  { id: 'tgl_kyo_inf', name: 'Kyoto Kaiju (Terra Tai)', img: '/tgl_neoncity_infielder_v2_1776486734283.png', rarity: 'uncommon' },
-  { id: 'tgl_kyo_spc', name: 'Kyoto Kaiju (Mecha Masa)', img: '/cyborg_diving_catch.png', rarity: 'common' },
-
-  // Roswell Rayguns
   { id: 'tgl_ros_inf', name: 'Roswell Rayguns (Zorblax Smith)', img: '/tgl_roswell_infielder_v2_1776486811710.png', rarity: 'legendary' },
-  { id: 'tgl_ros_pit', name: 'Roswell Rayguns (Beam Bill)', img: '/tgl_havana_pitcher_1776487239413.png', rarity: 'epic' },
-  { id: 'tgl_ros_hit', name: 'Roswell Rayguns (Pulse Pam)', img: '/tgl_atlanta_hitter_1776487205901.png', rarity: 'rare' },
-  { id: 'tgl_ros_spc', name: 'Roswell Rayguns (Ray Rick)', img: '/tgl_miami_stealer_1776487217131.png', rarity: 'uncommon' },
 
-  // Atlanta Aerodynamics
+  // --- SERIES 2: DIVERSITY EXPANSION (TEAMS 9-12) ---
   { id: 'tgl_atl_hit', name: 'Atlanta Aerodynamics (DeAndre Carter)', img: '/tgl_atlanta_hitter_1776487205901.png', rarity: 'rare' },
-  { id: 'tgl_atl_pit', name: 'Atlanta Aerodynamics (Aero Al)', img: '/tgl_havana_pitcher_1776487239413.png', rarity: 'common' },
-  { id: 'tgl_atl_inf', name: 'Atlanta Aerodynamics (Glide Guy)', img: '/tgl_sanjuan_infielder_1776487227839.png', rarity: 'uncommon' },
-  { id: 'tgl_atl_spc', name: 'Atlanta Aerodynamics (Drift Dan)', img: '/cyborg_stealing_second.png', rarity: 'common' },
-
-  // Miami Motherboards
   { id: 'tgl_mia_stl', name: 'Miami Motherboards (Mateo Rodriguez)', img: '/tgl_miami_stealer_1776487217131.png', rarity: 'epic' },
-  { id: 'tgl_mia_pit', name: 'Miami Motherboards (Chip Chad)', img: '/cyborg_card_tier1_pitcher.png', rarity: 'common' },
-  { id: 'tgl_mia_inf', name: 'Miami Motherboards (RAM Ray)', img: '/tgl_roswell_infielder_v2_1776486811710.png', rarity: 'uncommon' },
-  { id: 'tgl_mia_hit', name: 'Miami Motherboards (Port Pat)', img: '/tgl_brooklyn_hitter_v3_1776486966054.png', rarity: 'rare' },
-
-  // San Juan Synthetics
   { id: 'tgl_sj_inf', name: 'San Juan Synthetics (Luis Fernandez)', img: '/tgl_sanjuan_infielder_1776487227839.png', rarity: 'legendary' },
-  { id: 'tgl_sj_pit', name: 'San Juan Synthetics (Synth Sol)', img: '/tgl_siliconvalley_pitcher_v2_1776486747529.png', rarity: 'epic' },
-  { id: 'tgl_sj_hit', name: 'San Juan Synthetics (Bio Ben)', img: '/tgl_atlanta_hitter_1776487205901.png', rarity: 'rare' },
-  { id: 'tgl_sj_spc', name: 'San Juan Synthetics (Core Cal)', img: '/cyborg_diving_catch.png', rarity: 'common' },
-
-  // Havana Hover-Hounds
-  { id: 'tgl_hav_pit', name: 'Havana Hover-Hounds (Javier Gomez)', img: '/tgl_havana_pitcher_1776487239413.png', rarity: 'common' },
-  { id: 'tgl_hav_hit', name: 'Havana Hover-Hounds (Drift Dom)', img: '/tgl_osaka_hitter_v2_1776486782371.png', rarity: 'uncommon' },
-  { id: 'tgl_hav_inf', name: 'Havana Hover-Hounds (Glide Gus)', img: '/tgl_neoncity_infielder_v2_1776486734283.png', rarity: 'uncommon' },
-  { id: 'tgl_hav_spc', name: 'Havana Hover-Hounds (Hover Hal)', img: '/cyborg_bullpen_closer.png', rarity: 'rare' }
+  { id: 'tgl_hav_pit', name: 'Havana Hover-Hounds (Javier Gomez)', img: '/tgl_havana_pitcher_1776487239413.png', rarity: 'common' }
 ];
 
 // Helper to pull a random card based on rarity weights
