@@ -14,7 +14,7 @@ There is also a separate, paid card collection layer (see Section 7).
 
 **Audience:** Yahoo Fantasy Baseball players who are newer to the game, want to be competitive in their leagues, and don't have time or expertise to use elite tools like Rotoballer.
 
-**Domain:** goingyard.app
+**Domain:** goinyard.app
 
 ---
 
@@ -22,7 +22,7 @@ There is also a separate, paid card collection layer (see Section 7).
 
 - **Framework:** Next.js (frontend and backend consolidated in one codebase). Migration from a separate React frontend + standalone backend is in progress.
 - **Data source:** Yahoo Fantasy Sports API
-- **Hosting/domain:** Namecheap (goingyard.app)
+- **Hosting/domain:** Namecheap (goinyard.app)
 - **AI model for app's reasoning features (e.g., follow-up explanations):** Claude Sonnet 4.6 end-to-end. Do not split between models — handoffs cause logic drift.
 - **Build environment:** Antigravity IDE
 - **Builder:** Solo, non-coding director working with agentic AI
