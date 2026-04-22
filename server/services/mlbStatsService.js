@@ -280,19 +280,25 @@ async function getTodayLiveScores() {
     const games = data.dates?.[0]?.games || [];
 
     games.forEach(g => {
-      const status = g.status?.abstractGameState; // Live, Final, Preview
+      const status = g.status?.abstractGameState || 'Unknown';
+      const homeTeam = g.teams?.home?.team?.name || 'Home';
+      const awayTeam = g.teams?.away?.team?.name || 'Away';
+      const homeScore = g.teams?.home?.score ?? 0;
+      const awayScore = g.teams?.away?.score ?? 0;
+
       results.push({
         gameId: g.gamePk,
-        status,
-        homeTeam: g.teams?.home?.team?.name,
-        awayTeam: g.teams?.away?.team?.name,
-        homeScore: g.teams?.home?.score || 0,
-        awayScore: g.teams?.away?.score || 0,
+        status: status === 'Final' ? 'Completed (Final)' : status,
+        homeTeam,
+        awayTeam,
+        homeScore,
+        awayScore,
         homePitcher: g.teams?.home?.probablePitcher?.fullName,
         awayPitcher: g.teams?.away?.probablePitcher?.fullName,
         winner: g.decidingPitcher?.winner?.fullName,
         loser: g.decidingPitcher?.loser?.fullName,
-        saver: g.decidingPitcher?.save?.fullName
+        saver: g.decidingPitcher?.save?.fullName,
+        summary: `${awayTeam} ${awayScore}, ${homeTeam} ${homeScore}`
       });
     });
 

@@ -1478,15 +1478,14 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}, sharedMatchup = null,
   if (pitchingContext && pitchingContext.liveScoresToday?.length > 0) {
     promptBlock += `\n📊 TODAY'S LIVE SCORES (Real-time Reality) 📊\n`;
     pitchingContext.liveScoresToday.forEach(g => {
-      const scoreLine = `${g.awayTeam} ${g.awayScore} @ ${g.homeTeam} ${g.homeScore} (${g.status})`;
       let decisions = '';
       if (g.winner) decisions += ` | Win: ${g.winner}`;
       if (g.loser) decisions += ` | Loss: ${g.loser}`;
       if (g.saver) decisions += ` | Save: ${g.saver}`;
       
-      promptBlock += `- ${scoreLine}${decisions}\n`;
+      promptBlock += `- ${g.summary} (${g.status})${decisions}\n`;
     });
-    promptBlock += `\nIMPORTANT: Use these results to inform your advice. If a pitcher listed above was shelled or took a loss, reflect that in your response.\n`;
+    promptBlock += `\nCRITICAL: If a game is 'Completed (Final)', you MUST report the final score listed above. Do not generalize. If a pitcher on the user's roster was involved in a decision, analyze the impact on their standings.\n`;
   }
 
   // Format-specific strategic framing
