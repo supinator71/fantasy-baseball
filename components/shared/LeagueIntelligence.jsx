@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-export default function LeagueIntelligence({ leagueKey, isPro }) {
+export default function LeagueIntelligence({ leagueKey, isPro = true }) {  // TODO: set default back to false when re-enabling monetization
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (leagueKey && isPro) {
+    if (leagueKey) {  // isPro check removed for testing — add back: `&& isPro`
       fetchTransactions();
     }
   }, [leagueKey, isPro]);
