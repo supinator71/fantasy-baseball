@@ -64,12 +64,15 @@ export async function GET(request, { params }) {
       if (!info.player_key) continue;
 
       // selected_position can be in p[1] or nested differently
+      // Yahoo returns it as [{coverage_type, date}, {position: 'C'}]
       let slot = 'BN';
       const selPos = p[1]?.selected_position;
       if (selPos) {
         if (Array.isArray(selPos)) {
-          slot = selPos[0]?.position || selPos[0] || 'BN';
-        } else if (selPos.position) {
+          // Find whichever item actually has the position key
+          const posItem = selPos.find(s => s && typeof s === 'object' && s.position);
+          slot = posItem?.position || 'BN';
+        } else if (selPos && typeof selPos === 'object' && selPos.position) {
           slot = selPos.position;
         } else if (typeof selPos === 'string') {
           slot = selPos;
