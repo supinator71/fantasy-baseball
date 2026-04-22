@@ -70,7 +70,8 @@ router.get('/leagues', requireAuth, async (req, res) => {
 
 router.get('/league/settings/local', (req, res) => {
   const { leagueKey } = req.query;
-  const settings = db.prepare('SELECT * FROM league_settings WHERE league_key = ?').get(leagueKey || null)
+  const guid = req.session?.yahoo_guid;
+  const settings = db.prepare('SELECT * FROM league_settings WHERE league_key = ?').get(leagueKey || null, guid)
   if (!settings) return res.json(null)
   settings.roster_slots = JSON.parse(settings.roster_slots || '{}')
   settings.stat_categories = JSON.parse(settings.stat_categories || '[]')
@@ -81,10 +82,10 @@ router.post('/league/save', requireAuth, async (req, res) => {
   try {
     const { league_key, league_name, num_teams, scoring_type, draft_type, draft_position, roster_slots, stat_categories } = req.body
     db.prepare(`INSERT OR REPLACE INTO league_settings
-      (league_key, league_name, num_teams, scoring_type, draft_type, draft_position, roster_slots, stat_categories, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      (league_key, league_name, num_teams, scoring_type, draft_type, draft_position, roster_slots, stat_categories, updated_at, user_guid)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(league_key, league_name, num_teams, scoring_type, draft_type, draft_position,
-      JSON.stringify(roster_slots), JSON.stringify(stat_categories), Date.now())
+      JSON.stringify(roster_slots), JSON.stringify(stat_categories), Date.now(), req.session.yahoo_guid)
     // Clear cached data for this league so fresh data loads next time
     cache.clear(league_key)
     res.json({ success: true })
@@ -136,10 +137,10 @@ router.get('/league/:leagueKey', requireAuth, async (req, res) => {
 
     // Auto-save the fetched settings into the DB natively!
     db.prepare(`INSERT OR REPLACE INTO league_settings
-      (league_key, league_name, num_teams, scoring_type, draft_type, draft_position, roster_slots, stat_categories, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      (league_key, league_name, num_teams, scoring_type, draft_type, draft_position, roster_slots, stat_categories, updated_at, user_guid)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(payload.league_key, payload.league_name, payload.num_teams, payload.scoring_type, payload.draft_type, 1, 
-      JSON.stringify(payload.roster_slots), JSON.stringify(payload.stat_categories), Date.now());
+      JSON.stringify(payload.roster_slots), JSON.stringify(payload.stat_categories), Date.now(), req.session.yahoo_guid);
 
     res.json(payload);
   } catch (err) {

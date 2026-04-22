@@ -97,8 +97,8 @@ FORMATTING: Clean prose, no code syntax, no brackets. Rank recommendations clear
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-function getLeagueSettings(leagueKey) {
-  const s = db.prepare('SELECT * FROM league_settings WHERE league_key = ?').get(leagueKey || null);
+function getLeagueSettings(leagueKey, guid) {
+  const s = db.prepare('SELECT * FROM league_settings WHERE league_key = ?').get(leagueKey || null, guid);
   if (!s) return null;
   try {
     s.roster_slots = typeof s.roster_slots === 'string' ? JSON.parse(s.roster_slots) : (s.roster_slots || {});
@@ -304,7 +304,8 @@ async function getSharedPitchingContext() {
 // UNIFIED INTELLIGENCE HELPER
 // ─────────────────────────────────────────────────────────────────────────────
 async function getUnifiedIntelligence(req, league_key) {
-  const settings = getLeagueSettings(league_key);
+  const guid = req.session?.yahoo_guid;
+  const settings = getLeagueSettings(league_key, guid);
   try {
     const [rosterData, waivers, sharedMatchup, pitchingContext] = await Promise.all([
       yahoo.getMyRoster(req, league_key).catch(() => null),

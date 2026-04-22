@@ -92,7 +92,9 @@ const db = {
         const data = load();
         if (query.includes('INSERT OR REPLACE INTO league_settings')) {
           const leagueKey = args[0];
-          data.league_settings[leagueKey] = {
+          const guid = args[9]; // We'll pass the guid as the last argument
+          if (!data.league_settings[guid]) data.league_settings[guid] = {};
+          data.league_settings[guid][leagueKey] = {
             league_key: args[0], league_name: args[1], num_teams: args[2],
             scoring_type: args[3], draft_type: args[4], draft_position: args[5],
             roster_slots: args[6], stat_categories: args[7], updated_at: args[8]
@@ -121,7 +123,8 @@ const db = {
         const data = load();
         if (query.includes('FROM league_settings')) {
           const leagueKey = args[0];
-          return data.league_settings[leagueKey] || null;
+          const guid = args[1];
+          return (data.league_settings[guid] && data.league_settings[guid][leagueKey]) || null;
         }
         if (query.includes('COUNT(*) as count FROM draft_board')) {
           return { count: data.draft_board.length };
