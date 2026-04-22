@@ -160,8 +160,10 @@ MY ROSTER:
 ${rosterBlock}
 
 PITCHING INTELLIGENCE (as of ${nowDay}):
-IMPORTANT: Pitchers with starts already completed this week are LESS valuable as waiver adds. 
-A "2-start SP" who already pitched once is now effectively a 1-start SP for the rest of this week.
+⚠️ CRITICAL PITCHING RULE: Only recommend starting or streaming pitchers who appear in the schedule below.
+A player mentioned in breaking news (e.g., "X signs with Y team") is NOT available to start unless they
+appear as a confirmed probable pitcher in the schedule below. Newly signed players are typically on
+ramp-up/rehab and may not pitch for weeks. Do NOT recommend them.
 
 THIS WEEK — by remaining value:
 ${twoStartBlock}
