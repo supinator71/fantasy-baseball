@@ -106,9 +106,28 @@ export async function POST(request) {
       return { ...p, waiverScore: { score, priority: score >= 60 ? 'High priority' : 'Speculative add', reasoning: 'Check stats' } };
     }).sort((a, b) => (b.waiverScore?.score ?? 0) - (a.waiverScore?.score ?? 0));
 
-    // ── Single Claude call for the entire app ─────────────────────────────────
-    const twoStartThis = (pitching.currentWeek || []).slice(0, 8).join(', ') || 'None confirmed';
-    const twoStartNext = (pitching.nextWeek   || []).slice(0, 6).join(', ') || 'None confirmed';
+    // ── Build pitching intelligence block ───────────────────────────────────
+    const buildPitcherBlock = (names, details) =>
+      names.length === 0 ? '  None confirmed yet'
+      : names.map(n => {
+          const d = details?.[n];
+          return d ? `  • ${d.fullName}: ${d.label}` : `  • ${n}`;
+        }).join('\n');
+
+    const nowDay = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles' });
+    const twoStartBlock = [
+      pitching.remainingTwoStarters?.length
+        ? `  FULL 2-START VALUE (both starts remaining):\n${buildPitcherBlock(pitching.remainingTwoStarters, pitching.pitcherDetails)}`
+        : '  No pitchers with 2 full starts remaining',
+      pitching.oneStartRemaining?.length
+        ? `  PARTIAL VALUE — 1 start already pitched, 1 remaining:\n${buildPitcherBlock(pitching.oneStartRemaining, pitching.pitcherDetails)}`
+        : '',
+      pitching.today?.length
+        ? `  STARTING TODAY (single start only):\n${buildPitcherBlock(pitching.today, pitching.pitcherDetails)}`
+        : '',
+    ].filter(Boolean).join('\n');
+
+    const nextWeekBlock = buildPitcherBlock(pitching.nextWeek || [], {});
 
     const scoringLabel = SCORING_TYPE_MAP[settings.scoring_type] || settings.scoring_type || 'H2H Points';
 
@@ -140,9 +159,15 @@ ${ilBlock}
 MY ROSTER:
 ${rosterBlock}
 
-PITCHING INTELLIGENCE:
-- 2-start SPs THIS WEEK: ${twoStartThis}
-- 2-start SPs NEXT WEEK: ${twoStartNext}
+PITCHING INTELLIGENCE (as of ${nowDay}):
+IMPORTANT: Pitchers with starts already completed this week are LESS valuable as waiver adds. 
+A "2-start SP" who already pitched once is now effectively a 1-start SP for the rest of this week.
+
+THIS WEEK — by remaining value:
+${twoStartBlock}
+
+NEXT WEEK — pitchers with 2 confirmed starts next week (add now to benefit):
+${nextWeekBlock}
 
 TOP FREE AGENTS (available now):
 ${freeAgents.slice(0, 10).map(p => `  • ${p.name} (${p.position}) — ${p.team}`).join('\n') || '  None'}
