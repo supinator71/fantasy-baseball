@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-export default function AiQuestionBox({ context, leagueKey, isPro, title = "Ask a Follow-up", icon = "🧠", placeholder = "Ask a specific question about these results..." }) {
+export default function AiQuestionBox({ context, leagueKey, isPro = true, title = "Ask a Follow-up", icon = "🧠", placeholder = "Ask a specific question about these results..." }) {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!question.trim() || !isPro) return;
+    if (!question.trim()) return;
 
     setLoading(true);
     setAnswer('');

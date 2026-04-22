@@ -3,105 +3,133 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLeague } from '@/lib/context/LeagueContext';
-import { scoreWaiverTarget, buildRosterDiagnosis } from '@/lib/fantasyBrain';
 import { toast } from 'react-hot-toast';
+import AiQuestionBox from '@/components/shared/AiQuestionBox';
+
+const PRIORITY_COLORS = {
+  'MUST ADD':             { bg: 'rgba(0,168,107,0.15)',  color: '#00a86b', border: 'rgba(0,168,107,0.4)' },
+  'CHAMPIONSHIP STREAM':  { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: 'rgba(245,158,11,0.4)' },
+  'CRITICAL STREAM':      { bg: 'rgba(239,68,68,0.15)',  color: '#ef4444', border: 'rgba(239,68,68,0.4)' },
+  'High priority':        { bg: 'rgba(74,175,219,0.12)', color: '#4aafdb', border: 'rgba(74,175,219,0.3)' },
+  'Speculative add':      { bg: 'rgba(255,255,255,0.06)', color: '#94a3b8', border: 'rgba(255,255,255,0.1)' },
+  'Monitor':              { bg: 'rgba(255,255,255,0.04)', color: '#64748b', border: 'rgba(255,255,255,0.07)' },
+  'Pass':                 { bg: 'rgba(239,68,68,0.08)',  color: '#7f1d1d', border: 'rgba(239,68,68,0.15)' },
+};
 
 export default function WaiverWire() {
-  const { selectedLeague, leagueData } = useLeague();
-  const [availablePlayers, setAvailablePlayers] = useState([]);
-  const [myRoster, setMyRoster] = useState([]);
+  const { selectedLeague, aiAnalysis, aiLoading, scoredWaiver } = useLeague();
+  // Also fetch fresh waiver players locally for display
+  const [localPlayers, setLocalPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [diagnosis, setDiagnosis] = useState(null);
 
   useEffect(() => {
-    if (selectedLeague) fetchData();
+    if (selectedLeague) fetchPlayers();
   }, [selectedLeague]);
 
-  async function fetchData() {
+  async function fetchPlayers() {
     setLoading(true);
     try {
-      const [rosterRes, availableRes] = await Promise.all([
-        axios.get(`/api/yahoo/league/${selectedLeague}/myroster`),
-        axios.get(`/api/yahoo/league/${selectedLeague}/players`, { params: { status: 'A', position: 'ALL' } })
-      ]);
-      
-      const roster = rosterRes.data.players || [];
-      setMyRoster(roster);
-      
-      const diag = buildRosterDiagnosis(roster, leagueData?.settings || {});
-      setDiagnosis(diag);
-
-      // Score each available player
-      const scored = (availableRes.data || []).map(p => {
-        const evaluation = scoreWaiverTarget(p, roster, leagueData?.settings || {}, diag.categoryNeeds);
-        return { ...p, ...evaluation };
-      }).sort((a,b) => b.score - a.score);
-
-      setAvailablePlayers(scored);
+      const res = await axios.get(`/api/yahoo/league/${selectedLeague}/players`, {
+        params: { status: 'A' }
+      });
+      setLocalPlayers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      toast.error('Failed to load waiver data');
+      toast.error('Failed to load available players');
     } finally {
       setLoading(false);
     }
   }
 
+  // Use pre-scored waiver targets from context if available, else fall back to local list
+  const displayPlayers = scoredWaiver?.length > 0
+    ? scoredWaiver
+    : localPlayers.slice(0, 20);
+
   return (
-    <div className="waiver-wire">
-      {diagnosis && (
-        <div className="card" style={{ marginBottom: 24, borderLeft: '4px solid var(--primary)' }}>
-          <h4 style={{ color: 'var(--primary)', marginBottom: 8 }}>AI ROSTER DIAGNOSIS</h4>
-          <p style={{ margin: 0, fontSize: 14 }}>
-            {diagnosis.categoryNeeds.needsPitching && "⚠️ Your rotation is leaking points. Target high-K starters. "}
-            {diagnosis.categoryNeeds.needsHitting && "⚠️ Your lineup needs a power boost. Target HR/RBI hitters. "}
-            {!diagnosis.categoryNeeds.needsPitching && !diagnosis.categoryNeeds.needsHitting && "✅ Your roster is currently balanced across all categories."}
-          </p>
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 28, fontWeight: 700 }}>🔍 Waiver Wire Intel</h1>
+          <p style={{ color: '#7aafc4' }}>Free agents ranked by fantasyBrain scoring + AI recommendation</p>
+        </div>
+      </div>
+
+      {/* Claude AI recommendation from master analysis */}
+      {(aiLoading || aiAnalysis?.waiver) && (
+        <div className="card" style={{ marginBottom: 20, borderLeft: '4px solid #00a86b' }}>
+          <h4 style={{ color: '#00a86b', marginBottom: 8, fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 }}>
+            ⚡ AI Waiver Recommendation
+          </h4>
+          {aiLoading ? (
+            <p style={{ color: '#7aafc4', margin: 0, fontSize: 14 }}>Analyzing your league...</p>
+          ) : (
+            <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>{aiAnalysis.waiver}</p>
+          )}
         </div>
       )}
 
-      <div className="card">
+      {/* Player table */}
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e3d5c', fontSize: 12, fontWeight: 700, color: '#7aafc4', textTransform: 'uppercase', letterSpacing: 1 }}>
+          {scoredWaiver?.length > 0 ? `Top ${displayPlayers.length} Ranked Free Agents` : 'Available Free Agents'}
+        </div>
         {loading ? (
-          <div className="loading">Scouting free agents...</div>
+          <div className="loading" style={{ padding: 32 }}>Scouting free agents...</div>
         ) : (
           <table>
             <thead>
               <tr>
+                <th>#</th>
                 <th>Player</th>
                 <th>Pos</th>
-                <th>AI Score</th>
+                <th>Score</th>
                 <th>Priority</th>
-                <th>Reasoning</th>
+                <th style={{ maxWidth: 280 }}>Reasoning</th>
               </tr>
             </thead>
             <tbody>
-              {availablePlayers.slice(0, 20).map((p, i) => (
-                <tr key={i}>
-                  <td><strong>{p.name || p.player_name}</strong></td>
-                  <td><span className="badge">{p.position}</span></td>
-                  <td style={{ fontWeight: 800, color: p.score > 60 ? '#00ff88' : '#fff' }}>{p.score}</td>
-                  <td>
-                    <span className={`tag ${p.priority === 'High' ? 'tag-high' : 'tag-low'}`}>
-                      {p.priority}
-                    </span>
-                  </td>
-                  <td style={{ fontSize: 13, color: 'var(--text-muted)' }}>{p.reasoning}</td>
-                </tr>
-              ))}
+              {displayPlayers.map((p, i) => {
+                const priority = p.waiverScore?.priority || p.priority || '—';
+                const score    = p.waiverScore?.score    ?? p.score    ?? '—';
+                const reason   = p.waiverScore?.reasoning || p.reasoning || '';
+                const style    = PRIORITY_COLORS[priority] || PRIORITY_COLORS['Speculative add'];
+                return (
+                  <tr key={i}>
+                    <td style={{ color: '#4a7a94', fontSize: 12, width: 32 }}>{i + 1}</td>
+                    <td><strong>{p.name || p.player_name}</strong></td>
+                    <td><span className="badge">{p.position}</span></td>
+                    <td style={{ fontWeight: 800, fontSize: 16,
+                      color: score >= 80 ? '#00a86b' : score >= 60 ? '#f59e0b' : '#e2e8f0'
+                    }}>{score}</td>
+                    <td>
+                      <span style={{
+                        display: 'inline-block', padding: '3px 8px', borderRadius: 4,
+                        background: style.bg, color: style.color,
+                        border: `1px solid ${style.border}`,
+                        fontSize: 11, fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap'
+                      }}>{priority}</span>
+                    </td>
+                    <td style={{ fontSize: 12, color: '#7aafc4', maxWidth: 280 }}>{reason}</td>
+                  </tr>
+                );
+              })}
+              {displayPlayers.length === 0 && (
+                <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: '#7aafc4' }}>
+                  No players available. Try refreshing.
+                </td></tr>
+              )}
             </tbody>
           </table>
         )}
       </div>
 
-      <style jsx>{`
-        .tag {
-          padding: 2px 8px;
-          border-radius: 4px;
-          font-size: 11px;
-          font-weight: 800;
-          text-transform: uppercase;
-        }
-        .tag-high { background: rgba(0,255,136,0.1); color: #00ff88; border: 1px solid rgba(0,255,136,0.3); }
-        .tag-low { background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); }
-      `}</style>
+      <AiQuestionBox
+        context={`Waiver wire analysis: ${aiAnalysis?.waiver || ''} Top targets: ${displayPlayers.slice(0,5).map(p => p.name || p.player_name).join(', ')}`}
+        leagueKey={selectedLeague}
+        title="Ask About a Specific Player"
+        icon="🔍"
+        placeholder="Should I add [player name]? Who should I drop to make room?"
+      />
     </div>
   );
 }
