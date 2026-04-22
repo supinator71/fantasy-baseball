@@ -282,46 +282,33 @@
 
 .vault-card-id {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  background: rgba(0,0,0,0.8);
-  color: #fff;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 900;
-  border: 1px solid #ffd700;
-  z-index: 10;
-}
-
-.vault-run-badge {
-  position: absolute;
   bottom: 12px;
-  left: 12px;
-  background: #ffd700;
-  color: #000;
-  padding: 2px 6px;
-  font-size: 11px;
-  font-weight: 900;
+  right: 12px;
+  background: rgba(0,0,0,0.5);
+  color: rgba(255,255,255,0.7);
+  padding: 1px 6px;
   border-radius: 2px;
-  box-shadow: 2px 2px 0 #000;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(255,215,0,0.3);
   z-index: 10;
-  text-transform: uppercase;
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: 1px;
 }
 
 .vault-card-back .mint-stamp {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
-  background: #ff4444; /* Ink red */
-  color: #fff;
+  bottom: 25px;
+  right: 25px;
+  background: transparent;
+  color: #cc3333; /* Darker red ink */
   padding: 4px 12px;
   font-weight: 900;
-  transform: rotate(-12deg);
-  border: 2px solid rgba(0,0,0,0.3);
-  font-size: 16px;
+  transform: rotate(-15deg);
+  font-size: 20px;
   font-family: 'Courier New', Courier, monospace;
-  box-shadow: 2px 2px 0 rgba(0,0,0,0.2);
-  mix-blend-mode: multiply; /* Authentic ink look */
-  text-transform: uppercase;
+  opacity: 0.8;
+  mix-blend-mode: multiply;
+  text-shadow: 0.5px 0.5px 1px rgba(0,0,0,0.1);
+  letter-spacing: 2px;
 }

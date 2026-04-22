@@ -55,9 +55,6 @@ export default function Vault() {
                     <div className="card-patch" />
                   )}
                   <div className="vault-card-id">#{card.set_num}</div>
-                  {card.serial_total && (
-                    <div className="vault-run-badge">RUN: {card.serial_total}</div>
-                  )}
                 </div>
                 <div className="vault-card-info">
                   <h3>{card.name}</h3>
@@ -67,12 +64,12 @@ export default function Vault() {
 
               {/* BACK */}
               <div className="vault-card-back">
-                <div className="back-header">
-                  <div className="serial">CYBORG-ID: {card.id.toUpperCase()}</div>
+                <div className="card-back-3d">
+                  <div className="serial">SET-NUM: #{card.set_num}</div>
                   <div className="series">{getSeries(card.id)}</div>
                   {card.serial_total && card.mint_number && (
                     <div className="mint-stamp">
-                      MINT Run: {card.mint_number}/{card.serial_total}
+                      {card.mint_number} / {card.serial_total}
                     </div>
                   )}
                 </div>
