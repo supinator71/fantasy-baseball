@@ -637,14 +637,20 @@ router.post('/ask', rateLimiter('ask'), checkQuestionAccess, async (req, res) =>
   const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
 
-  let rosterContext = '';
+  let integratedContext = '';
   if (league_key) {
     try {
-      const roster = await yahoo.getMyRoster(req, league_key);
-      const diagnosis = brain.buildRosterDiagnosis(roster?.players || [], settings);
-      rosterContext = `\n\n=== LIVE ROSTER DATA (Yahoo API) ===\n${diagnosis.promptBlock}`;
+      const [rosterData, waivers, sharedMatchup, pitchingContext] = await Promise.all([
+        yahoo.getMyRoster(req, league_key),
+        yahoo.getPlayers(req, league_key, 'A').catch(() => []), // Top waivers
+        getSharedMatchupContext(req, league_key),
+        getSharedPitchingContext()
+      ]);
+
+      const diagnosis = brain.buildRosterDiagnosis(rosterData?.players || [], settings, sharedMatchup, pitchingContext);
+      integratedContext = `\n\n=== TOTAL LEAGUE INTELLIGENCE ===\n${diagnosis.promptBlock}\n\n=== WAIVER WIRE OPPORTUNITIES ===\n${JSON.stringify((waivers || []).slice(0, 15))}`;
     } catch (e) {
-      console.log('[Claude/ask] Roster injection failed:', e.message);
+      console.log('[Claude/ask] Full context integration failed:', e.message);
     }
   }
 
@@ -652,7 +658,7 @@ router.post('/ask', rateLimiter('ask'), checkQuestionAccess, async (req, res) =>
     const model = await getWorkingModel();
     const text = await callClaude([{
       role: 'user',
-      content: `${leagueCtx}${rosterContext}${context ? `\n\nPrevious Analysis Context: ${context}` : ''}\n\nQuestion: ${question}`,
+      content: `${leagueCtx}${integratedContext}${context ? `\n\nPrevious Analysis Context: ${context}` : ''}\n\nQuestion: ${question}`,
     }], 1800);
     res.json({ answer: text });
   } catch (err) {
