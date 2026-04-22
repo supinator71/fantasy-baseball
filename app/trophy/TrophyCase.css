@@ -1,0 +1,292 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap');
+
+.trophy-case-container {
+  padding: 24px 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.trophy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  background: rgba(12, 29, 53, 0.6);
+  padding: 32px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+}
+
+.album-stats-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.stat {
+  text-align: right;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--primary);
+  font-family: var(--font-heading);
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+
+.claim-btn {
+  background: linear-gradient(135deg, #FFD700, #FDB931);
+  color: #111;
+  font-weight: 800;
+  padding: 14px 24px;
+  font-size: 16px;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.pulse-glow {
+  animation: pulse-gold 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes pulse-gold {
+  0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
+  70% { box-shadow: 0 0 0 15px rgba(255, 215, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+}
+
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 32px;
+}
+
+.card-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card-wrapper-3d {
+  perspective: 1200px;
+  width: 100%;
+  aspect-ratio: 3/4;
+}
+
+.card-inner-3d {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform-style: preserve-3d;
+  cursor: pointer;
+}
+
+.card-wrapper-3d.is-flipped .card-inner-3d {
+  transform: rotateY(180deg);
+}
+
+.card-front-3d, .card-back-3d {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.card-front-3d {
+  background: #000;
+}
+
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  display: block;
+}
+
+.card-back-3d {
+  background: linear-gradient(135deg, #0c1d35 0%, #050a12 100%);
+  transform: rotateY(180deg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 2px solid var(--primary);
+}
+
+.card-back-3d .series {
+  font-size: 12px;
+  color: white;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.card-back-3d h4 {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  margin-top: 20px;
+}
+
+.card-back-3d p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #e2e8f0;
+  font-style: italic;
+}
+
+.card-back-3d .rarity-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+}
+
+.card-slot.locked .card-front-3d {
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  background: rgba(0,0,0,0.3);
+}
+
+.card-slot.locked .card-image {
+  filter: grayscale(100%) brightness(15%) blur(3px);
+  opacity: 0.5;
+}
+
+.lock-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.4);
+}
+
+.dupe-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--primary);
+  color: white;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 14px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  z-index: 10;
+}
+
+.card-meta {
+  text-align: center;
+}
+
+.card-name {
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 4px;
+  font-family: var(--font-heading);
+}
+
+.card-rarity {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.card-rarity.common { color: #94a3b8; background: rgba(148, 163, 184, 0.1); }
+.card-rarity.uncommon { color: #4ade80; background: rgba(74, 222, 128, 0.1); }
+.card-rarity.rare { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+.card-rarity.epic { color: #a855f7; background: rgba(168, 85, 247, 0.1); }
+.card-rarity.legendary { color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+
+.card-set-num {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(0,0,0,0.5);
+  color: rgba(255,255,255,0.7);
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(255,215,0,0.3);
+  z-index: 10;
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: 1px;
+}
+
+.pack-opening-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.pack-shatter-effect {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.strobe-text {
+  font-family: var(--font-heading);
+  font-size: 64px;
+  font-weight: 900;
+  color: white;
+  text-align: center;
+  letter-spacing: 0.1em;
+  margin-bottom: 40px;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px var(--primary);
+  animation: explode-in 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+.pack-card-container {
+  width: 320px;
+  height: 440px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 0 50px rgba(255, 255, 255, 0.2);
+}
+
+.pack-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@keyframes explode-in {
+  0% { transform: scale(0.5); opacity: 0; letter-spacing: -0.5em; }
+  100% { transform: scale(1); opacity: 1; letter-spacing: 0.1em; }
+}
