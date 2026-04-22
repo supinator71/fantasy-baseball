@@ -262,6 +262,48 @@ async function getLiveProbablePitchers() {
   }
 }
 
+/**
+ * Fetches today's live scoreboard including game status and deciding pitchers
+ */
+async function getTodayLiveScores() {
+  const key = 'live_scores_today';
+  const cached = getCached(key);
+  if (cached) return cached;
+
+  try {
+    const { data } = await axios.get(`${BASE_URL}/schedule`, {
+      params: { sportId: 1, hydrate: 'decidingPitcher,linescore' },
+      timeout: 10000
+    });
+
+    const results = [];
+    const games = data.dates?.[0]?.games || [];
+
+    games.forEach(g => {
+      const status = g.status?.abstractGameState; // Live, Final, Preview
+      results.push({
+        gameId: g.gamePk,
+        status,
+        homeTeam: g.teams?.home?.team?.name,
+        awayTeam: g.teams?.away?.team?.name,
+        homeScore: g.teams?.home?.score || 0,
+        awayScore: g.teams?.away?.score || 0,
+        homePitcher: g.teams?.home?.probablePitcher?.fullName,
+        awayPitcher: g.teams?.away?.probablePitcher?.fullName,
+        winner: g.decidingPitcher?.winner?.fullName,
+        loser: g.decidingPitcher?.loser?.fullName,
+        saver: g.decidingPitcher?.save?.fullName
+      });
+    });
+
+    setCache(key, results);
+    return results;
+  } catch (err) {
+    console.error(`[MLB Stats] Failed to fetch live scores:`, err.message);
+    return [];
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // DAILY SCHEDULE — Fetch upcoming matchups for AI context
 // ─────────────────────────────────────────────────────────────────────────────
@@ -492,4 +534,5 @@ module.exports = {
   getTwoStartPitchers,
   getUpcomingSchedule,
   getBreakingNews,
+  getTodayLiveScores
 };

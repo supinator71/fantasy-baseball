@@ -282,19 +282,21 @@ async function getSharedMatchupContext(req, league_key) {
 // ─────────────────────────────────────────────────────────────────────────────
 async function getSharedPitchingContext() {
   try {
-    const [probablePitchers, twoStartPitchers] = await Promise.all([
+    const [probablePitchers, twoStartPitchers, liveScores] = await Promise.all([
       mlbStats.getLiveProbablePitchers(),
       mlbStats.getTwoStartPitchers(),
+      mlbStats.getTodayLiveScores()
     ]);
     return {
       today: probablePitchers || [],
       currentWeekTwoStart: twoStartPitchers?.currentWeek || [],
-      nextWeekTwoStart: twoStartPitchers?.nextWeek || []
+      nextWeekTwoStart: twoStartPitchers?.nextWeek || [],
+      liveScoresToday: liveScores || []
     };
   } catch (e) {
     console.log('[Claude] Skip Pitching context generation:', e.message);
   }
-  return { today: [], currentWeekTwoStart: [], nextWeekTwoStart: [] };
+  return { today: [], currentWeekTwoStart: [], nextWeekTwoStart: [], liveScoresToday: [] };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

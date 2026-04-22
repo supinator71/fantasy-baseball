@@ -1474,6 +1474,21 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}, sharedMatchup = null,
     }
   }
 
+  // --- 🚨 LIVE GAME SCOREBOARD INJECTOR 🚨 ---
+  if (pitchingContext && pitchingContext.liveScoresToday?.length > 0) {
+    promptBlock += `\n📊 TODAY'S LIVE SCORES (Real-time Reality) 📊\n`;
+    pitchingContext.liveScoresToday.forEach(g => {
+      const scoreLine = `${g.awayTeam} ${g.awayScore} @ ${g.homeTeam} ${g.homeScore} (${g.status})`;
+      let decisions = '';
+      if (g.winner) decisions += ` | Win: ${g.winner}`;
+      if (g.loser) decisions += ` | Loss: ${g.loser}`;
+      if (g.saver) decisions += ` | Save: ${g.saver}`;
+      
+      promptBlock += `- ${scoreLine}${decisions}\n`;
+    });
+    promptBlock += `\nIMPORTANT: Use these results to inform your advice. If a pitcher listed above was shelled or took a loss, reflect that in your response.\n`;
+  }
+
   // Format-specific strategic framing
   if (fmt === FORMAT.H2H_POINTS) {
     promptBlock += `🎯 FORMAT: H2H POINTS — Maximize raw point output each week. Volume (ABs, IP) is everything. 2-start SPs are king. Never leave a roster spot empty. Do NOT give category-balancing advice.\n`;
