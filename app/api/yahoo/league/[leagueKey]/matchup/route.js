@@ -3,10 +3,10 @@ import { getSession } from '@/lib/session';
 import { getScoreboard, getUserTeamKey } from '@/lib/yahooService';
 
 const STAT_NAMES = {
-  '60': 'R', '7': 'HR', '12': 'RBI', '16': 'SB', '3': 'AVG',
-  '6': 'OBP', '5': 'SLG', '8': 'H', '10': 'BB',
+  '7': 'R', '12': 'HR', '13': 'RBI', '16': 'SB', '3': 'AVG',
+  '6': 'OBP', '5': 'SLG', '8': 'H', '18': 'BB',
   '28': 'W', '29': 'L', '32': 'SV', '42': 'K', '26': 'ERA', '27': 'WHIP',
-  '23': 'IP', '31': 'HLD', '48': 'QS'
+  '50': 'IP', '85': 'HLD', '83': 'QS', '60': 'H/AB'
 };
 const LOWER_IS_BETTER = new Set(['26', '27', '29']);
 
@@ -75,19 +75,34 @@ function parseYahooMatchup(matchups, myTeamKey) {
     const teamArr = teamEntries[j]?.team;
     if (!teamArr || !Array.isArray(teamArr)) continue;
     let info = Array.isArray(teamArr[0]) ? Object.assign({}, ...teamArr[0]) : teamArr[0] || {};
+    // Collect team_stats (category breakdown) AND team_points (H2H score) separately
     let statsObj = {};
+    let pointsObj = {};
     for (let k = 1; k < teamArr.length; k++) {
-      if (teamArr[k]?.team_stats) { statsObj = teamArr[k].team_stats; break; }
-      if (teamArr[k]?.team_points) { statsObj = teamArr[k].team_points; break; }
+      if (teamArr[k]?.team_stats) statsObj = teamArr[k].team_stats;
+      if (teamArr[k]?.team_points) pointsObj = teamArr[k].team_points;
     }
-    const stats = (statsObj.stats || []).map(s => s.stat || s).filter(s => s.stat_id !== undefined && s.value !== undefined)
+
+    // Handle Yahoo's {stat: [...]} or [{stat:{...}}, ...] nesting inside team_stats.stats
+    const rawStats = statsObj.stats;
+    const statsArr = Array.isArray(rawStats)
+      ? rawStats
+      : rawStats?.stat
+        ? (Array.isArray(rawStats.stat) ? rawStats.stat : [rawStats.stat])
+        : [];
+
+    const stats = statsArr
+      .map(s => s.stat || s)
+      .filter(s => s.stat_id !== undefined && s.value !== undefined)
       .map(s => ({ stat_id: String(s.stat_id), name: STAT_NAMES[String(s.stat_id)] || String(s.stat_id), value: s.value }));
+
     let manager = '';
     if (info.managers) {
       if (Array.isArray(info.managers)) manager = info.managers[0]?.manager?.nickname || info.managers[0]?.nickname || '';
       else if (info.managers.manager) manager = info.managers.manager?.nickname || '';
     }
-    let pointsTotal = parseFloat(statsObj.total) || parseFloat(statsObj.points?.total || statsObj.points) || 0;
+    // Prefer team_points.total for H2H score; fall back to team_stats total
+    let pointsTotal = parseFloat(pointsObj.total) || parseFloat(statsObj.total) || null;
     parsedTeams.push({ key: info.team_key, name: info.name || 'Team '+(j+1), manager, stats, total_points: pointsTotal });
   }
 
