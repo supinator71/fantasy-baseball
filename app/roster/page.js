@@ -17,7 +17,8 @@ export default function RosterPage() {
   async function fetchRoster(leagueKey) {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/yahoo/roster/${leagueKey}`);
+      // myroster returns clean parsed { name, position, team, status, injury } objects
+      const res = await axios.get(`/api/yahoo/league/${leagueKey}/myroster`);
       setRoster(res.data.players || []);
     } catch (err) {
       toast.error('Failed to load roster');
@@ -26,53 +27,87 @@ export default function RosterPage() {
     }
   }
 
+  const active = roster.filter(p => p.slot !== 'BN' && p.slot !== 'IL');
+  const bench  = roster.filter(p => p.slot === 'BN');
+  const il     = roster.filter(p => p.slot === 'IL');
+
+  function RosterSection({ title, players, color }) {
+    if (!players.length) return null;
+    return (
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color }}>
+          {title} ({players.length})
+        </h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Slot</th>
+              <th>Player</th>
+              <th>Position</th>
+              <th>Team</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {players.map((p, i) => (
+              <tr key={i}>
+                <td style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 600 }}>{p.slot}</td>
+                <td><strong>{p.name}</strong></td>
+                <td>
+                  <span className={`badge badge-${String(p.position || '').split(',')[0].trim().toLowerCase()}`}>
+                    {p.position}
+                  </span>
+                </td>
+                <td style={{ color: 'var(--text-muted)' }}>{p.team}</td>
+                <td>
+                  {p.injury
+                    ? <span style={{ color: '#ef4444', fontSize: 12 }}>{p.injury}</span>
+                    : <span style={{ color: '#00a86b', fontSize: 12 }}>Active</span>
+                  }
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700 }}>My Roster</h1>
+        <div>
+          <h1 style={{ fontSize: 28, fontWeight: 700 }}>◈ My Roster</h1>
+          <p style={{ color: 'var(--text-muted)' }}>Your current lineup pulled from Yahoo Fantasy</p>
+        </div>
         {leagues.length > 0 && (
-          <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 240 }}>
-            {leagues.map(l => <option key={l.league_key} value={l.league_key}>{l.name}</option>)}
-          </select>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 240 }}>
+              {leagues.map(l => <option key={l.league_key} value={l.league_key}>{l.name}</option>)}
+            </select>
+            <button className="btn btn-primary" onClick={() => fetchRoster(selectedLeague)} disabled={loading}>
+              {loading ? 'Loading...' : 'Refresh'}
+            </button>
+          </div>
         )}
       </div>
 
-      <div className="card">
-        {loading ? (
-          <div className="loading">Loading roster...</div>
-        ) : roster.length === 0 ? (
-          <p>No players found.</p>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Player</th>
-                <th>Position</th>
-                <th>Team</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {roster.map((p, i) => {
-                const info = p.player || p;
-                const name = info[0]?.name?.full || info.name || 'Unknown';
-                const pos = info[0]?.display_position || info.position || '???';
-                const team = info[0]?.editorial_team_abbr || info.team || '';
-                const status = info[0]?.status || info.status || '';
-                
-                return (
-                  <tr key={i}>
-                    <td><strong>{name}</strong></td>
-                    <td><span className={`badge badge-${pos.toLowerCase()}`}>{pos}</span></td>
-                    <td>{team}</td>
-                    <td>{status}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {loading ? (
+        <div className="loading">Loading your roster from Yahoo...</div>
+      ) : roster.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
+          <p style={{ color: 'var(--text-muted)' }}>
+            No roster data available. Make sure your Yahoo league is active and try refreshing.
+          </p>
+        </div>
+      ) : (
+        <>
+          <RosterSection title="Active Lineup" players={active} color="#00a86b" />
+          <RosterSection title="Bench" players={bench} color="#f59e0b" />
+          <RosterSection title="Injured List (IL)" players={il} color="#ef4444" />
+        </>
+      )}
     </div>
   );
 }

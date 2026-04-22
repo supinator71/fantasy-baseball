@@ -54,6 +54,32 @@ export async function GET(request, { params }) {
       console.error('[Yahoo Roster] Failed to override probable pitchers:', err.message);
     }
 
+    // Build a map of player_key → lineup slot (selected_position)
+    const slotMap = {};
+    for (const rosterItem of (rosterData || [])) {
+      const p = rosterItem?.player;
+      if (!p || !Array.isArray(p)) continue;
+      const infoArray = Array.isArray(p[0]) ? p[0] : [];
+      const info = Object.assign({}, ...infoArray);
+      if (!info.player_key) continue;
+
+      // selected_position can be in p[1] or nested differently
+      let slot = 'BN';
+      const selPos = p[1]?.selected_position;
+      if (selPos) {
+        if (Array.isArray(selPos)) {
+          slot = selPos[0]?.position || selPos[0] || 'BN';
+        } else if (selPos.position) {
+          slot = selPos.position;
+        } else if (typeof selPos === 'string') {
+          slot = selPos;
+        }
+      }
+      slotMap[info.player_key] = slot;
+    }
+
+    players = players.map(p => ({ ...p, slot: slotMap[p.key] || 'BN' }));
+
     return NextResponse.json({ players });
   } catch (err) {
     console.error('[Pitching Hub] Roster fetch failed:', err.message);
