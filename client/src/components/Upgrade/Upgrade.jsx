@@ -28,7 +28,7 @@ export default function UpgradePage({ subscription, onUpgradeComplete }) {
       <div className="upgrade-header">
         <h1>⚾ Upgrade to Goin' Yard Pro</h1>
         <p className="upgrade-subtitle">
-          An affordable, accessible secondary fantasy assistant to help you learn strategy while you play.
+          Professional-grade fantasy intelligence for serious managers. Unlimited AI, 2 leagues included.
         </p>
       </div>
 
@@ -52,7 +52,7 @@ export default function UpgradePage({ subscription, onUpgradeComplete }) {
         <div className={`pricing-card pro ${isPro ? 'current' : 'recommended'}`}>
           {!isPro && <div className="pricing-recommended">⭐ BEST VALUE</div>}
           <div className="pricing-badge pro">Pro Season Pass</div>
-          <div className="pricing-price">{pricing?.season_pass?.label || '$15'}</div>
+          <div className="pricing-price">{pricing?.season_pass?.label || '$19.99'}</div>
           <div className="pricing-period">one-time • through Sept 2026</div>
           <ul className="pricing-features">
             <li>✅ <strong>2 leagues</strong> included</li>
@@ -70,7 +70,7 @@ export default function UpgradePage({ subscription, onUpgradeComplete }) {
               onClick={() => handleCheckout('season_pass')}
               disabled={loading}
             >
-              {loading ? '⏳ Redirecting...' : `Get Season Pass — ${pricing?.season_pass?.label || '$15'}`}
+              {loading ? '⏳ Redirecting...' : `Get Season Pass — ${pricing?.season_pass?.label || '$19.99'}`}
             </button>
           )}
         </div>
@@ -79,7 +79,7 @@ export default function UpgradePage({ subscription, onUpgradeComplete }) {
         {isPro && (
           <div className="pricing-card addon">
             <div className="pricing-badge addon">Add-On</div>
-            <div className="pricing-price">$3</div>
+            <div className="pricing-price">{pricing?.extra_league?.label || '$4.99'}</div>
             <div className="pricing-period">per extra league</div>
             <ul className="pricing-features">
               <li>✅ Add one more league</li>
@@ -94,7 +94,7 @@ export default function UpgradePage({ subscription, onUpgradeComplete }) {
             >
               {(subscription?.max_leagues || 2) >= 6
                 ? 'Max Leagues Reached'
-                : loading ? '⏳ Redirecting...' : 'Add Extra League — $3'}
+                : loading ? '⏳ Redirecting...' : `Add Extra League — ${pricing?.extra_league?.label || '$4.99'}`}
             </button>
           </div>
         )}
