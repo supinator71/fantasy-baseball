@@ -121,7 +121,7 @@ const db = {
         const data = load();
         if (query.includes('FROM league_settings')) {
           const leagueKey = args[0];
-          return data.league_settings[leagueKey] || Object.values(data.league_settings).sort((a,b) => b.updated_at - a.updated_at)[0] || null;
+          return data.league_settings[leagueKey] || null;
         }
         if (query.includes('COUNT(*) as count FROM draft_board')) {
           return { count: data.draft_board.length };
