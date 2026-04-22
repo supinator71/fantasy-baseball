@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
-import { callClaude } from '@/lib/claude';
+import { callClaudeFast } from '@/lib/claude';
 import { db } from '@/lib/database';
 import * as mlbStats from '@/lib/mlbStatsService';
 
@@ -41,7 +41,7 @@ export async function POST(request) {
       return `  • ${p.name || p.player_name} (${p.position || '?'}, ${p.team || '?'}) [${p.slot || 'BN'}]${ilTag} — ${statStr || 'no stats available'}`;
     }).join('\n') || '  (no roster data)';
 
-    const text = await callClaude([{
+    const text = await callClaudeFast([{
       role: 'user',
       content: `${STAT_GUARDRAIL}
 League Format: ${scoringLabel}

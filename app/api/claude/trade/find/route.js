@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
-import { callClaude } from '@/lib/claude';
+import { callClaudeFast } from '@/lib/claude';
 import { db } from '@/lib/database';
 
 export async function POST(request) {
@@ -12,7 +12,7 @@ export async function POST(request) {
     const { my_roster, all_rosters, league_key } = await request.json();
     const settings = db.getLeagueSettings(guid, league_key) || {};
 
-    const text = await callClaude([{
+    const text = await callClaudeFast([{
       role: 'user',
       content: `League: ${JSON.stringify(settings)}
 My Roster: ${JSON.stringify(my_roster || [])}

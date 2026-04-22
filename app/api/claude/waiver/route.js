@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
 import { db } from '@/lib/database';
-import { callClaude } from '@/lib/claude';
+import { callClaudeFast } from '@/lib/claude';
 import * as brain from '@/lib/fantasyBrain';
 import * as mlbStats from '@/lib/mlbStatsService';
 import * as yahoo from '@/lib/yahooService';
@@ -38,7 +38,7 @@ export async function POST(request) {
 
     const news = await mlbStats.getBreakingNews();
     
-    const text = await callClaude([
+    const text = await callClaudeFast([
       {
         role: 'user',
         content: `⚠️ DATA RULE: Use ONLY the player stats and scores provided below. DO NOT use training data to supply ERA, AVG, HR, or any stat values. DO NOT recommend pitchers not listed in the probable pitcher schedule in the roster diagnosis.

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
-import { callClaude } from '@/lib/claude';
+import { callClaudeFast } from '@/lib/claude';
 import { db } from '@/lib/database';
 
 export async function POST(request) {
@@ -17,7 +17,7 @@ export async function POST(request) {
     // Pull any saved league settings for richer context
     const leagueSettings = leagueKey ? db.getLeagueSettings(guid, leagueKey) : null;
 
-    const answer = await callClaude([
+    const answer = await callClaudeFast([
       {
         role: 'user',
         content: [

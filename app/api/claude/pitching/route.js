@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
-import { callClaude } from '@/lib/claude';
+import { callClaudeFast } from '@/lib/claude';
 import { db } from '@/lib/database';
 import * as brain from '@/lib/fantasyBrain';
 import * as mlbStats from '@/lib/mlbStatsService';
@@ -48,7 +48,7 @@ export async function POST(request) {
       `  • ${p.name} (${p.position}, ${p.team}) — Score:${p.waiverScore.score} | ${p.statStr || 'no stats'} | ${p.waiverScore.reasoning || ''}`
     ).join('\n');
 
-    const text = await callClaude([{
+    const text = await callClaudeFast([{
       role: 'user',
       content: `${STAT_GUARDRAIL}
 League: ${settings.name || league_key || '?'} | Format: ${settings.scoring_type || 'Unknown'} | As of: ${nowDay}
