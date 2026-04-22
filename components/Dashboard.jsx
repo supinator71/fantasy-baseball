@@ -111,6 +111,7 @@ export default function Dashboard({ leagueSettings, subscription }) {
           { label: 'Trade Finder',       icon: '💡', href: '/tradefinder',  desc: 'AI trade proposals' },
           { label: 'Weekly Game Plan',   icon: '📅', href: '/gameplan',     desc: 'Lineup optimizer' },
           { label: 'Baseball 101',       icon: '🎓', href: '/baseball101',  desc: 'Beginner metrics guide' },
+          { label: 'Pitching Intel',     icon: '🎯', href: '/pitching',   desc: 'Advanced pitcher analytics' },
           { label: 'Trophy Case',        icon: '🏆', href: '/trophy',       desc: 'Gamification unlocks' },
           { label: 'Upgrade to Pro',     icon: '⭐', href: '/upgrade',      desc: 'Unlock infinite AI insights' },
         ].map(item => (

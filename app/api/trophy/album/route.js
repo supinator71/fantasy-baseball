@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/database';
 import { getSession } from '@/lib/session';
+import { CARD_COLLECTION } from '@/lib/constants';
 
 export async function GET() {
   const session = await getSession();
@@ -11,6 +12,9 @@ export async function GET() {
   }
 
   const trophyCase = db.getTrophyCase(guid);
-  // Return in the format the frontend expects (if it expects 'unlocked_cards')
-  return NextResponse.json(trophyCase);
+  
+  return NextResponse.json({
+    ...trophyCase,
+    all_cards: CARD_COLLECTION
+  });
 }
