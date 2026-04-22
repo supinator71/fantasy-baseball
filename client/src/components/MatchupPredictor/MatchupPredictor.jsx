@@ -76,10 +76,20 @@ export default function MatchupPredictor({ leagueSettings }) {
     if (!matchup) return
     setAiLoading(true)
     try {
+      // Proactively fetch waiver targets for the scout to consider
+      let waivers = [];
+      try {
+        const waiverRes = await axios.get(`/api/yahoo/league/${selectedLeague}/players`, { params: { status: 'A' } });
+        waivers = Array.isArray(waiverRes.data) ? waiverRes.data.slice(0, 15) : [];
+      } catch (e) {
+        console.warn('Could not fetch waivers for matchup context');
+      }
+
       const { data } = await axios.post('/api/claude/matchup/predict', {
         my_team: matchup.myTeam,
         opponent: matchup.opponent,
         stat_categories: leagueSettings?.stat_categories || ['R','HR','RBI','SB','AVG','W','SV','K','ERA','WHIP'],
+        available_players: waivers,
         week: matchup.week,
         league_key: selectedLeague
       })

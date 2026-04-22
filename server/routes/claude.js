@@ -689,7 +689,7 @@ Write in clean, conversational prose. No JSON syntax, no brackets, no code forma
 
 // Matchup prediction
 router.post('/matchup/predict', rateLimiter('matchup'), async (req, res) => {
-  const { my_team, opponent, stat_categories, week, league_key } = req.body;
+  const { my_team, opponent, stat_categories, week, league_key, available_players } = req.body;
   const settings = getLeagueSettings(league_key);
   const leagueCtx = leagueContext(settings);
 
@@ -739,6 +739,9 @@ Current Total Points: ${opponent?.total_points || 0}
 Categories: ${JSON.stringify(stat_categories || ['R','HR','RBI','SB','AVG','W','SV','K','ERA','WHIP'])}
 Pre-computed matchup analysis: ${JSON.stringify(catAnalysis)}
 
+TOP AVAILABLE WAIVER TARGETS:
+${JSON.stringify(available_players || [])}
+
 IMPORTANT: ${isPoints ? 'This is a POINTS league. Ignore wins/losses in categories. Focus ONLY on total point projections.' : 'This is a CATEGORIES league. Focus on winning 6+ categories.'}
 Write all text values in clean, conversational prose. No brackets, no code syntax. Write like a sports analyst breaking down a matchup.
 
@@ -750,7 +753,7 @@ Return ONLY valid JSON (no markdown):
   "overall_confidence": "medium",
   "summary": "A clear, readable summary of the matchup projection",
   "key_matchups": "Describe the 2-3 swing categories and how to win them in plain English",
-  "lineup_recommendations": "Write specific actionable moves in conversational prose",
+  "lineup_recommendations": "Suggest specific moves. Use the TOP AVAILABLE WAIVER TARGETS list to name 1-2 players the user should pick up immediately to help win specific swing categories or maximize point volume.",
   "categories": [{ "name": "Category Name", "my_proj": "value", "opp_proj": "value", "winner": "me", "confidence": "high", "note": "A readable sentence" }]
 }`,
     }], 1500);
