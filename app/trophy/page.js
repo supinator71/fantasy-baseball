@@ -120,7 +120,13 @@ export default function TrophyCase() {
                   <div className="card-front-3d">
                     <img src={cardDef.img} alt={cardDef.name} className="card-image" />
                     {isUnlocked && count > 1 && <div className="dupe-badge">x{count}</div>}
-                    <div className="card-set-num">#{cardDef.set_num}</div>
+                    <div className="card-set-num">No. {unlocks[0]?.cardNumber || cardDef.set_num}</div>
+                    {isUnlocked && cardDef.has_signature && (
+                      <div className="card-signature">{cardDef.signature_name || 'Authentic Autograph'}</div>
+                    )}
+                    {isUnlocked && cardDef.has_patch && (
+                      <div className="card-patch" title="Authentic Jersey Material"></div>
+                    )}
                     {!isUnlocked && (
                       <div className="lock-overlay">
                         <span style={{ fontSize: 32 }}>🔒</span>
@@ -134,9 +140,9 @@ export default function TrophyCase() {
                       <div style={{ color: 'var(--primary)', fontSize: 11, fontWeight: 700, marginBottom: 4 }}>{unlocks[0]?.team?.toUpperCase() || 'UNASSIGNED UNIT'}</div>
                       <h4>{cardDef.specialization || 'Player Intelligence'}</h4>
                       <p>{cardDef.lore || "A premium digital collectible."}</p>
-                      {unlocks[0]?.serial && (
-                        <div className="card-serial-stamp">
-                          {unlocks[0].serial} / {cardDef.serial_total || '∞'}
+                      {unlocks[0]?.serial && (cardDef.rarity === 'rare' || cardDef.rarity === 'epic' || cardDef.rarity === 'legendary') && (
+                        <div style={{ marginTop: 20, fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: '0.15em', border: '1px solid rgba(255,255,255,0.4)', padding: '8px 16px', borderRadius: 8, display: 'inline-block', fontFamily: 'var(--font-heading)' }}>
+                          {unlocks[0].serialPosition || 1} / {cardDef.serial_total || '∞'}
                         </div>
                       )}
                     </div>

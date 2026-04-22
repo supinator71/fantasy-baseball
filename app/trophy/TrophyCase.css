@@ -238,19 +238,38 @@
   font-family: var(--font-heading);
 }
 
-.card-serial-stamp {
-  margin-top: 20px;
-  font-size: 20px;
-  font-weight: 900;
-  color: #fff;
-  letter-spacing: 0.15em;
-  text-shadow: 0 0 10px rgba(255,255,255,0.5);
-  background: rgba(255,255,255,0.1);
-  padding: 8px 16px;
-  border: 1px solid rgba(255,255,255,0.4);
-  border-radius: 8px;
-  display: inline-block;
-  font-family: var(--font-heading);
+.card-signature {
+  position: absolute;
+  bottom: 40px;
+  left: 20px;
+  font-family: 'Caveat', cursive;
+  font-size: 24px;
+  color: #FFD700;
+  text-shadow: 0 0 10px rgba(255,215,0,0.5);
+  transform: rotate(-10deg);
+  z-index: 15;
+  pointer-events: none;
+}
+
+.card-patch {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  background: #222;
+  border: 3px solid #444;
+  box-shadow: inset 0 0 10px #000;
+  z-index: 12;
+  overflow: hidden;
+}
+
+.card-patch::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: repeating-linear-gradient(45deg, #333, #333 2px, #444 2px, #444 4px);
+  opacity: 0.5;
 }
 
 .pack-opening-overlay {
