@@ -321,8 +321,11 @@ router.post('/startsit', rateLimiter('startsit'), async (req, res) => {
   // ── Unified Roster Diagnosis ───────────────────────────────────────────
   const diagnosis = brain.buildRosterDiagnosis(players || [], settings || {}, sharedMatchup, pitchingContext);
 
-  // Use the canonical enriched data from the diagnosis object
-  const enriched = diagnosis.vorByPlayer;
+  const enriched = diagnosis.vorByPlayer.map(p => {
+    const basicName = (p.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const isProbable = pitchingContext?.today?.includes(basicName);
+    return { ...p, is_starting: isProbable ? 'YES' : p.is_starting };
+  });
 
   // Fetch 2025 stats, TODAY'S LIVE MATCHUPS, and BREAKING NEWS for decision context (non-blocking)
   let historicalIntel = '';

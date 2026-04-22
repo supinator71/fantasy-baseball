@@ -9,21 +9,31 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const MODEL = "claude-4-5-haiku-20251015";
+const MODEL_REGISTRY = [
+  'claude-haiku-4-5',
+  'claude-4-5-haiku',
+  'claude-3-5-haiku-latest',
+  'claude-3-5-sonnet-latest'
+];
 
 async function callClaude(messages, systemPrompt, max_tokens = 1500) {
-  try {
-    const msg = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens,
-      temperature: 0,
-      system: systemPrompt,
-      messages,
-    });
-    return msg.content[0].text;
-  } catch (err) {
-    return 'ERROR: ' + err.message;
+  let lastErr = null;
+  for (const model of MODEL_REGISTRY) {
+    try {
+      const msg = await anthropic.messages.create({
+        model,
+        max_tokens,
+        temperature: 0,
+        system: systemPrompt,
+        messages,
+      });
+      return msg.content[0].text;
+    } catch (err) {
+      console.warn(`  [QA] Model ${model} failed: ${err.message}`);
+      lastErr = err;
+    }
   }
+  return 'ERROR: ' + lastErr?.message;
 }
 
 const LEAGUES = [
@@ -97,16 +107,18 @@ RULES:
 
 function leagueContext(settings) {
   const rawType = (settings.scoring_type || '').toLowerCase();
-  let format = 'Rotisserie (Roto)';
+  const fmt = brain.detectFormat(rawType);
+  let formatLabel = 'Rotisserie (Roto)';
   let rule = 'Focus on long-term categorical accumulation. Protect ERA/WHIP.';
-  if (rawType.includes('headpoint')) {
-    format = 'Head-to-Head Points';
+  
+  if (fmt === brain.FORMAT.H2H_POINTS) {
+    formatLabel = 'Head-to-Head Points';
     rule = 'Maximize raw total points. Volume is everything. Strikeouts DO NOT count against you.';
-  } else if (rawType.includes('head')) {
-    format = 'Head-to-Head Categories';
+  } else if (fmt === brain.FORMAT.H2H_CAT) {
+    formatLabel = 'Head-to-Head Categories';
     rule = 'Balance gathering counting stats with protecting ratios. Consider weekly matchups.';
   }
-  return `League Rules: ${settings.num_teams} teams, **${format} scoring**. ${rule}`;
+  return `League Rules: ${settings.num_teams} teams, **${formatLabel} scoring**. ${rule}`;
 }
 
 async function runSimulatorQA() {
