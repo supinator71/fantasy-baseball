@@ -135,8 +135,8 @@ export default function TrophyCase() {
                       <h4>{cardDef.specialization || 'Player Intelligence'}</h4>
                       <p>{cardDef.lore || "A premium digital collectible."}</p>
                       {unlocks[0]?.serial && (
-                        <div style={{ marginTop: 12, fontSize: 14, fontWeight: 800, color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '4px 8px', borderRadius: 4, display: 'inline-block' }}>
-                          NO. {unlocks[0].serial} / {cardDef.serial_total || '∞'}
+                        <div className="card-serial-stamp">
+                          {unlocks[0].serial} / {cardDef.serial_total || '∞'}
                         </div>
                       )}
                     </div>

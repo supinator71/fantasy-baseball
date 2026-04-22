@@ -56,8 +56,8 @@ export default function Vault() {
                       <div style={{ color: '#00c8ff', fontSize: 11, fontWeight: 700, marginBottom: 4 }}>FACTORY SPECIFICATION</div>
                       <h4>{cardDef.specialization || 'Player Intelligence'}</h4>
                       <p>{cardDef.lore || "A premium digital collectible."}</p>
-                      <div style={{ marginTop: 12, fontSize: 14, fontWeight: 800, color: '#00c8ff', border: '1px solid rgba(0,200,255,0.3)', padding: '4px 8px', borderRadius: 4, display: 'inline-block' }}>
-                        SERIAL RANGE: 1 - {cardDef.serial_total || '∞'}
+                      <div className="card-serial-stamp" style={{ color: '#00c8ff', borderColor: 'rgba(0,200,255,0.4)' }}>
+                        1 / {cardDef.serial_total || '∞'}
                       </div>
                     </div>
                     <div className="back-footer">
