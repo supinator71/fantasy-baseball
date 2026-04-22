@@ -244,7 +244,7 @@ The JSON keys below are FORMAT INSTRUCTIONS — replace ALL quoted placeholder t
   }
 }`;
 
-    const raw = await callClaude([{ role: 'user', content: prompt }], 1400);
+    const raw = await callClaude([{ role: 'user', content: prompt }], 4096);
 
     let analysis = {};
     try {
