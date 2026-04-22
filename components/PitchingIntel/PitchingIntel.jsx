@@ -4,14 +4,13 @@ import toast from 'react-hot-toast'
 import AiQuestionBox from '../shared/AiQuestionBox'
 import { useLeague } from '@/lib/context/LeagueContext'
 
+
 export default function PitchingIntel({ subscription }) {
-  const { leagues, selectedLeague, setSelectedLeague } = useLeague()
+  const { leagues, selectedLeague, setSelectedLeague, aiAnalysis, aiLoading, refreshAnalysis } = useLeague()
   const [availablePitchers, setAvailablePitchers] = useState([])
   const [myRoster, setMyRoster] = useState([])
   const [myPitchers, setMyPitchers] = useState([])
   const [loading, setLoading] = useState(false)
-  const [aiRec, setAiRec] = useState('')
-  const [aiLoading, setAiLoading] = useState(false)
   const [posFilter, setPosFilter] = useState('ALL')
 
   const isPitcher = (pos) => ['SP', 'RP', 'P'].some(x => String(pos).toUpperCase().includes(x));
@@ -63,23 +62,10 @@ export default function PitchingIntel({ subscription }) {
     }
   }
 
-  async function getAiPitchingStrategy() {
-    setAiLoading(true)
-    setAiRec('')
-    try {
-      const { data } = await axios.post('/api/claude/pitching', {
-        available_players: availablePitchers.slice(0, 20),
-        my_roster: myRoster, // Always send FULL roster to backend so AI knows what hitting categories are strong/weak!
-        league_key: selectedLeague
-      })
-      setAiRec(data.recommendations)
-    } catch (err) {
-      const msg = err.response?.data?.error || err.message || 'AI recommendation failed'
-      toast.error(msg)
-    } finally {
-      setAiLoading(false)
-    }
-  }
+  // AI recommendation comes from the shared master analysis in LeagueContext.
+  // Clicking the button refreshes the full analysis (re-runs /api/claude/analyze).
+  const aiRec = aiAnalysis?.pitching || '';
+  function getAiPitchingStrategy() { refreshAnalysis(); }
 
   const safeStat = (val) => (val === undefined || val === null || val === '-' || val === '-/-') ? '—' : val;
   const safeRate = (val, decimals = 3) => {
