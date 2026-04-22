@@ -55,8 +55,11 @@ export default function TrophyCase() {
             {/* FRONT */}
             <div className="card-front-3d">
               <img src={cardDef.img} alt={cardDef.name} className="card-image" />
-              {isUnlocked && cardDef.rarity === 'legendary' && (
-                <div className="card-signature">Cyborg 71</div>
+              {isUnlocked && cardDef.has_signature && (
+                <div className="card-signature">{cardDef.signature_name}</div>
+              )}
+              {isUnlocked && cardDef.has_patch && (
+                <div className="card-patch" />
               )}
               {!isUnlocked && (
                 <div className="lock-overlay">
@@ -73,6 +76,11 @@ export default function TrophyCase() {
             <div className="card-back-3d">
               <div className="serial">CYBORG-ID: {cardDef.id.toUpperCase()}</div>
               <div className="series">{getSeries(cardDef.id)}</div>
+              {isUnlocked && cardDef.serial_total && (
+                <div className="mint-stamp">
+                  MINT Run: 1/{cardDef.serial_total}
+                </div>
+              )}
               <div className="back-content">
                 <h4>{cardDef.specialization || 'Player Intelligence'}</h4>
                 <p>{cardDef.lore || "A premium digital collectible celebrating the evolution of the national pastime."}</p>

@@ -48,6 +48,12 @@ export default function Vault() {
               <div className="vault-card-front">
                 <div className="vault-card-visual">
                   <img src={card.img} alt={card.name} />
+                  {card.has_signature && (
+                    <div className="card-signature">{card.signature_name}</div>
+                  )}
+                  {card.has_patch && (
+                    <div className="card-patch" />
+                  )}
                   <div className="vault-card-id">#{idx + 1}</div>
                 </div>
                 <div className="vault-card-info">
@@ -61,6 +67,11 @@ export default function Vault() {
                 <div className="back-header">
                   <div className="serial">CYBORG-ID: {card.id.toUpperCase()}</div>
                   <div className="series">{getSeries(card.id)}</div>
+                  {card.serial_total && (
+                    <div className="mint-stamp">
+                      MINT Run: 1/{card.serial_total}
+                    </div>
+                  )}
                 </div>
                 <div className="back-content">
                   <h4>{card.specialization || 'Player Intelligence'}</h4>
