@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
-import { callClaude } from '@/lib/claude';
+import { callClaude, callClaudeFast } from '@/lib/claude';
 import { db } from '@/lib/database';
 import * as yahoo from '@/lib/yahooService';
 import * as mlbStats from '@/lib/mlbStatsService';
@@ -53,8 +53,17 @@ export async function POST(request) {
   if (!guid) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
   try {
-    const { league_key } = await request.json();
+    const { league_key, force = false } = await request.json();
     if (!league_key) return NextResponse.json({ error: 'league_key required' }, { status: 400 });
+
+    // ── Daily cache check — return cached result unless user explicitly force-refreshes ──
+    if (!force) {
+      const cached = db.getAnalysisCache(guid, league_key);
+      if (cached) {
+        console.log(`[analyze] Serving cached result for ${guid}:${league_key} (model: ${cached.model || 'unknown'})`);
+        return NextResponse.json({ ...cached, fromCache: true });
+      }
+    }
 
     const settings = db.getLeagueSettings(guid, league_key) || {};
 
@@ -275,18 +284,25 @@ The JSON keys below are FORMAT INSTRUCTIONS — replace ALL quoted placeholder t
   }
 }`;
 
-    const raw = await callClaude([{ role: 'user', content: prompt }], 4096);
+    // ── Select model: Sonnet for force-refresh (quality), Haiku for daily auto-load (cost) ──
+    const model = force ? 'sonnet' : 'haiku';
+    console.log(`[analyze] Running ${force ? 'FORCE (Sonnet)' : 'AUTO (Haiku)'} analysis for ${guid}:${league_key}`);
+    const raw = force
+      ? await callClaude([{ role: 'user', content: prompt }], 4096)
+      : await callClaudeFast([{ role: 'user', content: prompt }], 4096);
 
     let analysis = {};
     try {
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
       analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
     } catch {
-      // Fallback: wrap raw text so modules can still display something
       analysis = { waiver: { headline: 'Analysis unavailable', summary: raw }, startSit: {}, pitching: {}, audit: {}, gameplan: {}, matchup: {} };
     }
 
-    return NextResponse.json({ analysis, scoredWaiver: scoredWaiver.slice(0, 10), lineupRecs: null });
+    const payload = { analysis, scoredWaiver: scoredWaiver.slice(0, 10), lineupRecs: null, model };
+    db.setAnalysisCache(guid, league_key, payload);
+
+    return NextResponse.json({ ...payload, fromCache: false });
 
   } catch (err) {
     console.error('[claude/analyze]', err.message);
