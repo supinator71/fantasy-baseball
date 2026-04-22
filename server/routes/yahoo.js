@@ -710,7 +710,13 @@ function parseYahooMatchup(matchups, myTeamKey) {
         }
         
         let pointsTotal = null;
-        if (statsObj.total) pointsTotal = parseFloat(statsObj.total);
+        if (statsObj.total) {
+          pointsTotal = parseFloat(statsObj.total);
+        } else {
+          // Fallback: search for a stat with name 'Total' or 'Points'
+          const totalStat = stats.find(s => s.name === 'Total' || s.name === 'Points');
+          if (totalStat) pointsTotal = parseFloat(totalStat.value);
+        }
 
         parsedTeams.push({
           key: info.team_key,

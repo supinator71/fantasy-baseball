@@ -1461,12 +1461,14 @@ function buildRosterDiagnosis(roster = [], leagueCtx = {}, sharedMatchup = null,
     promptBlock += `- Opponent: ${sharedMatchup.opponent.name}\n`;
     
     if (fmt === FORMAT.H2H_CAT) {
+      const myWins = sharedMatchup.stats.filter(s => s.my_winning).length;
+      const oppWins = sharedMatchup.stats.filter(s => s.opp_winning).length;
       const trailingIn = sharedMatchup.stats.filter(s => s.opp_winning).map(s => s.name);
-      promptBlock += `- Matchup Status: MUST Prioritize ${trailingIn.join(', ') || 'None'} to win the week!\n\n`;
+      promptBlock += `- Matchup Status: ${myWins} to ${oppWins} (Prioritize: ${trailingIn.join(', ') || 'None'})\n\n`;
     } else {
-      // H2H Points or Total Points override
-      const myScore = parseFloat(sharedMatchup.myTeam.stats.find(s => String(s.stat_id) === '1' || s.name === 'Total')?.value || sharedMatchup.myTeam.stats[0]?.value || 0);
-      const oppScore = parseFloat(sharedMatchup.opponent.stats.find(s => String(s.stat_id) === '1' || s.name === 'Total')?.value || sharedMatchup.opponent.stats[0]?.value || 0);
+      // H2H Points
+      const myScore = sharedMatchup.myTeam?.total_points ?? 0;
+      const oppScore = sharedMatchup.opponent?.total_points ?? 0;
       const diff = (myScore - oppScore).toFixed(1);
       promptBlock += `- Current Score: ${myScore} to ${oppScore} (${diff < 0 ? 'Trailing by ' + Math.abs(diff) : 'Winning by ' + diff})\n\n`;
     }
