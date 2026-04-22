@@ -19,7 +19,7 @@ export async function POST() {
     return NextResponse.json({ error: 'Already claimed today' }, { status: 429 });
   }
 
-  const cardId = getRandomCardId();
+  const cardId = 'random_dynamic';
   
   const awardedData = db.awardCard(guid, cardId, 'daily_pack');
   db.updateDailyPackTimer(guid, today);

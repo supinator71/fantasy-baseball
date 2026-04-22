@@ -137,8 +137,8 @@ export default function TrophyCase() {
                   <div className="card-back-3d">
                     <div className="series">{getSeries(cardDef.id)}</div>
                     <div className="back-content">
-                      <div style={{ color: 'var(--primary)', fontSize: 11, fontWeight: 700, marginBottom: 4 }}>{unlocks[0]?.team?.toUpperCase() || 'UNASSIGNED UNIT'}</div>
-                      <h4>{cardDef.specialization || 'Player Intelligence'}</h4>
+                      <div style={{ color: cardDef.teamColor || 'var(--primary)', fontSize: 11, fontWeight: 700, marginBottom: 4 }}>{(unlocks[0]?.team || cardDef.team || 'UNASSIGNED').toUpperCase()}</div>
+                      <h4 style={{ color: 'var(--text-muted)' }}>{cardDef.specialization || 'Player Intelligence'}</h4>
                       <p>{cardDef.lore || "A premium digital collectible."}</p>
                       {unlocks[0]?.serial && (cardDef.rarity === 'rare' || cardDef.rarity === 'epic' || cardDef.rarity === 'legendary') && (
                         <div style={{ marginTop: 20, fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: '0.15em', border: '1px solid rgba(255,255,255,0.4)', padding: '8px 16px', borderRadius: 8, display: 'inline-block', fontFamily: 'var(--font-heading)' }}>
