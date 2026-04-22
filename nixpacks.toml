@@ -1,0 +1,4 @@
+[build]
+  # Explicitly tell Nixpacks NOT to look for secrets that might crash the build
+  # We only need variables at runtime
+  # secrets = []
