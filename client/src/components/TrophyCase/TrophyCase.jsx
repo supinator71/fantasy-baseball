@@ -127,6 +127,7 @@ export default function TrophyCase() {
           <h1 style={{ fontSize: 36, marginBottom: 8 }}>🏆 The Collector's Album</h1>
           <p style={{ color: 'var(--text-muted)' }}>
             Earn premium digital trading cards by dominating your league, maintaining an A+ roster, and spotting rising rookies.
+            <a href="/vault" style={{ color: 'var(--primary)', marginLeft: 8, textDecoration: 'none', fontWeight: 600 }}>View Full Collection →</a>
           </p>
         </div>
         

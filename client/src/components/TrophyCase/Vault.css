@@ -1,0 +1,115 @@
+
+.vault-container {
+  padding: 40px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.vault-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.vault-header h1 {
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: -2px;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #fff 0%, #7aafc4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.vault-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 32px;
+}
+
+.vault-card-item {
+  background: #0c1d35;
+  border: 1px solid #1e3d5c;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.vault-card-item:hover {
+  transform: translateY(-10px) scale(1.05);
+  border-color: #007a7a;
+  z-index: 10;
+}
+
+.vault-card-visual {
+  position: relative;
+  aspect-ratio: 2.5 / 3.5;
+  background: #000;
+}
+
+.vault-card-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vault-card-id {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(0,0,0,0.7);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.vault-card-info {
+  padding: 16px;
+  text-align: center;
+}
+
+.vault-card-info h3 {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #f8fafc;
+  line-height: 1.2;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rarity-tag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  background: #1e3d5c;
+}
+
+/* Rarity Color Themes */
+.vault-card-item.common { border-color: #4a5568; }
+.vault-card-item.uncommon { border-color: #48bb78; }
+.vault-card-item.rare { border-color: #4299e1; box-shadow: 0 0 15px rgba(66,153,225,0.3); }
+.vault-card-item.epic { border-color: #9f7aea; box-shadow: 0 0 20px rgba(159,122,234,0.4); }
+.vault-card-item.legendary { border-color: #ecc94b; box-shadow: 0 0 25px rgba(236,201,75,0.5); }
+
+.rarity-tag.common { color: #a0aec0; }
+.rarity-tag.uncommon { color: #48bb78; background: rgba(72,187,120,0.1); }
+.rarity-tag.rare { color: #4299e1; background: rgba(66,153,225,0.1); }
+.rarity-tag.epic { color: #9f7aea; background: rgba(159,122,234,0.1); }
+.rarity-tag.legendary { color: #ecc94b; background: rgba(236,201,75,0.1); }
+
+.vault-loading {
+  height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #7aafc4;
+}

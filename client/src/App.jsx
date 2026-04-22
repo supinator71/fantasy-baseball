@@ -19,6 +19,7 @@ import PlayerTrends from './components/PlayerTrends/PlayerTrends'
 import UpgradePage from './components/Upgrade/Upgrade'
 import PitchingIntel from './components/PitchingIntel/PitchingIntel'
 import TrophyCase from './components/TrophyCase/TrophyCase'
+import Vault from './components/TrophyCase/Vault'
 import FeedbackLogs from './components/shared/FeedbackLogs'
 import FeedbackBox from './components/shared/FeedbackBox'
 
@@ -132,6 +133,7 @@ export default function App() {
                 <Route path="/tradefinder" element={<TradeFinder leagueSettings={leagueSettings} />} />
                 <Route path="/gameplan"   element={<GamePlan leagueSettings={leagueSettings} />} />
                 <Route path="/album"      element={<TrophyCase />} />
+                <Route path="/vault"      element={<Vault />} />
                 <Route path="/feedback-logs" element={<FeedbackLogs />} />
                 <Route path="/upgrade"   element={<UpgradePage subscription={subscription} />} />
               </Routes>
