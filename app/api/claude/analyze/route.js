@@ -10,14 +10,12 @@ import * as mlbStats from '@/lib/mlbStatsService';
  * POST /api/claude/analyze
  *
  * The single master AI call for the entire app.
- * Fetches all needed data server-side (roster, trends, pitching context, waiver targets),
- * runs fantasyBrain scoring, and sends ONE prompt to Claude.
- * Returns a structured { waiver, startSit, pitching, audit, gameplan, matchup } object
- * that gets cached in LeagueContext and shared across all modules.
+ * Fetches roster + waiver targets + pitching context server-side,
+ * runs fantasyBrain scoring, then makes ONE Claude call.
+ * Returns structured { waiver, startSit, pitching, audit, gameplan, matchup }
+ * stored in LeagueContext and shared across all modules.
  *
- * Individual module buttons that previously triggered their own Claude calls should
- * display this cached result instead. Only AiQuestionBox (/api/claude/ask) calls
- * Claude again, and only on explicit user input.
+ * Only /api/claude/ask is called again — on explicit user questions.
  */
 export async function POST(request) {
   const session = await getSession();
@@ -30,23 +28,38 @@ export async function POST(request) {
 
     const settings = db.getLeagueSettings(guid, league_key) || {};
 
-    // ── Fetch all data in parallel ────────────────────────────────────────────
-    const [rosterRes, trendsRes, pitchingCtx, waiverFAs] = await Promise.allSettled([
-      yahoo.getRosterWithStats(guid, league_key),
-      yahoo.getTrends ? yahoo.getTrends(guid, league_key) : Promise.resolve({ myPlayers: [], freeAgents: [] }),
+    // ── Fetch all needed data in parallel ─────────────────────────────────────
+    const [teamKey, pitching, freeAgents] = await Promise.all([
+      yahoo.getUserTeamKey(guid, league_key),
       mlbStats.getTwoStartPitchers().catch(() => ({ today: [], currentWeekTwoStart: [], nextWeekTwoStart: [] })),
       yahoo.getPlayers(guid, league_key, 'A', 0, null).catch(() => []),
     ]);
 
-    const roster      = rosterRes.status === 'fulfilled'   ? rosterRes.value   : [];
-    const trends      = trendsRes.status === 'fulfilled'   ? trendsRes.value   : { myPlayers: [], freeAgents: [] };
-    const pitching    = pitchingCtx.status === 'fulfilled' ? pitchingCtx.value : { today: [], currentWeekTwoStart: [], nextWeekTwoStart: [] };
-    const freeAgents  = waiverFAs.status === 'fulfilled'   ? waiverFAs.value   : [];
+    // Fetch roster (needs teamKey first)
+    let roster = [];
+    if (teamKey) {
+      try {
+        const rosterRaw = await yahoo.getRoster(guid, league_key, teamKey);
+        const playerKeys = [];
+        for (const item of (rosterRaw || [])) {
+          const p = item?.player;
+          if (Array.isArray(p)) {
+            const info = Object.assign({}, ...(Array.isArray(p[0]) ? p[0] : []));
+            if (info.player_key) playerKeys.push(info.player_key);
+          }
+        }
+        if (playerKeys.length) {
+          roster = await yahoo.getBatchPlayerStats(guid, league_key, playerKeys, null);
+        }
+      } catch (e) {
+        console.warn('[analyze] roster fetch failed:', e.message);
+      }
+    }
 
-    // ── Run fantasyBrain scoring ──────────────────────────────────────────────
+    // ── Run fantasyBrain scoring (pure compute, no Claude) ────────────────────
     const diagnosis = brain.buildRosterDiagnosis
       ? brain.buildRosterDiagnosis(roster, settings, null, pitching)
-      : { promptBlock: `Roster: ${JSON.stringify(roster.slice(0, 10))}`, categoryNeeds: {} };
+      : { promptBlock: `Roster: ${roster.slice(0, 5).map(p => p.name).join(', ')}`, categoryNeeds: {} };
 
     const scoredWaiver = freeAgents.slice(0, 25).map(p => ({
       ...p,
@@ -57,10 +70,10 @@ export async function POST(request) {
 
     const lineupRecs = brain.optimizeLineup
       ? brain.optimizeLineup(roster, {}, settings.scoring_type, settings.num_teams)
-      : { starters: [], bench: [], reasoning: '' };
+      : { starters: [], bench: [], volumePlays: [], reasoning: '' };
 
-    // ── Single Claude call ────────────────────────────────────────────────────
-    const prompt = `You are Goin' Yard HQ — a friendly, expert fantasy baseball assistant. The user is likely a beginner.
+    // ── Single Claude call for the entire app ─────────────────────────────────
+    const prompt = `You are Goin' Yard HQ — a friendly, expert fantasy baseball assistant for beginners.
 
 LEAGUE: ${settings.name || league_key} | Format: ${settings.scoring_type || 'H2H Points'} | Teams: ${settings.num_teams || 10}
 
@@ -68,48 +81,38 @@ ${diagnosis.promptBlock || ''}
 
 PITCHING CONTEXT:
 - Probable starters TODAY: ${pitching.today?.slice(0, 8).join(', ') || 'None'}
-- 2-start pitchers THIS WEEK: ${pitching.currentWeekTwoStart?.slice(0, 6).join(', ') || 'None'}
-- 2-start pitchers NEXT WEEK: ${pitching.nextWeekTwoStart?.slice(0, 6).join(', ') || 'None'}
+- 2-start SPs THIS WEEK: ${pitching.currentWeekTwoStart?.slice(0, 6).join(', ') || 'None'}
+- 2-start SPs NEXT WEEK: ${pitching.nextWeekTwoStart?.slice(0, 6).join(', ') || 'None'}
 
-LINEUP OPTIMIZER OUTPUT: ${lineupRecs.reasoning}
-Top starts: ${lineupRecs.starters?.slice(0, 5).map(p => `${p.player_name} (score:${p.startScore})`).join(', ') || 'N/A'}
-Volume plays (7-game weeks): ${lineupRecs.volumePlays?.map(p => p.player_name).join(', ') || 'None'}
+LINEUP OPTIMIZER: ${lineupRecs.reasoning}
+Top starts: ${lineupRecs.starters?.slice(0, 5).map(p => `${p.player_name}(${p.startScore})`).join(', ') || 'N/A'}
+Volume plays: ${lineupRecs.volumePlays?.map(p => p.player_name).join(', ') || 'None'}
 
-TOP WAIVER TARGETS (scored by brain):
-${scoredWaiver.slice(0, 8).map(p => `${p.name || p.player_name} (${p.position}) — Score: ${p.waiverScore?.score}, ${p.waiverScore?.priority}`).join('\n')}
-
-HOT FREE AGENTS (trending):
-${trends.freeAgents?.slice(0, 5).map(p => `${p.name} (${p.position}) — ${p.trend}`).join('\n') || 'None'}
+TOP WAIVER TARGETS (scored):
+${scoredWaiver.slice(0, 8).map(p => `${p.name}(${p.position}) Score:${p.waiverScore?.score} ${p.waiverScore?.priority}`).join('\n')}
 
 ---
-Respond ONLY with a JSON object in this exact shape (no markdown, no prose outside JSON):
+Respond ONLY with valid JSON (no markdown, no prose outside JSON):
 {
-  "waiver": "2-3 sentence waiver wire recommendation. Name specific players to add/drop.",
-  "startSit": "2-3 sentence start/sit advice for this week. Reference the lineup optimizer output.",
-  "pitching": "2-3 sentence pitching strategy. Highlight any 2-start pitchers to stream or pick up.",
-  "audit": "2-3 sentence team audit. Name the biggest strength and biggest weakness on this roster.",
-  "gameplan": "2-3 sentence weekly game plan. What is the #1 priority move this week?",
-  "matchup": "1-2 sentence matchup preview. Which categories should the user focus on winning?"
+  "waiver": "2-3 sentence waiver recommendation naming specific players to add/drop.",
+  "startSit": "2-3 sentence start/sit advice referencing the lineup optimizer output.",
+  "pitching": "2-3 sentence pitching strategy highlighting any 2-start pitchers.",
+  "audit": "2-3 sentence team audit naming the biggest strength and biggest weakness.",
+  "gameplan": "2-3 sentence weekly game plan with the #1 priority move.",
+  "matchup": "1-2 sentence matchup preview focusing on key categories."
 }`;
 
     const raw = await callClaude([{ role: 'user', content: prompt }], 900);
 
-    // Parse JSON from Claude response
     let analysis = {};
     try {
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : { waiver: raw, startSit: '', pitching: '', audit: '', gameplan: '', matchup: '' };
+      analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : { waiver: raw };
     } catch {
-      // If JSON parse fails, put the whole response in waiver as fallback
-      analysis = { waiver: raw, startSit: '', pitching: '', audit: '', gameplan: '', matchup: '' };
+      analysis = { waiver: raw };
     }
 
-    return NextResponse.json({
-      analysis,
-      // Pass computed data to the client so modules can use brain scores directly
-      scoredWaiver: scoredWaiver.slice(0, 10),
-      lineupRecs,
-    });
+    return NextResponse.json({ analysis, scoredWaiver: scoredWaiver.slice(0, 10), lineupRecs });
 
   } catch (err) {
     console.error('[claude/analyze]', err.message);
