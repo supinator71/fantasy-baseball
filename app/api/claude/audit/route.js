@@ -17,6 +17,18 @@ const SCORING_TYPE_MAP = {
   'roto':      'Rotisserie (season-long category ranking)',
 };
 
+const IL_SLOTS    = new Set(['IL', 'IL+', 'IL7', 'IL10', 'IL15', 'IL60']);
+const IL_STATUSES = new Set(['IL', 'IL10', 'IL15', 'IL60', 'DL', 'O', 'OUT', 'SUSP', 'NA']);
+const DTD_STATUSES = new Set(['DTD', 'Q', 'QUESTIONABLE']);
+
+function playerILTag(p) {
+  const slot   = String(p.slot   || '').toUpperCase();
+  const status = String(p.status || '').toUpperCase();
+  if (IL_SLOTS.has(slot) || [...IL_STATUSES].some(s => status.includes(s))) return '[⛔IL]';
+  if ([...DTD_STATUSES].some(s => status.includes(s))) return '[⚠️DTD]';
+  return '';
+}
+
 function buildPlayerLine(p) {
   const stats = p.stats || {};
   const parts = Object.entries(stats)
@@ -104,7 +116,7 @@ Perform a full team audit. Respond ONLY with valid JSON — no markdown fences:
   ],
   "vorByPlayer": ${JSON.stringify(vorTable.map(p => ({ name: p.name, position: p.position, vor: p.vor, scarcity: p.scarcity })))}
 }`
-    }], 1000);
+    }], 1500);
 
     // Parse JSON response
     let parsed = {};

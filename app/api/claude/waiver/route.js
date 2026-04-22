@@ -25,7 +25,7 @@ export async function POST(request) {
 
   try {
     const { available_players, my_roster, league_key } = await request.json();
-    const settings = db.load().league_settings[guid]?.[league_key] || {};
+    const settings = db.getLeagueSettings(guid, league_key) || {};
     
     // Build context
     const pitchingContext = await mlbStats.getTwoStartPitchers();
@@ -56,6 +56,7 @@ Provide Add/Drop recommendations based ONLY on the engine scores and stats above
 
     return NextResponse.json({ recommendations: text, scored: scored.slice(0, 10) });
   } catch (err) {
+    console.error('[claude/waiver]', err.message, err.stack);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
