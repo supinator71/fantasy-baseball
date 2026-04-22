@@ -46,7 +46,7 @@ export default function Vault() {
             <div className="vault-card-inner">
               {/* FRONT */}
               <div className="vault-card-front">
-                <div className="vault-card-visual">
+                <div className="vault-card-visual" data-id={card.id}>
                   <img src={card.img} alt={card.name} />
                   {card.has_signature && (
                     <div className="card-signature">{card.signature_name}</div>

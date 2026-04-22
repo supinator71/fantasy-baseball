@@ -53,7 +53,7 @@ export default function TrophyCase() {
         >
           <div className="card-inner-3d">
             {/* FRONT */}
-            <div className="card-front-3d">
+            <div className="card-front-3d" data-id={cardDef.id}>
               <img src={cardDef.img} alt={cardDef.name} className="card-image" />
               {isUnlocked && cardDef.has_signature && (
                 <div className="card-signature">{cardDef.signature_name}</div>

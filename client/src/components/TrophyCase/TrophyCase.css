@@ -348,46 +348,65 @@
 /* Legendary Gamification - Digital Signature overlay */
 .card-signature {
   position: absolute;
-  bottom: 15%;
+  bottom: 18%;
   left: 50%;
   transform: translateX(-50%) rotate(-5deg);
   font-family: 'Caveat', 'Playball', cursive, sans-serif;
   font-size: 36px;
-  color: #FFD700;
   background: linear-gradient(135deg, #FFD700 0%, #FFF5CC 50%, #FFD700 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   z-index: 100;
-  filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.9)) drop-shadow(0 0 15px rgba(255,215,0,0.5));
+  filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.9)) drop-shadow(0 0 15px rgba(255,215,0,0.6));
   pointer-events: none;
   opacity: 0;
-  animation: sign-in 1.5s 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: sign-in 0.8s 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   white-space: nowrap;
+}
+
+/* Fix for Arcana cards */
+.trophy-card[data-id*="arcana"] .card-signature {
+  bottom: 35%;
 }
 
 .card-patch {
   position: absolute;
   bottom: 12%;
-  right: 8%;
+  right: 10%;
   width: 55px;
   height: 55px;
-  background: #333;
-  border: 2px solid #555;
-  box-shadow: inset 0 0 10px #000, 0 0 0 4px #222, 0 0 0 6px #ffd700;
+  background: radial-gradient(circle at center, #444, #222);
+  border: 1px solid #555;
+  box-shadow: 
+    inset 0 0 12px rgba(0,0,0,1), 
+    0 0 0 3px #111, 
+    0 0 0 5px #ffd700;
   border-radius: 2px;
   z-index: 90;
   overflow: hidden;
 }
 
 .card-patch::after {
-  content: '';
+  content: "";
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-image: 
+    linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255,255,255,0.05) 25%, transparent 25%);
+  background-size: 4px 4px;
+}
+
+.card-patch::before {
+  content: "";
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background-image: 
-    repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 4px),
-    repeating-linear-gradient(-45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 4px);
-  background-size: 8px 8px;
-  opacity: 0.8;
+  background: linear-gradient(135deg, transparent 45%, rgba(255,215,0,0.1) 50%, transparent 55%);
+  animation: patch-glint 3s infinite linear;
+}
+
+@keyframes patch-glint {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 .card-back-3d .mint-stamp {
@@ -405,7 +424,4 @@
 }
 
 @keyframes sign-in {
-  0% { clip-path: polygon(0 0, 0 100%, 0 100%, 0 0); opacity: 0; }
-  50% { opacity: 1; }
-  100% { clip-path: polygon(0 0, 0 100%, 100% 100%, 100% 0); opacity: 1; }
 }
