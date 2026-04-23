@@ -54,7 +54,7 @@ export default function Vault() {
                   {card.has_patch && (
                     <div className="card-patch" />
                   )}
-                  <div className="vault-card-id">#{card.set_num}</div>
+                  <div className="vault-card-id">CARD #{card.set_num}</div>
                 </div>
                 <div className="vault-card-info">
                   <h3>{card.name}</h3>
@@ -65,11 +65,11 @@ export default function Vault() {
               {/* BACK */}
               <div className="vault-card-back">
                 <div className="card-back-3d">
-                  <div className="serial">SET-NUM: #{card.set_num}</div>
+                  <div className="serial">CARD: #{card.set_num}</div>
                   <div className="series">{getSeries(card.id)}</div>
-                  {card.serial_total && card.mint_number && (
+                  {card.serial_total && (
                     <div className="mint-stamp">
-                      {card.mint_number} / {card.serial_total}
+                      X / {card.serial_total}
                     </div>
                   )}
                 </div>

@@ -70,15 +70,15 @@ export default function TrophyCase() {
               {isUnlocked && count > 1 && (
                 <div className="dupe-badge">x{count}</div>
               )}
-              <div className="card-set-num">#{cardDef.set_num}</div>
+              <div className="card-set-num">CARD #{cardDef.set_num}</div>
             </div>
 
             {/* BACK */}
             <div className="card-back-3d">
               <div className="series">{getSeries(cardDef.id)}</div>
-              {isUnlocked && cardDef.serial_total && cardDef.mint_number && (
+              {isUnlocked && cardDef.serial_total && unlocks[0]?.serialPosition && (
                 <div className="mint-stamp">
-                  {cardDef.mint_number} / {cardDef.serial_total}
+                  {unlocks[0].serialPosition} / {cardDef.serial_total}
                 </div>
               )}
               <div className="back-content">
