@@ -12,9 +12,11 @@ export async function GET() {
   }
 
   const trophyCase = db.getTrophyCase(guid);
+  const serverToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
   
   return NextResponse.json({
     ...trophyCase,
-    all_cards: CARD_COLLECTION
+    all_cards: CARD_COLLECTION,
+    server_today: serverToday,
   });
 }

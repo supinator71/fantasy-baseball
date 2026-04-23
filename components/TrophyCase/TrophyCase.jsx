@@ -106,12 +106,13 @@ export default function TrophyCase() {
     return <div style={{ padding: 40, textAlign: 'center' }}>Loading Trophy Case...</div>;
   }
 
-  const { all_cards, unlocked_cards, last_daily_pack } = collection || {};
-  const localToday = new Date().toLocaleDateString('en-CA');
+  const { all_cards, unlocked_cards, last_daily_pack, server_today } = collection || {};
+  // Use server's Pacific Time date — consistent across all devices
+  const todayPT = server_today || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
   
   let canClaimDaily = true;
   if (last_daily_pack) {
-    if (typeof last_daily_pack === 'string') canClaimDaily = (last_daily_pack !== localToday);
+    if (typeof last_daily_pack === 'string') canClaimDaily = (last_daily_pack !== todayPT);
     else canClaimDaily = (Date.now() - last_daily_pack > 20 * 60 * 60 * 1000);
   }
   
@@ -129,7 +130,7 @@ export default function TrophyCase() {
   async function claimDailyPack() {
     try {
       setLoading(true);
-      const { data } = await axios.post('/api/trophy/daily-pack', { clientDate: localToday });
+      const { data } = await axios.post('/api/trophy/daily-pack');
       setAwardedCard(data.awarded);
       setPackOpening(true);
       fetchAlbum();
