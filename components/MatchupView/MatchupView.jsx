@@ -71,8 +71,9 @@ export default function MatchupView() {
     <div className="matchup-view">
       {/* Score banner */}
       <div className="card" style={{ background: 'linear-gradient(to right, #1a365d, #0f172a)', padding: 40, textAlign: 'center', marginBottom: 24 }}>
-        <div style={{ fontSize: 11, color: '#7aafc4', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 16 }}>
-          Week {matchup.week} — Live Score
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+          <img src="/cyborg_mascot_homerun.png" alt="Home Run Mascot" style={{ height: 56, objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(74,175,219,0.5))' }} />
+          <div style={{ fontSize: 11, color: '#7aafc4', textTransform: 'uppercase', letterSpacing: 2 }}>Week {matchup.week} — Live Score</div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 40 }}>
           <div>

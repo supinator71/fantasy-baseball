@@ -53,9 +53,12 @@ export default function StartSit() {
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700 }}>⚡ Daily Start/Sit</h1>
-        <p style={{ color: '#7aafc4' }}>AI-powered daily lineup optimizer</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+        <img src="/cyborg_batter_ready.png" alt="Batter Ready" style={{ height: 72, objectFit: 'contain', filter: 'drop-shadow(0 0 12px rgba(0,168,107,0.4))' }} />
+        <div>
+          <h1 style={{ fontSize: 28, fontWeight: 700 }}>⚡ Daily Start/Sit</h1>
+          <p style={{ color: '#7aafc4' }}>AI-powered daily lineup optimizer</p>
+        </div>
       </div>
 
       <InsightCard data={aiAnalysis?.startSit} type="startSit" loading={aiLoading} />

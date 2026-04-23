@@ -152,9 +152,12 @@ export default function TeamAudit({ leagueSettings }) {
       
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: 28, fontWeight: 700 }}>▣ Team Audit</h1>
-          <p style={{ color: '#7aafc4' }}>AI-powered roster analysis — grades, VOR rankings, and actionable moves</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <img src="/cyborg_analyst.png" alt="Cyborg Analyst" style={{ height: 72, width: 72, objectFit: 'contain', filter: 'drop-shadow(0 0 12px rgba(74,175,219,0.4))' }} />
+          <div>
+            <h1 style={{ fontSize: 28, fontWeight: 700 }}>▣ Team Audit</h1>
+            <p style={{ color: '#7aafc4' }}>AI-powered roster analysis — grades, VOR rankings, and actionable moves</p>
+          </div>
         </div>
         {teams.length > 0 && (
           <select value={selectedTeam} onChange={e => setSelectedTeam(e.target.value)} style={{ minWidth: 200, padding: '8px 12px', borderRadius: 6, background: '#122840', color: '#fff', border: '1px solid #1e3d5c' }}>

@@ -84,11 +84,12 @@ export default function WaiverWire() {
     <div>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: 28, fontWeight: 700 }}>🔍 Waiver Wire Intel</h1>
-          <p style={{ color: '#7aafc4' }}>
-            Free agents ranked by fantasyBrain engine score · AI add/drop recommendations on demand
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <img src="/cyborg_mascot_pointing.png" alt="Goin' Yard Scout" style={{ height: 72, objectFit: 'contain', filter: 'drop-shadow(0 0 12px rgba(74,175,219,0.4))' }} />
+          <div>
+            <h1 style={{ fontSize: 28, fontWeight: 700 }}>🔍 Waiver Wire Intel</h1>
+            <p style={{ color: '#7aafc4' }}>Free agents ranked by fantasyBrain engine score · AI add/drop recommendations on demand</p>
+          </div>
         </div>
         <button
           className="btn btn-primary"
