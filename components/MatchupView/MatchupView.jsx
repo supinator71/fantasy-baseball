@@ -44,6 +44,13 @@ export default function MatchupView() {
     }
   }
 
+  // Auto-run prediction when matchup data loads
+  useEffect(() => {
+    if (matchup && !aiPrediction && !aiPredLoading) {
+      runMatchupPrediction();
+    }
+  }, [matchup]);
+
   async function runMatchupPrediction() {
     setAiPredLoading(true);
     setAiPredError('');
@@ -94,7 +101,29 @@ export default function MatchupView() {
         </div>
       </div>
 
-      <InsightCard data={aiAnalysis?.matchup || aiAnalysis?.gameplan} type="matchup" />
+      {/* Live deficit banner — replaces stale cached InsightCard */}
+      {(() => {
+        const gap    = parseFloat(oppScore) - parseFloat(myScore);
+        const gapAbs = Math.abs(gap).toFixed(1);
+        const losing = gap > 0;
+        const urgent = gap > 75;
+        const close  = Math.abs(gap) <= 30;
+        const color  = urgent ? '#ef4444' : close ? '#f59e0b' : losing ? '#fb923c' : '#00a86b';
+        const bg     = urgent ? 'rgba(239,68,68,0.1)' : close ? 'rgba(245,158,11,0.1)' : losing ? 'rgba(251,146,60,0.08)' : 'rgba(0,168,107,0.1)';
+        const icon   = urgent ? '🚨' : close ? '⚡' : losing ? '⚠️' : '✅';
+        const msg    = losing
+          ? `${icon} You are DOWN ${gapAbs} pts — ${urgent ? 'URGENT: make aggressive moves NOW' : 'make lineup moves to close the gap'}`
+          : `${icon} You are leading by ${gapAbs} pts — stay the course`;
+        return (
+          <div style={{ background: bg, border: `1px solid ${color}`, borderRadius: 12, padding: '14px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 22 }}>{icon}</span>
+            <div>
+              <div style={{ fontWeight: 700, color, fontSize: 15 }}>{msg}</div>
+              {losing && <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>AI analysis loading below — check your bench for immediate upgrades</div>}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* AI Prediction button + result */}
       {aiPredError && (
