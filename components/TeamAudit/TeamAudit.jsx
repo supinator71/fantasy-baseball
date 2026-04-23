@@ -173,7 +173,16 @@ export default function TeamAudit({ leagueSettings }) {
         )}
       </div>
 
-      <InsightCard data={audit || aiAnalysis?.audit} type="audit" loading={aiLoading && !audit && !aiAnalysis} />
+      {/* Auto-run loading state */}
+      {loading && !audit && (
+        <div className="card" style={{ textAlign: 'center', padding: '20px 28px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+          <span className="loading" style={{ padding: 0 }}>⚙️</span>
+          <div>
+            <strong>Running AI Roster Analysis...</strong>
+            <p style={{ color: '#7aafc4', fontSize: 13, margin: '4px 0 0' }}>Computing VOR, grades, and recommendations from your live stats</p>
+          </div>
+        </div>
+      )}
 
 
       {error && (
