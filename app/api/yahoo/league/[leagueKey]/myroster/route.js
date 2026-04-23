@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { getRoster, getUserTeamKey, getBatchPlayerStats } from '@/lib/yahooService';
 import { getLiveProbablePitchers } from '@/lib/mlbStatsService';
-import { calculateVOR, getPositionalScarcity } from '@/lib/fantasyBrain';
+import * as brain from '@/lib/fantasyBrain';
 import { db } from '@/lib/database';
 
 export async function GET(request, { params }) {
@@ -91,9 +91,9 @@ export async function GET(request, { params }) {
     const scoringType = settings.scoring_type || 'headpoint';
     players = players.map(p => {
       const rawPos  = String(p.position || '').split('/')[0].trim();
-      const vorRaw  = calculateVOR(p.stats || {}, rawPos, numTeams, scoringType);
+      const vorRaw  = brain.calculateVOR(p.stats || {}, rawPos, numTeams, scoringType);
       const vor     = typeof vorRaw === 'object' ? (vorRaw.vor ?? vorRaw.score ?? 0) : (vorRaw ?? 0);
-      const scarcity = getPositionalScarcity(rawPos, numTeams);
+      const scarcity = brain.getPositionalScarcity(rawPos, numTeams);
       return { ...p, vor: Math.round(vor), vorScarcity: scarcity.tier || 'moderate' };
     });
 

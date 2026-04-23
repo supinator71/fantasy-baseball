@@ -5,7 +5,6 @@ import { db } from '@/lib/database';
 import * as yahoo from '@/lib/yahooService';
 import * as mlbStats from '@/lib/mlbStatsService';
 import * as brain from '@/lib/fantasyBrain';
-import { calculateVOR } from '@/lib/fantasyBrain';
 
 // Yahoo scoring_type codes → human labels
 const SCORING_TYPE_MAP = {
@@ -46,7 +45,7 @@ function buildPlayerLine(p, numTeams, scoringType) {
   const team = p.team ? `, ${p.team}` : '';
   const ilTag = playerILTag(p);
   const rawPos = String(p.position || '').split('/')[0].trim();
-  const vorRaw = numTeams ? calculateVOR(stats, rawPos, numTeams, scoringType) : null;
+  const vorRaw = numTeams ? brain.calculateVOR(stats, rawPos, numTeams, scoringType) : null;
   const vor    = vorRaw !== null ? (typeof vorRaw === 'object' ? (vorRaw.vor ?? vorRaw.score ?? 0) : (vorRaw ?? 0)) : null;
   const vorStr = vor !== null ? ` VOR:${Math.round(vor)}` : '';
   return `  • ${p.name} (${p.position}${team}) [${slot}]${ilTag}${vorStr} — ${statStr}`;
@@ -132,7 +131,7 @@ export async function POST(request) {
     // Compute VOR for every player so Claude has a real grading signal
     const withVOR = roster.map(p => {
       const rawPos = String(p.position || '').split('/')[0].trim();
-      const vorRaw = calculateVOR(p.stats || {}, rawPos, numTeams, scoringType);
+      const vorRaw = brain.calculateVOR(p.stats || {}, rawPos, numTeams, scoringType);
       const vor    = typeof vorRaw === 'object' ? (vorRaw.vor ?? vorRaw.score ?? 0) : (vorRaw ?? 0);
       return { ...p, _vor: Math.round(vor) };
     });
