@@ -11,6 +11,8 @@ export default function Dashboard({ subscription }) {
   const [fromCache, setFromCache] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [cachedAt, setCachedAt] = useState(null)
+  const [roster, setRoster]         = useState([])
+  const [rosterLoading, setRosterLoading] = useState(false)
 
   const formatScoringType = (type) => {
     if (!type) return 'Rotisserie';
@@ -28,8 +30,33 @@ export default function Dashboard({ subscription }) {
       axios.get('/api/yahoo/league/' + selectedLeague)
         .catch(err => console.error('Failed to auto-sync league settings', err))
         .finally(() => setSyncing(false))
+      // Also auto-load roster for VOR display
+      fetchRoster(selectedLeague)
     }
   }, [selectedLeague, leagues])
+
+  async function fetchRoster(key) {
+    setRosterLoading(true)
+    setRoster([])
+    try {
+      const { data } = await axios.get(`/api/yahoo/league/${key}/myroster`)
+      const players = data.players || []
+      // Sort by simple composite score (proxy for VOR) — no server call needed
+      const scored = players.map(p => {
+        const s = p.stats || {}
+        const isPitcher = ['SP','RP','P'].includes(String(p.position||'').split('/')[0])
+        const score = isPitcher
+          ? (parseFloat(s['28']||0)*8 + parseFloat(s['42']||0)*0.5 + parseFloat(s['32']||0)*5 - parseFloat(s['26']||4.5)*8)
+          : (parseFloat(s['12']||0)*4 + parseFloat(s['13']||0)*2 + parseFloat(s['7']||0)*2 + parseFloat(s['16']||0)*3 + parseFloat(s['3']||.250)*50)
+        return { ...p, _score: Math.round(score) }
+      }).sort((a,b) => b._score - a._score)
+      setRoster(scored)
+    } catch (e) {
+      console.error('Dashboard roster fetch failed:', e.message)
+    } finally {
+      setRosterLoading(false)
+    }
+  }
 
 
   return (
@@ -151,6 +178,59 @@ export default function Dashboard({ subscription }) {
           </div>
         )}
       </div>
+
+      {/* Roster with descending composite score */}
+      {selectedLeague && (
+        <div className="card" style={{ padding: 0, overflow: 'hidden', marginTop: 24 }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e3d5c', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#7aafc4', textTransform: 'uppercase', letterSpacing: 1 }}>My Roster — Ranked by Score</span>
+            <button onClick={() => fetchRoster(selectedLeague)} disabled={rosterLoading}
+              style={{ fontSize: 11, background: 'none', border: '1px solid #1e3d5c', borderRadius: 4, padding: '3px 10px', color: '#7aafc4', cursor: 'pointer' }}>
+              {rosterLoading ? '...' : '↻ Refresh'}
+            </button>
+          </div>
+          {rosterLoading ? (
+            <div className="loading" style={{ padding: 24 }}>Loading roster...</div>
+          ) : roster.length === 0 ? (
+            <div style={{ padding: 24, color: '#7aafc4', textAlign: 'center' }}>No roster data yet.</div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Player</th>
+                  <th>Pos</th>
+                  <th>Slot</th>
+                  <th>Key Stats</th>
+                  <th>Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roster.map((p, i) => {
+                  const s = p.stats || {}
+                  const isPitcher = ['SP','RP','P'].includes(String(p.position||'').split('/')[0])
+                  const statLine = isPitcher
+                    ? `${s['28']??'—'}W  ${s['42']??'—'}K  ${parseFloat(s['26']||0).toFixed(2)} ERA  ${parseFloat(s['27']||0).toFixed(2)} WHIP`
+                    : `${s['12']??'—'}HR  ${s['13']??'—'}RBI  ${s['7']??'—'}R  ${s['16']??'—'}SB  .${String(parseFloat(s['3']||0).toFixed(3)).replace('0.','')}`
+                  const slotColor = p.slot === 'IL' || p.slot === 'IL+' ? '#ef4444' : p.slot === 'BN' ? '#7aafc4' : '#00a86b'
+                  return (
+                    <tr key={i}>
+                      <td style={{ color: '#4a7a94', fontSize: 12, width: 28 }}>{i+1}</td>
+                      <td><strong>{p.name}</strong></td>
+                      <td><span className="badge">{String(p.position||'').split('/')[0]}</span></td>
+                      <td style={{ fontSize: 11, fontWeight: 700, color: slotColor }}>{p.slot || 'BN'}</td>
+                      <td style={{ fontSize: 12, color: '#a0aab2', whiteSpace: 'nowrap' }}>{statLine}</td>
+                      <td style={{ fontWeight: 800, fontSize: 15,
+                        color: p._score >= 60 ? '#00a86b' : p._score >= 30 ? '#f59e0b' : '#e2e8f0'
+                      }}>{p._score}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, marginTop: 24 }}>
         <LeagueIntelligence leagueKey={selectedLeague} isPro={subscription?.plan === 'pro'} />

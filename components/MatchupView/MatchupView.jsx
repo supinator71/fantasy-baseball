@@ -23,6 +23,9 @@ export default function MatchupView() {
   const { selectedLeague, leagueData, aiAnalysis } = useLeague();
   const [matchup, setMatchup] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [aiPrediction, setAiPrediction]     = useState(null);
+  const [aiPredLoading, setAiPredLoading]   = useState(false);
+  const [aiPredError, setAiPredError]       = useState('');
 
   useEffect(() => {
     if (selectedLeague) fetchMatchup();
@@ -30,6 +33,7 @@ export default function MatchupView() {
 
   async function fetchMatchup() {
     setLoading(true);
+    setAiPrediction(null);
     try {
       const res = await axios.get(`/api/yahoo/league/${selectedLeague}/matchup`);
       setMatchup(res.data);
@@ -40,8 +44,24 @@ export default function MatchupView() {
     }
   }
 
+  async function runMatchupPrediction() {
+    setAiPredLoading(true);
+    setAiPredError('');
+    try {
+      const { data } = await axios.post('/api/claude/matchup/predict', {
+        league_key: selectedLeague,
+        matchup_data: matchup,
+      });
+      setAiPrediction(data.prediction || data.analysis || data.summary || JSON.stringify(data));
+    } catch (err) {
+      setAiPredError(err.response?.data?.error || 'Prediction failed. Try again.');
+    } finally {
+      setAiPredLoading(false);
+    }
+  }
+
   if (loading) return <div className="card loading">Analyzing live matchup...</div>;
-  if (!matchup) return <div className="card">No active matchup found.</div>;
+  if (!matchup) return <div className="card">No active matchup found. Select a league above.</div>;
 
   const myScore   = matchup.myTeam?.total_points ?? 0;
   const oppScore  = matchup.opponent?.total_points ?? 0;
@@ -74,6 +94,30 @@ export default function MatchupView() {
       </div>
 
       <InsightCard data={aiAnalysis?.matchup || aiAnalysis?.gameplan} type="matchup" />
+
+      {/* AI Prediction button + result */}
+      {aiPredError && (
+        <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', borderRadius: 8, padding: 16, marginBottom: 16, color: '#ef4444' }}>
+          {aiPredError}
+        </div>
+      )}
+      {aiPrediction ? (
+        <div className="card" style={{ marginBottom: 16, borderLeft: '3px solid #06b6d4' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#06b6d4', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+            ⚔️ Deep Matchup Prediction
+          </div>
+          <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{aiPrediction}</div>
+          <button className="btn btn-ghost" style={{ marginTop: 12, fontSize: 12 }} onClick={runMatchupPrediction} disabled={aiPredLoading}>
+            ↻ Re-run Prediction
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+          <button className="btn btn-primary" onClick={runMatchupPrediction} disabled={aiPredLoading}>
+            {aiPredLoading ? '⟳ Predicting...' : '⚔️ Get AI Prediction'}
+          </button>
+        </div>
+      )}
 
       {/* Category table */}
       {matchup.stats?.length > 0 && (

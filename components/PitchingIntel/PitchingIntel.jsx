@@ -7,12 +7,15 @@ import { useLeague } from '@/lib/context/LeagueContext'
 
 
 export default function PitchingIntel({ subscription }) {
-  const { leagues, selectedLeague, setSelectedLeague, aiAnalysis, aiLoading, refreshAnalysis } = useLeague()
+  const { leagues, selectedLeague, setSelectedLeague, aiAnalysis, aiLoading } = useLeague()
   const [availablePitchers, setAvailablePitchers] = useState([])
   const [myRoster, setMyRoster] = useState([])
   const [myPitchers, setMyPitchers] = useState([])
   const [loading, setLoading] = useState(false)
   const [posFilter, setPosFilter] = useState('ALL')
+  const [pitchingRec, setPitchingRec]     = useState(null)
+  const [pitchingLoading, setPitchingLoading] = useState(false)
+  const [pitchingError, setPitchingError] = useState('')
 
   const isPitcher = (pos) => ['SP', 'RP', 'P'].some(x => String(pos).toUpperCase().includes(x));
 
@@ -62,10 +65,27 @@ export default function PitchingIntel({ subscription }) {
     }
   }
 
-  // AI recommendation comes from the shared master analysis in LeagueContext.
-  // Clicking the button refreshes the full analysis (re-runs /api/claude/analyze).
-  const aiRec = aiAnalysis?.pitching || '';
-  function getAiPitchingStrategy() { refreshAnalysis(); }
+  // AI recommendation — master analyze InsightCard shows on load;
+  // "Get Pitching Strategy" button calls targeted pitching route (Haiku, cheap).
+  const aiRec = aiAnalysis?.pitching || null;
+
+  async function getPitchingStrategy() {
+    setPitchingLoading(true);
+    setPitchingError('');
+    try {
+      const { data } = await axios.post('/api/claude/pitching', {
+        league_key: selectedLeague,
+        my_pitchers: myPitchers,
+        available_pitchers: availablePitchers.slice(0, 15),
+        pitching_context: pitchingContext,
+      });
+      setPitchingRec(data.recommendation || data.analysis || data.summary || '');
+    } catch (err) {
+      setPitchingError(err.response?.data?.error || 'Analysis failed.');
+    } finally {
+      setPitchingLoading(false);
+    }
+  }
 
   const safeStat = (val) => (val === undefined || val === null || val === '-' || val === '-/-') ? '—' : val;
   const safeRate = (val, decimals = 3) => {
@@ -108,24 +128,32 @@ export default function PitchingIntel({ subscription }) {
           <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>
             {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
           </select>
-          <button className="btn btn-primary" onClick={getAiPitchingStrategy} disabled={aiLoading || availablePitchers.length === 0}>
-            {aiLoading ? '🤖 Building Playbook...' : '⚡ Get Pitching Strategy'}
+          <button className="btn btn-primary" onClick={getPitchingStrategy} disabled={pitchingLoading || loading}>
+            {pitchingLoading ? '🤖 Building Playbook...' : '⚡ Get Pitching Strategy'}
           </button>
         </div>
       </div>
 
-      {(aiRec || aiLoading) && (
+      {(aiRec || aiLoading || pitchingRec) && (
         <div className="card" style={{ marginBottom: 24, background: 'linear-gradient(to bottom, var(--panel-bg), #0c1524)', border: '1px solid #00a86b33' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <img src="/cyborg_batflip.png" alt="Goin' Yard Scout" className="mascot-header" style={{height: 48, filter: 'hue-rotate(140deg)'}} />
               <h3 style={{ color: '#00a86b', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>The Pitching Playbook</h3>
             </div>
-            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => refreshAnalysis()}>↻ Refresh</button>
           </div>
           <InsightCard data={aiAnalysis?.pitching} type="pitching" loading={aiLoading} />
+          {pitchingError && (
+            <div style={{ color: '#ef4444', fontSize: 13, marginTop: 8 }}>{pitchingError}</div>
+          )}
+          {pitchingRec && (
+            <div style={{ marginTop: 12, padding: '12px 16px', background: '#0c1d35', borderRadius: 8, borderLeft: '3px solid #00a86b' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#00a86b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Deep Pitching Analysis</div>
+              <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{pitchingRec}</div>
+            </div>
+          )}
           <AiQuestionBox 
-            context={`Pitching strategy context: ${typeof aiRec === 'string' ? aiRec : aiRec?.summary || ''}`}
+            context={`Pitching strategy context: ${typeof aiRec === 'string' ? aiRec : aiRec?.summary || ''} ${pitchingRec || ''}`}
             leagueKey={selectedLeague}
             title="Ask the Pitching Coach"
             icon="🎯"
