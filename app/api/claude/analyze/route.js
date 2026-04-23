@@ -238,14 +238,16 @@ ROSTER VOR SUMMARY (Value Over Replacement — higher = more valuable relative t
 • Hitter VOR: ${hitterVOR} | Pitcher VOR: ${pitcherVOR}
 • Best player: ${topPlayer?.name || 'N/A'} (VOR:${topPlayer?._vor || 0})
 
-GRADING SCALE — base audit.grade on Total VOR of ${totalVOR} (be accurate, not generous):
-• A+ = Total VOR > 600 (elite contender)
-• A  = Total VOR 450-600 (strong)
-• A- = Total VOR 350-449 (above avg)
-• B+ = Total VOR 250-349 (solid)
-• B  = Total VOR 150-249 (average)
-• B- = Total VOR 80-149 (below average)
-• C  = Total VOR < 80 (weak/rebuilding)
+GRADING SCALE — base audit.grade on Total VOR of ${totalVOR} (be accurate and honest, do NOT round up):
+• A+ = Total VOR > 700 (elite, championship-caliber)
+• A  = Total VOR 550-700 (strong contender)
+• A- = Total VOR 400-549 (above average)
+• B+ = Total VOR 300-399 (solid, playoff team)
+• B  = Total VOR 220-299 (average)
+• B- = Total VOR 140-219 (below average)
+• C+ = Total VOR 80-139 (weak, needs significant help)
+• C  = Total VOR 30-79 (rebuilding)
+• D  = Total VOR < 30 (very early season / barely rostered)
 
 ACTIVE ROSTER (each player includes VOR score):
 ${activeBlock}
