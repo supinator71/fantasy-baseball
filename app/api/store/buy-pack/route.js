@@ -13,16 +13,27 @@ export async function POST(request) {
   try {
     const { packId, forceRarity } = await request.json();
 
-    // NOTE: In a real implementation, this endpoint would:
-    // 1. Validate a Stripe session ID or process payment
-    // 2. Award multiple cards (e.g. 3, 5, or 10 based on pack)
-    // 3. Guarantee at least 1 card matches the forceRarity
+    const packConfig = {
+      'core_pack': { count: 3 },
+      'premium_hobby': { count: 5 },
+      'titan_drop': { count: 10 }
+    };
+    
+    const count = packConfig[packId]?.count || 1;
+    const cards = [];
 
-    // For this mock implementation, we just immediately award 1 guaranteed card
-    // so the PackDropModal can show it off.
-    const awardedCard = await db.awardCard(guid, 'random_dynamic', `Store Purchase: ${packId}`, forceRarity);
+    // Award the guaranteed hit first
+    const hit = await db.awardCard(guid, 'random_dynamic', `Store Purchase: ${packId}`, forceRarity);
+    cards.push(hit);
 
-    return NextResponse.json({ success: true, awarded: awardedCard });
+    // Award the rest of the pack with standard randomized rarity
+    for (let i = 1; i < count; i++) {
+      const standardCard = await db.awardCard(guid, 'random_dynamic', `Store Purchase: ${packId}`, null);
+      cards.push(standardCard);
+    }
+
+    // We'll return the 'hit' to be showcased in the animation, but the user actually gets all of them.
+    return NextResponse.json({ success: true, awarded: hit, total_awarded: count });
   } catch (error) {
     console.error('Store checkout error:', error);
     return NextResponse.json({ error: 'Failed to process purchase' }, { status: 500 });
