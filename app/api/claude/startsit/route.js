@@ -15,9 +15,8 @@ const STAT_MAP = {
 
 const IL_STATUSES = new Set(['IL','IL+','IL7','IL10','IL15','IL60','DL','O','OUT','SUSP','NA']);
 
-function buildPlayerLine(p) {
+function buildPlayerLine(p, teamsPlaying) {
   const rawStats = p.stats || {};
-  // Map numeric IDs → readable names; skip zero/empty values
   const parts = Object.entries(rawStats)
     .filter(([id, v]) => STAT_MAP[id] && v !== null && v !== undefined && v !== '' && v !== '-' && v !== '0' && v !== 0)
     .map(([id, v]) => `${STAT_MAP[id]}:${v}`);
@@ -26,10 +25,23 @@ function buildPlayerLine(p) {
   const status   = String(p.status || '').toUpperCase();
   const isIL     = IL_STATUSES.has(status) || IL_STATUSES.has(slot.toUpperCase());
   const isDTD    = ['DTD','Q','QUESTIONABLE'].some(s => status.includes(s));
-  const tag      = isIL ? ' [⛔IL-UNAVAILABLE — do NOT start]' : isDTD ? ' [⚠️DTD]' : '';
 
-  const statStr  = parts.length ? parts.join(' ') : 'no stats yet';
-  return `  • ${p.name || p.player_name} (${p.position || '?'}) [Slot:${slot}] Team:${p.team || '?'}${tag}\n    Stats: ${statStr}`;
+  // Check if hitter's team has a game today
+  const isPitcher = ['SP','RP','P'].some(x => String(p.position||'').toUpperCase().includes(x));
+  const teamAbbr  = String(p.team || '').toUpperCase();
+  const teamName  = String(p.team || '').toLowerCase();
+  const hasGame   = !teamsPlaying || isPitcher
+    || teamsPlaying.abbrs.has(teamAbbr)
+    || teamsPlaying.names.has(teamName)
+    || teamsPlaying.abbrs.size === 0;  // fallback: if schedule fetch failed, assume game
+
+  const tag = isIL    ? ' [⛔IL-UNAVAILABLE — do NOT start]'
+             : isDTD  ? ' [⚠️DTD — health risk]'
+             : !hasGame ? ' [⛔NO GAME TODAY — cannot score points, bench this player]'
+             : '';
+
+  const statStr = parts.length ? parts.join(' ') : 'no stats yet';
+  return `  • ${p.name || p.player_name} (${p.position || '?'}) [Slot:${slot}] Team:${teamAbbr}${tag}\n    Stats: ${statStr}`;
 }
 
 export async function POST(request) {
@@ -43,9 +55,15 @@ export async function POST(request) {
     const settings   = { ...dbSettings, ...clientSettings, scoring_type: clientSettings?.scoring_type || dbSettings.scoring_type || scoring_type };
 
     const pitching = await mlbStats.getTwoStartPitchers().catch(() => ({ currentWeek: [], nextWeek: [], today: [], pitcherDetails: {} }));
+    const teamsPlaying = await mlbStats.getTodayTeamsPlaying().catch(() => ({ abbrs: new Set(), names: new Set() }));
+
     const todayNames     = (pitching.today || []).join(', ')                    || 'None confirmed';
     const twoStartNames  = (pitching.remainingTwoStarters || pitching.currentWeek || []).join(', ') || 'None confirmed';
     const nextWeekNames  = (pitching.nextWeek || []).slice(0, 8).join(', ')     || 'None confirmed';
+    const teamsOffToday  = teamsPlaying.abbrs.size > 0
+      ? `Teams with NO game today (hitters cannot score): any team NOT listed below has the day off.
+Teams PLAYING today: ${[...teamsPlaying.abbrs].join(', ')}`
+      : 'Schedule unavailable — assume all hitters may play.';
 
     const scoringLabel = settings.scoring_type === 'headpoint' ? 'H2H Points'
       : settings.scoring_type === 'headone' ? 'H2H Categories'
@@ -58,7 +76,7 @@ export async function POST(request) {
 
     const rosterBlock = [
       'ACTIVE PLAYERS (only recommend these):',
-      ...activePlayers.map(buildPlayerLine),
+      ...activePlayers.map(p => buildPlayerLine(p, teamsPlaying)),
       '',
       'IL / UNAVAILABLE (do NOT recommend starting or benching — they cannot play):',
       ...ilPlayers.map(p => `  • ${p.name} (${p.position}) [${p.status || 'injured'}]`),
@@ -74,22 +92,36 @@ DO NOT recommend starting IL/UNAVAILABLE players.
 SCORING FORMAT: ${scoringLabel}
 LEAGUE: ${settings.name || league_key || 'Unknown'}
 
-MY ROSTER — 2026 Yahoo season stats (stat labels: R=Runs, HR=HRs, RBI, SB, AVG, BB, HBP, W=Wins, K=Strikeouts, ERA, WHIP, IP, SV=Saves):
+FANTASY SLOT KEY (shown as [Slot:XX] next to each player):
+- Active slots (C, 1B, 2B, 3B, SS, OF, SP, RP, UTIL, P) = currently in fantasy starting lineup
+- [Slot:BN] = currently benched in fantasy lineup — manager has them sitting
+- [Slot:IL] or [Slot:IL+] = on fantasy IL — cannot move or play
+
+MY ROSTER — 2026 Yahoo season stats:
 ${rosterBlock}
 
-CONFIRMED PITCHING SCHEDULE (ONLY these pitchers are cleared to start):
+HITTER SCHEDULE — TODAY:
+${teamsOffToday}
+⚠️ HITTER RULES:
+1. Any hitter tagged [⛔NO GAME TODAY] has no game — automatic sit, cannot score.
+2. Even if a hitter has a game, they may not be in their MLB team's actual starting lineup. Note this uncertainty for players who platoon or sit vs. certain handedness.
+3. If a player is [Slot:BN] and has a game + strong stats, recommend whether to move them ACTIVE.
+4. If a player is in an active slot but tagged [⛔NO GAME TODAY], recommend moving them to bench.
+
+CONFIRMED PITCHING SCHEDULE:
 • Starting TODAY: ${todayNames}
 • 2-start SPs this week: ${twoStartNames}
 • 2-start SPs next week: ${nextWeekNames}
 
-⚠️ PITCHER RULE: Only recommend starting SPs who appear in the schedule above. If none of MY pitchers appear in those lists, say so — do not substitute others.
+⚠️ PITCHER RULE: Only recommend starting SPs who appear in the schedule above. If none of MY pitchers appear in those lists, say so.
 
-Context from manager: ${matchup_context || 'Evaluate my full roster for today. Who are my must-starts? Who should sit?'}
+Context from manager: ${matchup_context || 'Evaluate my full roster for today. Who are must-starts? Who should sit or be moved to bench?'}
 
-Give concrete start/sit advice using ONLY my roster above. Include:
-1. Must-starts with specific stat reasons
-2. Sit candidates with reasons from their actual stats
-3. The 3 toughest start/sit decisions on THIS roster`;
+Give concrete lineup advice using ONLY my roster. Include:
+1. Must-starts (active slot confirmed, team playing, likely in MLB lineup)
+2. Automatic sits (no game today, IL, or [Slot:BN] with no reason to activate)
+3. Moves to make (BN → active or active → BN swaps)
+4. Top 3 toughest decisions`;
 
     const text = await callClaudeFast([{ role: 'user', content: prompt }], 1200);
     return NextResponse.json({ analysis: text });
