@@ -43,7 +43,7 @@ function computeGrade(totalVOR) {
 // ── Guardrail: sanitize Claude output against real data ───────────────────────
 // Removes hallucinated players and overrides computed values so Claude
 // can never fabricate availability, roster membership, or grade.
-function sanitizeAnalysis(analysis, { roster, freeAgents, totalVOR }) {
+function sanitizeAnalysis(analysis, { roster, freeAgents, totalVOR, teamsPlaying }) {
   const normName = n => String(n || '').toLowerCase().replace(/[^a-z]/g, '');
 
   const rosterSet = new Set(roster.map(p => normName(p.name)));
@@ -51,6 +51,20 @@ function sanitizeAnalysis(analysis, { roster, freeAgents, totalVOR }) {
 
   const onRoster = name => rosterSet.has(normName(name));
   const onFAList = name => faSet.has(normName(name));
+
+  // Build a lookup: player name → does their team have a game today?
+  const playerHasGame = {};
+  if (teamsPlaying && teamsPlaying.abbrs && teamsPlaying.abbrs.size > 0) {
+    for (const p of roster) {
+      const teamAbbr = String(p.team || '').toUpperCase();
+      playerHasGame[normName(p.name)] = teamsPlaying.abbrs.has(teamAbbr);
+    }
+  }
+  const hasGameToday = name => {
+    // If we have schedule data, use it; otherwise assume they have a game (don't strip)
+    const key = normName(name);
+    return playerHasGame[key] !== undefined ? playerHasGame[key] : true;
+  };
 
   // 1. Audit grade — always engine-computed, never Claude's
   if (analysis.audit) {
@@ -75,9 +89,18 @@ function sanitizeAnalysis(analysis, { roster, freeAgents, totalVOR }) {
     analysis.waiver.drops = analysis.waiver.drops.filter(d => onRoster(d.player));
   }
 
-  // 4. Start/Sit — only allow roster players
+  // 4. Start/Sit — only allow roster players + enforce daily schedule
   if (analysis.startSit?.starts?.length) {
-    analysis.startSit.starts = analysis.startSit.starts.filter(s => onRoster(s.player));
+    const before = analysis.startSit.starts.length;
+    analysis.startSit.starts = analysis.startSit.starts.filter(s => {
+      if (!onRoster(s.player)) return false;
+      // Cannot start a player whose team has no game today
+      if (!hasGameToday(s.player)) {
+        console.warn(`[guardrail] Stripped START for ${s.player} — team has no game today`);
+        return false;
+      }
+      return true;
+    });
   }
   if (analysis.startSit?.sits?.length) {
     analysis.startSit.sits = analysis.startSit.sits.filter(s => onRoster(s.player));
@@ -171,12 +194,14 @@ export async function POST(request) {
     const settings = db.getLeagueSettings(guid, league_key) || {};
 
     // ── Fetch all needed data in parallel ─────────────────────────────────────
-    const [teamKey, pitching, freeAgents, newsRaw] = await Promise.all([
+    const [teamKey, pitching, freeAgents, newsRaw, teamsPlayingRaw] = await Promise.all([
       yahoo.getUserTeamKey(guid, league_key),
       mlbStats.getTwoStartPitchers().catch(() => ({ currentWeek: [], nextWeek: [] })),
       yahoo.getPlayers(guid, league_key, 'A', 0, null).catch(() => []),
       mlbStats.getBreakingNews().catch(() => ''),
+      mlbStats.getTodayTeamsPlaying().catch(() => ({ abbrs: new Set(), names: new Set() })),
     ]);
+    const teamsPlaying = teamsPlayingRaw || { abbrs: new Set(), names: new Set() };
 
     let roster = [];
     if (teamKey) {
@@ -481,6 +506,7 @@ The JSON keys below are FORMAT INSTRUCTIONS — replace ALL quoted placeholder t
       roster,
       freeAgents,
       totalVOR,
+      teamsPlaying,
     });
 
     const refreshesUsed = db.getForceRefreshCount(guid);
