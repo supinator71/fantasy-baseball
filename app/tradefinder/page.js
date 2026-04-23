@@ -1,11 +1,12 @@
 'use client';
-import ModulePage from '@/components/shared/ModulePage';
-import AiStrategyModule from '@/components/shared/AiStrategyModule';
 
+import React from 'react';
+import TradeAnalyzer from '@/components/TradeAnalyzer/TradeAnalyzer';
+
+// Trade Finder uses the full TradeAnalyzer component which:
+// 1. Auto-loads your roster on mount
+// 2. Shows InsightCard from master analyze
+// 3. Has an AI "Find Trades" button that calls /api/claude/trade/find with real roster data
 export default function TradeFinderPage() {
-  return (
-    <ModulePage title="Trade Finder">
-      <AiStrategyModule title="Trade Finder" focus="identifying trade targets and league partners" icon="🔍" />
-    </ModulePage>
-  );
+  return <TradeAnalyzer />;
 }
