@@ -6,6 +6,20 @@ import * as brain from '@/lib/fantasyBrain';
 import * as yahoo from '@/lib/yahooService';
 import * as mlbStats from '@/lib/mlbStatsService';
 
+// Deterministic grade from VOR — Claude cannot override this
+function computeGrade(totalVOR) {
+  if (totalVOR > 700)  return 'A+';
+  if (totalVOR > 550)  return 'A';
+  if (totalVOR > 400)  return 'A-';
+  if (totalVOR > 300)  return 'B+';
+  if (totalVOR > 220)  return 'B';
+  if (totalVOR > 140)  return 'B-';
+  if (totalVOR > 80)   return 'C+';
+  if (totalVOR > 30)   return 'C';
+  return 'D';
+}
+
+
 // Yahoo stat ID → human-readable name
 const STAT_MAP = {
   '7': 'R', '12': 'HR', '13': 'RBI', '16': 'SB', '3': 'AVG',
@@ -248,7 +262,10 @@ Respond ONLY with valid JSON (no markdown fences):
 
     return NextResponse.json({
       ...parsed,
-      vorByPlayer: vorTable,  // Always use engine-computed VOR, not Claude's
+      grade:      computeGrade(totalVOR),  // Always engine-computed — never trust Claude's grade
+      totalVOR,
+      avgVOR,
+      vorByPlayer: vorTable,               // Always engine-computed VOR, not Claude's
     });
 
   } catch (err) {
