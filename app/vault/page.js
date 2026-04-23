@@ -48,7 +48,13 @@ export default function Vault() {
                 <div className="card-inner-3d">
                   <div className="card-front-3d">
                     <img src={cardDef.img} alt={cardDef.name} className="card-image" />
-                    <div className="card-set-num">#{cardDef.set_num}</div>
+                    {cardDef.has_signature && (
+                      <div className={`card-signature ${cardDef.sig_style || ''}`}>{cardDef.signature_name}</div>
+                    )}
+                    {cardDef.has_patch && (
+                      <div className="card-patch" />
+                    )}
+                    <div className="card-set-num">CARD #{cardDef.set_num}</div>
                   </div>
                   <div className="card-back-3d" style={{ borderColor: '#00c8ff' }}>
                     <div className="series">{getSeries(cardDef.id)}</div>
@@ -57,7 +63,7 @@ export default function Vault() {
                       <h4>{cardDef.specialization || 'Player Intelligence'}</h4>
                       <p>{cardDef.lore || "A premium digital collectible."}</p>
                       <div className="card-serial-stamp" style={{ color: '#00c8ff', borderColor: 'rgba(0,200,255,0.4)' }}>
-                        1 / {cardDef.serial_total || '∞'}
+                        X / {cardDef.serial_total || '∞'}
                       </div>
                     </div>
                     <div className="back-footer">
