@@ -40,17 +40,8 @@ export default function Dashboard({ subscription }) {
     setRoster([])
     try {
       const { data } = await axios.get(`/api/yahoo/league/${key}/myroster`)
-      const players = data.players || []
-      // Sort by simple composite score (proxy for VOR) — no server call needed
-      const scored = players.map(p => {
-        const s = p.stats || {}
-        const isPitcher = ['SP','RP','P'].includes(String(p.position||'').split('/')[0])
-        const score = isPitcher
-          ? (parseFloat(s['28']||0)*8 + parseFloat(s['42']||0)*0.5 + parseFloat(s['32']||0)*5 - parseFloat(s['26']||4.5)*8)
-          : (parseFloat(s['12']||0)*4 + parseFloat(s['13']||0)*2 + parseFloat(s['7']||0)*2 + parseFloat(s['16']||0)*3 + parseFloat(s['3']||.250)*50)
-        return { ...p, _score: Math.round(score) }
-      }).sort((a,b) => b._score - a._score)
-      setRoster(scored)
+      // myroster route now returns players pre-sorted by VOR descending
+      setRoster(data.players || [])
     } catch (e) {
       console.error('Dashboard roster fetch failed:', e.message)
     } finally {
@@ -202,7 +193,8 @@ export default function Dashboard({ subscription }) {
                   <th>Pos</th>
                   <th>Slot</th>
                   <th>Key Stats</th>
-                  <th>Score</th>
+                  <th>VOR</th>
+                  <th>Scarcity</th>
                 </tr>
               </thead>
               <tbody>
@@ -213,6 +205,9 @@ export default function Dashboard({ subscription }) {
                     ? `${s['28']??'—'}W  ${s['42']??'—'}K  ${parseFloat(s['26']||0).toFixed(2)} ERA  ${parseFloat(s['27']||0).toFixed(2)} WHIP`
                     : `${s['12']??'—'}HR  ${s['13']??'—'}RBI  ${s['7']??'—'}R  ${s['16']??'—'}SB  .${String(parseFloat(s['3']||0).toFixed(3)).replace('0.','')}`
                   const slotColor = p.slot === 'IL' || p.slot === 'IL+' ? '#ef4444' : p.slot === 'BN' ? '#7aafc4' : '#00a86b'
+                  const vor = p.vor ?? 0
+                  const vorColor = vor >= 40 ? '#00a86b' : vor >= 15 ? '#f59e0b' : vor >= 0 ? '#e2e8f0' : '#ef4444'
+                  const scarcityColor = p.vorScarcity === 'scarce' ? '#ef4444' : p.vorScarcity === 'high' ? '#f59e0b' : '#7aafc4'
                   return (
                     <tr key={i}>
                       <td style={{ color: '#4a7a94', fontSize: 12, width: 28 }}>{i+1}</td>
@@ -220,9 +215,8 @@ export default function Dashboard({ subscription }) {
                       <td><span className="badge">{String(p.position||'').split('/')[0]}</span></td>
                       <td style={{ fontSize: 11, fontWeight: 700, color: slotColor }}>{p.slot || 'BN'}</td>
                       <td style={{ fontSize: 12, color: '#a0aab2', whiteSpace: 'nowrap' }}>{statLine}</td>
-                      <td style={{ fontWeight: 800, fontSize: 15,
-                        color: p._score >= 60 ? '#00a86b' : p._score >= 30 ? '#f59e0b' : '#e2e8f0'
-                      }}>{p._score}</td>
+                      <td style={{ fontWeight: 800, fontSize: 15, color: vorColor }}>{vor}</td>
+                      <td style={{ fontSize: 11, color: scarcityColor, textTransform: 'uppercase', letterSpacing: 0.5 }}>{p.vorScarcity || ''}</td>
                     </tr>
                   )
                 })}

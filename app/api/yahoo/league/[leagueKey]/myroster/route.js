@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { getRoster, getUserTeamKey, getBatchPlayerStats } from '@/lib/yahooService';
 import { getLiveProbablePitchers } from '@/lib/mlbStatsService';
+import { calculateVOR, getPositionalScarcity } from '@/lib/fantasyBrain';
+import { db } from '@/lib/database';
 
 export async function GET(request, { params }) {
   const { leagueKey } = await params;
@@ -83,7 +85,22 @@ export async function GET(request, { params }) {
 
     players = players.map(p => ({ ...p, slot: slotMap[p.key] || 'BN' }));
 
-    return NextResponse.json({ players, teamKey });
+    // ── Compute VOR for every player using the same engine as TeamAudit ──────
+    const settings = db.getLeagueSettings(guid, leagueKey) || {};
+    const numTeams    = settings.num_teams    || 10;
+    const scoringType = settings.scoring_type || 'headpoint';
+    players = players.map(p => {
+      const rawPos  = String(p.position || '').split('/')[0].trim();
+      const vorRaw  = calculateVOR(p.stats || {}, rawPos, numTeams, scoringType);
+      const vor     = typeof vorRaw === 'object' ? (vorRaw.vor ?? vorRaw.score ?? 0) : (vorRaw ?? 0);
+      const scarcity = getPositionalScarcity(rawPos, numTeams);
+      return { ...p, vor: Math.round(vor), vorScarcity: scarcity.tier || 'moderate' };
+    });
+
+    // Sort by VOR descending so Dashboard and other consumers get ranked order
+    const sorted = [...players].sort((a, b) => b.vor - a.vor);
+
+    return NextResponse.json({ players: sorted, teamKey });
   } catch (err) {
     console.error('[Pitching Hub] Roster fetch failed:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
