@@ -1,130 +1,132 @@
 'use client';
 
-const SECTIONS = [
-  {
-    title: '📊 Batting Stats',
-    items: [
-      { term: 'AVG', def: 'Batting Average — Hits ÷ At-Bats. .300 is excellent, .250 is average.' },
-      { term: 'HR', def: 'Home Runs — Solo power stat. Huge in every format.' },
-      { term: 'RBI', def: 'Runs Batted In — Drives runners home. Lineup spot dependent.' },
-      { term: 'R', def: 'Runs Scored — Being driven home. Leadoff/top-of-order hitters score more.' },
-      { term: 'SB', def: 'Stolen Bases — Speed stat. Scarce in modern MLB — value it.' },
-      { term: 'OBP', def: 'On-Base Percentage — Hits + BB + HBP ÷ PA. Better than AVG for true value.' },
-      { term: 'SLG', def: 'Slugging Percentage — Total bases ÷ At-Bats. Power indicator.' },
-      { term: 'OPS', def: 'On-Base + Slugging combined. .850+ is elite; .700 is average.' },
-      { term: 'wOBA', def: 'Weighted On-Base Average — Best single hitter metric. League avg ~.320.' },
-      { term: 'BB', def: 'Walks — Free passes. Count as points in H2H Points leagues.' },
-      { term: 'HBP', def: 'Hit By Pitch — Counts like a walk in many formats.' },
-      { term: 'XBH', def: 'Extra-Base Hits — Doubles + Triples + HRs.' },
-    ]
-  },
-  {
-    title: '⚾ Pitching Stats',
-    items: [
-      { term: 'ERA', def: 'Earned Run Average — Earned runs per 9 innings. Under 3.50 is elite.' },
-      { term: 'WHIP', def: 'Walks + Hits per Inning Pitched. Under 1.15 is elite; 1.30 is average.' },
-      { term: 'K', def: 'Strikeouts — The premier pitching counting stat.' },
-      { term: 'W', def: 'Wins — Team-dependent. A great pitcher can have a bad W-L record.' },
-      { term: 'SV', def: 'Saves — Closers only. Must enter with ≤3-run lead and record final 3 outs.' },
-      { term: 'HLD', def: 'Holds — Setup men who enter in save situations and hand off the lead.' },
-      { term: 'QS', def: 'Quality Start — 6+ IP, 3 ER or fewer. Rewards workload + effectiveness.' },
-      { term: 'IP', def: 'Innings Pitched — Volume stat. Matters for ERA/WHIP ratio stability.' },
-      { term: 'K/9', def: 'Strikeouts per 9 innings. 10+ is elite.' },
-      { term: 'BB/9', def: 'Walks per 9 innings. Under 2.5 is excellent control.' },
-      { term: 'FIP', def: 'Fielding Independent Pitching — ERA based only on K, BB, HR. True skill indicator.' },
-      { term: 'xFIP', def: 'Expected FIP — Normalizes HR rate. Predicts future ERA better than ERA itself.' },
-    ]
-  },
-  {
-    title: '📈 Advanced / Sabermetric Terms',
-    items: [
-      { term: 'VOR', def: 'Value Over Replacement — How much better a player is vs. a waiver pickup at the same position. The core Goin\' Yard scoring metric.' },
-      { term: 'ADP', def: 'Average Draft Position — Where players go on average in mock drafts. Used to find value.' },
-      { term: 'BABIP', def: 'Batting Average on Balls In Play. High BABIP (.350+) often regresses; low BABIP (.250-) often improves.' },
-      { term: 'Hard%', def: 'Hard-Hit Rate — Balls hit 95+ mph exit velocity. Correlates with future success.' },
-      { term: 'Barrel%', def: 'Ideal launch angle + exit velocity combo. Best predictor of HR/XBH production.' },
-      { term: 'xBA', def: 'Expected Batting Average based on exit velocity and launch angle. Cuts through luck.' },
-      { term: 'xERA', def: 'Expected ERA based on contact quality allowed. Better than ERA for future projections.' },
-      { term: 'SVOP', def: 'Save Opportunities — Closers can\'t get saves without them. Track this for closer streamers.' },
-      { term: 'LOB%', def: 'Left On Base % — Pitchers strand ~72% of runners on average. High LOB% regresses.' },
-    ]
-  },
-  {
-    title: '🏆 League Format Glossary',
-    items: [
-      { term: 'H2H Points', def: 'Head-to-Head Points — Each stat earns points weekly. Win/lose vs. one opponent. Most beginner-friendly.' },
-      { term: 'H2H Categories', def: 'Head-to-Head Categories — Win/lose each individual stat category weekly. Requires balanced roster.' },
-      { term: 'Roto', def: 'Rotisserie — Season-long category rankings. Every point matters all year. Strategic drops/adds.' },
-      { term: 'Streaming', def: 'Adding a pitcher from waivers for 1-2 starts, then dropping them. Key H2H Points strategy.' },
-      { term: '2-Start SP', def: 'A starting pitcher with two scheduled starts in a given week. Huge value in H2H formats.' },
-      { term: 'Waiver Priority', def: 'Claim order for players dropped. Lower priority = earlier claim. Guard yours early.' },
-      { term: 'FAAB', def: 'Free Agent Acquisition Budget — Blind bid system for waiver adds. Budget wisely.' },
-      { term: 'Holds Strategy', def: 'In H2H Categories, targeting HLD accumulation via high-leverage relievers is an underused edge.' },
-    ]
-  },
-  {
-    title: '📅 Season Strategy Terms',
-    items: [
-      { term: 'Punt', def: 'Intentionally ignoring a category to dominate others. "Punting saves" = streaming SPs instead.' },
-      { term: 'Handcuff', def: 'Rostering a backup behind an injury-prone star (especially RBs in football — in baseball, a closer backup).' },
-      { term: 'Upside Play', def: 'A player with lower floor but high ceiling — worth the risk if you need production.' },
-      { term: 'Floor', def: 'The minimum production you can reliably expect from a player each week.' },
-      { term: 'Ceiling', def: 'The maximum production a player could deliver in a great week/season.' },
-      { term: 'Regression', def: 'Stats moving back toward career averages. High BABIP regresses down; low BABIP regresses up.' },
-      { term: 'IL Stash', def: 'Holding an injured player to activate later, saving a roster spot for depth.' },
-      { term: 'Sell High', def: 'Trading a player at peak value before regression hits. Often after a hot streak.' },
-      { term: 'Buy Low', def: 'Acquiring a player after a cold streak when their price is down but underlying skills are intact.' },
-    ]
-  },
-];
+import React from 'react';
 
 export default function Baseball101Page() {
   return (
     <div>
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700 }}>🎓 Baseball 101</h1>
-        <p style={{ color: '#7aafc4' }}>
-          Definitions, acronyms, and strategy terms — everything you need to understand fantasy baseball
+      <h1 style={{ fontSize: 32, marginBottom: 8, color: 'var(--text-main)' }}>🎓 Baseball 101</h1>
+      <p style={{ color: 'var(--text-muted)', marginBottom: 32, fontSize: 16 }}>
+        The beginner's guide to understanding the sport and dominating your fantasy league.
+      </p>
+
+      {/* The Core Objective */}
+      <div className="card" style={{ marginBottom: 24 }}>
+        <h2 style={{ color: 'var(--primary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span>⚾</span> The absolute basics
+        </h2>
+        <p style={{ color: 'var(--text-main)', fontSize: 15, lineHeight: 1.6 }}>
+          The core objective of baseball is simple: score more <strong>Runs</strong>.
+          A run is scored when a hitter safely hits the ball, rounds all four bases in consecutive order, and crosses home plate.
+          Meanwhile, the opposing team (the defense on the field) tries to record three <strong>Outs</strong>. An out is recorded when a batter fails to reach base safely—most commonly by striking out, hitting a ball that is caught in the air before it touches the ground, or having the ball thrown to the base before they can run there. Once the defense gets three outs, the teams swap places and it is their turn to hit.
+          There are nine <strong>Innings</strong> in a standard game. Each inning is split into two halves: the <strong>Top</strong> of the inning (where the Away team bats) and the <strong>Bottom</strong> of the inning (where the Home team bats). The break in between is called the Middle of the inning.
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {SECTIONS.map((section, si) => (
-          <div key={si} className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{
-              padding: '12px 20px', borderBottom: '1px solid #1e3d5c',
-              fontSize: 14, fontWeight: 700, color: '#4aafdb',
-              background: 'rgba(74,175,219,0.06)'
-            }}>
-              {section.title}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, marginBottom: 32 }}>
+        {/* Hitting Stats */}
+        <div className="card">
+          <h2 style={{ borderBottom: '1px solid var(--border)', paddingBottom: 12, marginBottom: 16, fontSize: 18 }}>
+            Hitter Dictionary (Offense)
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>AVG (Batting Average)</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Hits divided by At-Bats. A good average is around .270. Anything over .300 is elite.</div>
             </div>
-            <div style={{ padding: '8px 0' }}>
-              {section.items.map((item, ii) => (
-                <div key={ii} style={{
-                  display: 'grid',
-                  gridTemplateColumns: '100px 1fr',
-                  gap: 12,
-                  padding: '10px 20px',
-                  borderBottom: ii < section.items.length - 1 ? '1px solid rgba(30,61,92,0.5)' : 'none',
-                }}>
-                  <div style={{
-                    fontFamily: 'monospace', fontWeight: 700, fontSize: 13,
-                    color: '#00a86b', letterSpacing: 0.5, paddingTop: 1
-                  }}>
-                    {item.term}
-                  </div>
-                  <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.55 }}>
-                    {item.def}
-                  </div>
-                </div>
-              ))}
+            <div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>HR (Home Run)</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Hitting the ball out of the park, instantly scoring a run for the hitter and anyone else on base.</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>RBI (Runs Batted In)</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>You get an RBI when your hit successfully brings a teammate across home plate to score a run.</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>SB (Stolen Base)</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Running to the next base while the pitcher is throwing the ball to the catcher. Huge for fantasy points!</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>OBP (On-Base Percentage)</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>How often a batter reaches base via a hit or a walk.</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>OPS (On-Base Plus Slugging)</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>A combined metric of OBP and Slugging Percentage (power). An OPS over .800 is great; over .900 is MVP-level.</div>
             </div>
           </div>
-        ))}
+        </div>
+
+        {/* Pitching Stats */}
+        <div className="card">
+          <h2 style={{ borderBottom: '1px solid var(--border)', paddingBottom: 12, marginBottom: 16, fontSize: 18 }}>
+            Pitcher Dictionary (Defense)
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>ERA (Earned Run Average)</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>How many runs a pitcher gives up per 9 innings. <strong>Lower is better!</strong> An ERA under 3.50 is fantastic.</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>WHIP</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Walks + Hits per Inning Pitched. How many guys get on base against you. Under 1.20 is great.</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>K (Strikeout)</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Getting three strikes on a batter. Pitchers who strike out many batters are highly prized in fantasy.</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>W (Wins) & QS (Quality Starts)</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>You get a Win if your team leads when you leave the game. A Quality Start is 6+ innings allowing 3 runs or less.</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>SV (Saves)</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>A specialized stat for Relief Pitchers who come into the 9th inning to protect a close lead.</div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div style={{ marginTop: 20, padding: '12px 16px', borderRadius: 8, background: 'rgba(74,175,219,0.06)', border: '1px solid #1e3d5c', fontSize: 12, color: '#7aafc4' }}>
-        💡 Tip: The Goin' Yard AI uses VOR (Value Over Replacement) as its primary player scoring metric — every audit, waiver score, and trade evaluation is grounded in this number.
+      {/* Advanced Stats */}
+      <div className="card" style={{ marginBottom: 32 }}>
+        <h2 style={{ borderBottom: '1px solid var(--border)', paddingBottom: 12, marginBottom: 16, fontSize: 18, color: '#4aafdb' }}>
+          Advanced Fantasy Analytics
+        </h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>VOR (Value Over Replacement)</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.5 }}>
+              This is the holy grail metric for fantasy baseball. VOR calculates how many more points/stats a player produces compared to a totally average, "free" replacement-level player you could just pick off the Waiver Wire.
+              <br /><br />
+              <strong>Why it matters:</strong> A First Baseman who hits 25 home runs is good, but a Catcher who hits 25 home runs has an exponentially higher VOR, because good hitting catchers are incredibly rare! VOR tells you exactly who is actually helping you win your league by accounting for positional scarcity.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Fantasy Formats */}
+      <div className="card" style={{ marginBottom: 32 }}>
+        <h2 style={{ color: 'var(--text-main)', marginBottom: 16, fontSize: 20 }}>Fantasy League Formats</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+          <div style={{ background: 'rgba(255,255,255,0.03)', padding: 16, borderRadius: 8 }}>
+            <div style={{ fontWeight: 700, color: 'var(--primary)', marginBottom: 8, fontSize: 16 }}>Head-to-Head (Points)</div>
+            <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+              Works like fantasy football. Every action (a home run, a strikeout) earns physical points. The person with the most total points at the end of the week wins the matchup. Starting Pitchers are extremely valuable here.
+            </p>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.03)', padding: 16, borderRadius: 8 }}>
+            <div style={{ fontWeight: 700, color: 'var(--success)', marginBottom: 8, fontSize: 16 }}>Head-to-Head (Categories)</div>
+            <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+              Instead of one total score, you battle your opponent across ~10 different categories (e.g., who hit the most Home Runs?). You get a win for every category you beat them in. Balanced teams thrive here.
+            </p>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.03)', padding: 16, borderRadius: 8 }}>
+            <div style={{ fontWeight: 700, color: '#eab308', marginBottom: 8, fontSize: 16 }}>Rotisserie (Roto)</div>
+            <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+              No weekly matchups! You rank against every team in the league simultaneously across all stat categories over the entire 162-game season. It requires extreme consistency and patience.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
