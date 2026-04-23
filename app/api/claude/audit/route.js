@@ -61,12 +61,23 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { league_key, team_key } = body;
+    const { league_key, team_key, force = false } = body;
     // Accept pre-fetched roster from frontend as fallback
     const frontendRoster = body.my_roster || body.roster || [];
 
     const settings = db.getLeagueSettings(guid, league_key) || {};
     const scoringLabel = SCORING_TYPE_MAP[settings.scoring_type] || settings.scoring_type || 'H2H Points';
+
+    // ── Daily cache check (same pattern as /analyze) ──────────────────────────
+    // 'audit_' prefix keeps audit cache separate from master analysis cache
+    const cacheKey = `audit_${league_key}`;
+    if (!force) {
+      const cached = db.getAnalysisCache(guid, cacheKey);
+      if (cached) {
+        console.log(`[audit] Serving cached result for ${guid}:${league_key}`);
+        return NextResponse.json({ ...cached, fromCache: true });
+      }
+    }
 
     // ── Fetch rich context server-side in parallel ────────────────────────────
     const [pitchingCtx, newsRaw, standingsRaw] = await Promise.allSettled([
@@ -259,13 +270,22 @@ Respond ONLY with valid JSON (no markdown fences). Do NOT include vorByPlayer �
       parsed = { grade: '?', raw };
     }
 
-    return NextResponse.json({
+    const result = {
       ...parsed,
       grade:      computeGrade(totalVOR),  // Always engine-computed — never trust Claude's grade
       totalVOR,
       avgVOR,
       vorByPlayer: vorTable,               // Always engine-computed VOR, not Claude's
-    });
+      fromCache:  false,
+    };
+
+    // ── Write to daily cache (only if Claude returned real prose) ─────────────
+    if (parsed.championshipPath) {
+      db.setAnalysisCache(guid, cacheKey, result);
+      console.log(`[audit] Cached result for ${guid}:${league_key}`);
+    }
+
+    return NextResponse.json(result);
 
   } catch (err) {
     console.error('[claude/audit]', err.message);

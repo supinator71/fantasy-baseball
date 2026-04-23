@@ -29,12 +29,12 @@ export default function RosterAudit() {
     if (selectedLeague) runAudit(selectedLeague);
   }, [selectedLeague]);
 
-  async function runAudit(leagueKey) {
+  async function runAudit(leagueKey, force = false) {
     if (!leagueKey) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.post('/api/claude/audit', { league_key: leagueKey });
+      const res = await axios.post('/api/claude/audit', { league_key: leagueKey, force });
       setAudit(res.data);
     } catch (err) {
       const msg = err.response?.data?.error || err.message || 'Audit failed';
@@ -116,10 +116,13 @@ export default function RosterAudit() {
           <div style={{ fontSize: 16, lineHeight: 1.7, fontWeight: 500 }}>
             {audit.championshipPath || 'Analysis loading…'}
           </div>
+          {audit.fromCache && (
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8 }}>⚡ Cached</span>
+          )}
           <button
             className="btn btn-secondary"
             style={{ marginTop: 16, alignSelf: 'flex-start', fontSize: 13 }}
-            onClick={() => runAudit(selectedLeague)}
+            onClick={() => runAudit(selectedLeague, true)}
           >
             🔄 Refresh Audit
           </button>
