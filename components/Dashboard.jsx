@@ -7,7 +7,7 @@ import FeedbackBox from './shared/FeedbackBox'
 import { useLeague } from '@/lib/context/LeagueContext'
 
 export default function Dashboard({ subscription }) {
-  const { leagues, selectedLeague, setSelectedLeague, loading } = useLeague()
+  const { leagues, selectedLeague, setSelectedLeague, loading, refreshAnalysis, refreshesRemaining, refreshLimitReached, aiLoading } = useLeague()
   const [fromCache, setFromCache] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [cachedAt, setCachedAt] = useState(null)
@@ -138,6 +138,17 @@ export default function Dashboard({ subscription }) {
             )}
             <LastUpdated cachedAt={cachedAt} fromCache={fromCache} ttlLabel="5 min cache"
               onRefresh={() => window.location.reload()} loading={loading} />
+            {selectedLeague && (
+              <button
+                onClick={refreshAnalysis}
+                disabled={aiLoading || refreshLimitReached}
+                className="btn btn-primary"
+                style={{ fontSize: 12, padding: '6px 14px', whiteSpace: 'nowrap' }}
+                title={refreshLimitReached ? 'Daily refresh limit reached' : `${refreshesRemaining} force refresh${refreshesRemaining !== 1 ? 'es' : ''} remaining today`}
+              >
+                {aiLoading ? '⟳ Analyzing...' : `🔄 Refresh AI${refreshesRemaining < 3 ? ` (${refreshesRemaining} left)` : ''}`}
+              </button>
+            )}
           </div>
         </div>
         {loading ? (
