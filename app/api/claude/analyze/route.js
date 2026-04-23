@@ -283,11 +283,24 @@ The JSON keys below are FORMAT INSTRUCTIONS — replace ALL quoted placeholder t
     "avoid": {"player": "Name", "reason": "why to avoid"}
   },
   "audit": {
-    "grade": "[A/B/C/D based on roster VOR]",
-    "headline": "[one sentence verdict on this roster]",
-    "strength": "[#1 roster strength — player name and stat value from the data above]",
-    "weakness": "[#1 roster weakness — category or player name with stat from the data above]",
-    "topPlayer": {"name": "[player name from roster]", "position": "[position]", "statLine": "[stat:value pairs from data above only]"}
+    "grade": "[A+/A/A-/B+/B/B-/C+/C/D/F based on overall roster VOR — be specific]",
+    "headline": "[one punchy sentence verdict on this roster's overall strength]",
+    "championshipPath": "[one sentence on how THIS specific team wins the league, citing their actual best players]",
+    "strengths": [
+      "[Strength 1 — cite a specific player from the roster data above with their actual stat]",
+      "[Strength 2 — another player or category advantage]",
+      "[Strength 3]"
+    ],
+    "weaknesses": [
+      "[Weakness 1 — cite a specific roster gap, low-VOR player, or category hole]",
+      "[Weakness 2]",
+      "[Weakness 3]"
+    ],
+    "moves": [
+      {"action": "[Specific move: drop X / add Y, or trade suggestion]", "priority": "immediate", "reasoning": "[why, citing actual stats from the data above]"},
+      {"action": "[Move 2]", "priority": "high", "reasoning": "[why]"}
+    ],
+    "topPlayer": {"name": "[best player from roster]", "position": "[position]", "statLine": "[stat:value pairs from data above only]"}
   },
   "gameplan": {
     "headline": "The single most important strategic move for this week",

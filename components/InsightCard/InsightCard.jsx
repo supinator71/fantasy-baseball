@@ -125,32 +125,77 @@ function renderPitching(data, accent) {
 }
 
 function renderAudit(data, accent) {
+  // Normalise to arrays — handle both new (arrays) and old (single strings) shapes
+  const strengths  = data.strengths  || (data.strength  ? [data.strength]  : []);
+  const weaknesses = data.weaknesses || (data.weakness  ? [data.weakness]  : []);
+  const moves      = data.moves      || [];
+
   return (
     <>
+      {/* Grade + championship path */}
       <div className={styles.gradeRow}>
         <div className={styles.gradeBadge} style={{ borderColor: accent, color: accent }}>{data.grade || '?'}</div>
-        {data.topPlayer && (
-          <div className={styles.topPlayerPill}>
-            <span className={styles.topPlayerName}>⭐ {data.topPlayer.name}</span>
-            <span className={styles.topPlayerStat}>{data.topPlayer.statLine}</span>
-          </div>
-        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {data.championshipPath && (
+            <p style={{ margin: 0, fontSize: 13, color: '#e2e8f0', lineHeight: 1.5 }}>{data.championshipPath}</p>
+          )}
+          {data.topPlayer && (
+            <div className={styles.topPlayerPill} style={{ marginTop: data.championshipPath ? 6 : 0 }}>
+              <span className={styles.topPlayerName}>⭐ {data.topPlayer.name}</span>
+              <span className={styles.topPlayerStat}>{data.topPlayer.statLine}</span>
+            </div>
+          )}
+        </div>
       </div>
-      {data.strength && (
-        <div className={styles.auditLine} style={{ borderColor: '#22c55e' }}>
-          <span className={styles.auditIcon}>💪</span>
-          <span>{data.strength}</span>
+
+      {/* Strengths */}
+      {strengths.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          {strengths.map((s, i) => (
+            <div key={i} className={styles.auditLine} style={{ borderColor: '#22c55e' }}>
+              <span className={styles.auditIcon}>💪</span>
+              <span>{s}</span>
+            </div>
+          ))}
         </div>
       )}
-      {data.weakness && (
-        <div className={styles.auditLine} style={{ borderColor: '#ef4444' }}>
-          <span className={styles.auditIcon}>⚠️</span>
-          <span>{data.weakness}</span>
+
+      {/* Weaknesses */}
+      {weaknesses.length > 0 && (
+        <div style={{ marginTop: 6 }}>
+          {weaknesses.map((w, i) => (
+            <div key={i} className={styles.auditLine} style={{ borderColor: '#ef4444' }}>
+              <span className={styles.auditIcon}>⚠️</span>
+              <span>{w}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Recommended moves */}
+      {moves.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#7aafc4', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
+            Recommended Moves
+          </div>
+          {moves.map((m, i) => {
+            const priorityColor = m.priority === 'immediate' ? '#ef4444' : m.priority === 'high' ? '#f59e0b' : '#4aafdb';
+            return (
+              <div key={i} style={{
+                background: '#0c1d35', borderRadius: 6, padding: '8px 12px', marginBottom: 6,
+                borderLeft: `3px solid ${priorityColor}`
+              }}>
+                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2 }}>{m.action}</div>
+                {m.reasoning && <p style={{ margin: 0, fontSize: 12, color: '#7aafc4', lineHeight: 1.4 }}>{m.reasoning}</p>}
+              </div>
+            );
+          })}
         </div>
       )}
     </>
   );
 }
+
 
 function renderGameplan(data, accent) {
   const pri = PRIORITY_STYLES[data.priority] || PRIORITY_STYLES.medium;
