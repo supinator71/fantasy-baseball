@@ -83,7 +83,7 @@ export async function GET(request, { params }) {
 
     players = players.map(p => ({ ...p, slot: slotMap[p.key] || 'BN' }));
 
-    return NextResponse.json({ players });
+    return NextResponse.json({ players, teamKey });
   } catch (err) {
     console.error('[Pitching Hub] Roster fetch failed:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
