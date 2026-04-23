@@ -62,9 +62,11 @@ export default function Vault() {
                       <div style={{ color: '#00c8ff', fontSize: 11, fontWeight: 700, marginBottom: 4 }}>FACTORY SPECIFICATION</div>
                       <h4>{cardDef.specialization || 'Player Intelligence'}</h4>
                       <p>{cardDef.lore || "A premium digital collectible."}</p>
-                      <div className="card-serial-stamp" style={{ color: '#00c8ff', borderColor: 'rgba(0,200,255,0.4)' }}>
-                        X / {cardDef.serial_total || '∞'}
-                      </div>
+                      {cardDef.serial_total && (
+                        <div className="card-serial-stamp" style={{ color: '#00c8ff', borderColor: 'rgba(0,200,255,0.4)' }}>
+                          X / {cardDef.serial_total}
+                        </div>
+                      )}
                     </div>
                     <div className="back-footer">
                       <span className="rarity-tag" style={{ color: '#00c8ff', borderColor: '#00c8ff' }}>{cardDef.rarity.toUpperCase()} UNIT</span>
