@@ -27,6 +27,66 @@ const IL_SLOTS    = new Set(['IL', 'IL+', 'IL7', 'IL10', 'IL15', 'IL60']);
 const IL_STATUSES = new Set(['IL', 'IL10', 'IL15', 'IL60', 'DL', 'O', 'OUT', 'SUSP', 'NA']);
 const DTD_STATUSES = new Set(['DTD', 'Q', 'QUESTIONABLE']);
 
+// ── Deterministic grade from VOR (cannot be overridden by Claude) ─────────────
+function computeGrade(totalVOR) {
+  if (totalVOR > 700) return 'A+';
+  if (totalVOR > 550) return 'A';
+  if (totalVOR > 400) return 'A-';
+  if (totalVOR > 300) return 'B+';
+  if (totalVOR > 220) return 'B';
+  if (totalVOR > 140) return 'B-';
+  if (totalVOR > 80)  return 'C+';
+  if (totalVOR > 30)  return 'C';
+  return 'D';
+}
+
+// ── Guardrail: sanitize Claude output against real data ───────────────────────
+// Removes hallucinated players and overrides computed values so Claude
+// can never fabricate availability, roster membership, or grade.
+function sanitizeAnalysis(analysis, { roster, freeAgents, totalVOR }) {
+  const normName = n => String(n || '').toLowerCase().replace(/[^a-z]/g, '');
+
+  const rosterSet = new Set(roster.map(p => normName(p.name)));
+  const faSet     = new Set(freeAgents.map(p => normName(p.name)));
+
+  const onRoster = name => rosterSet.has(normName(name));
+  const onFAList = name => faSet.has(normName(name));
+
+  // 1. Audit grade — always engine-computed, never Claude's
+  if (analysis.audit) {
+    analysis.audit.grade = computeGrade(totalVOR);
+    // Verify topPlayer is real
+    if (analysis.audit.topPlayer?.name && !onRoster(analysis.audit.topPlayer.name)) {
+      analysis.audit.topPlayer = null;
+    }
+  }
+
+  // 2. Waiver adds — only allow players confirmed on the FA list
+  if (analysis.waiver?.adds?.length) {
+    const before = analysis.waiver.adds.length;
+    analysis.waiver.adds = analysis.waiver.adds.filter(a => onFAList(a.player));
+    if (analysis.waiver.adds.length < before) {
+      console.warn(`[guardrail] Stripped ${before - analysis.waiver.adds.length} hallucinated waiver add(s)`);
+    }
+  }
+
+  // 3. Waiver drops — only allow players confirmed on the roster
+  if (analysis.waiver?.drops?.length) {
+    analysis.waiver.drops = analysis.waiver.drops.filter(d => onRoster(d.player));
+  }
+
+  // 4. Start/Sit — only allow roster players
+  if (analysis.startSit?.starts?.length) {
+    analysis.startSit.starts = analysis.startSit.starts.filter(s => onRoster(s.player));
+  }
+  if (analysis.startSit?.sits?.length) {
+    analysis.startSit.sits = analysis.startSit.sits.filter(s => onRoster(s.player));
+  }
+
+  return analysis;
+}
+
+
 function playerILTag(p) {
   const slot   = String(p.slot   || '').toUpperCase();
   const status = String(p.status || '').toUpperCase();
@@ -372,10 +432,17 @@ The JSON keys below are FORMAT INSTRUCTIONS — replace ALL quoted placeholder t
       analysis = { waiver: { headline: 'Analysis unavailable', summary: raw }, startSit: {}, pitching: {}, audit: {}, gameplan: {}, matchup: {} };
     }
 
+    // ── Guardrail pass — strip hallucinated data, override computed values ─────
+    analysis = sanitizeAnalysis(analysis, {
+      roster,
+      freeAgents,
+      totalVOR,
+    });
+
     const refreshesUsed = db.getForceRefreshCount(guid);
     const refreshesRemaining = Math.max(0, db.DAILY_FORCE_LIMIT - refreshesUsed);
 
-    const payload = { analysis, scoredWaiver: scoredWaiver.slice(0, 10), lineupRecs: null, model };
+    const payload = { analysis, scoredWaiver: scoredWaiver.slice(0, 10), lineupRecs: null, model, totalVOR, avgVOR };
     db.setAnalysisCache(guid, league_key, payload);
 
     return NextResponse.json({ ...payload, fromCache: false, refreshesRemaining, refreshesLimit: db.DAILY_FORCE_LIMIT });
