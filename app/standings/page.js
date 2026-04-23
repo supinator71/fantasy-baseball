@@ -8,7 +8,7 @@ import AiQuestionBox from '@/components/shared/AiQuestionBox';
 import Standings from '@/components/Standings/Standings';
 
 export default function StandingsPage() {
-  const { selectedLeague, aiAnalysis, aiLoading, leagueData } = useLeague();
+  const { leagues, selectedLeague, setSelectedLeague, aiAnalysis, aiLoading, leagueData } = useLeague();
 
   // Raw standings data (fetched inside Standings component already)
   // We duplicate a light fetch here just for the AI context string
@@ -76,14 +76,27 @@ Use only the data above. Be specific about team names and records.`,
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>◎ League Standings</h1>
           <p style={{ color: '#7aafc4' }}>Live standings · AI playoff positioning analysis on demand</p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={runStandingsAnalysis}
-          disabled={aiRecLoading || !standingsData.length}
-          style={{ whiteSpace: 'nowrap' }}
-        >
-          {aiRecLoading ? '⟳ Analyzing...' : '⚡ Get AI Analysis'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {leagues?.length > 1 && (
+            <select
+              value={selectedLeague || ''}
+              onChange={e => setSelectedLeague(e.target.value)}
+              style={{ minWidth: 200, padding: '8px 12px', borderRadius: 6, background: '#122840', color: '#fff', border: '1px solid #1e3d5c' }}
+            >
+              {leagues.map((l, i) => (
+                <option key={i} value={l.league_key}>{l.name || l.league_key}</option>
+              ))}
+            </select>
+          )}
+          <button
+            className="btn btn-primary"
+            onClick={runStandingsAnalysis}
+            disabled={aiRecLoading || !standingsData.length}
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            {aiRecLoading ? '⟳ Analyzing...' : '⚡ Get AI Analysis'}
+          </button>
+        </div>
       </div>
 
       {/* Master-analyze InsightCard — gameplan section is most relevant for standings context */}
