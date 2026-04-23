@@ -167,6 +167,10 @@ export async function POST(request) {
     // ── Roster diagnosis for category needs ──────────────────────────────────
     const diagnosis = brain.buildRosterDiagnosis(activePlayers, settings, null, pitchingContext);
 
+    const totalVOR  = vorTable.reduce((s, p) => s + (p.vor || 0), 0);
+    const avgVOR    = vorTable.length ? Math.round(totalVOR / vorTable.length) : 0;
+    const topPlayer = vorTable[0];
+
     // ── Prompt ────────────────────────────────────────────────────────────────
     const raw = await callClaudeFast([{
       role: 'user',
@@ -182,38 +186,50 @@ ${standingsBlock}${pitchingBlock}
 
 LEAGUE: "${settings.name || league_key}" | Teams: ${settings.num_teams || 10} | Format: ${scoringLabel}
 
-TEAM ROSTER — 2026 Yahoo season stats (each line: Name (Pos) [Slot] — stats):
+TEAM ROSTER — 2026 Yahoo season stats:
 ${rosterBlock}
 
-CATEGORY NEEDS (engine-computed from this roster):
+CATEGORY NEEDS (engine-computed):
 ${diagnosis.promptBlock || 'N/A'}
 
-PRE-CALCULATED VOR (engine-computed — use these exact values in vorByPlayer, do NOT recalculate):
+PRE-CALCULATED VOR RANKINGS (engine-computed — use these exact values):
+Team Total VOR: ${totalVOR} | Avg VOR per player: ${avgVOR} | Best: ${topPlayer?.name || 'N/A'} (VOR:${topPlayer?.vor || 0})
 ${vorBlock}
+
+GRADING SCALE — base "grade" on Total VOR of ${totalVOR} (be accurate and honest, do NOT round up):
+• A+ = Total VOR > 700 (elite, championship-caliber)
+• A  = Total VOR 550–700 (strong contender)
+• A- = Total VOR 400–549 (above average)
+• B+ = Total VOR 300–399 (solid, playoff team)
+• B  = Total VOR 220–299 (average)
+• B- = Total VOR 140–219 (below average)
+• C+ = Total VOR 80–139 (weak, needs significant help)
+• C  = Total VOR 30–79 (rebuilding)
+• D  = Total VOR < 30 (very early season)
 
 ⛔ IL PLAYERS — do NOT mention as strengths or streaming options:
 ${ilPlayers.length ? ilPlayers.map(p => `  • ${p.name} (${p.position}) [${p.status || 'injured'}]`).join('\n') : '  None'}
 
-BREAKING NEWS (factor in if relevant):
+BREAKING NEWS:
 ${news ? news.slice(0, 600) : 'None'}
 
-Perform a comprehensive team audit. Be specific — cite actual player names and stats from above.
+Perform a comprehensive team audit. Be specific — cite actual player names and stats.
 Respond ONLY with valid JSON (no markdown fences):
 {
-  "grade": "[A+/A/A-/B+/B/B-/C+/C/D/F based on roster VOR distribution above]",
-  "championshipPath": "[one specific sentence on this team's path to win, citing actual roster strengths]",
+  "grade": "[Apply grading scale above to Total VOR ${totalVOR} — be accurate]",
+  "championshipPath": "[one specific sentence citing actual roster strengths and how THIS team wins]",
   "strengths": [
-    "[Strength citing a specific player + their actual stat above]",
-    "[Strength 2 — another player or category advantage]",
+    "[Strength citing a specific player + their actual stat]",
+    "[Strength 2]",
     "[Strength 3]"
   ],
   "weaknesses": [
-    "[Weakness citing a specific gap or low-VOR player from above]",
+    "[Weakness citing a specific gap or low-VOR player]",
     "[Weakness 2]",
-    "[Weakness 3 — category hole if relevant to ${scoringLabel}]"
+    "[Weakness 3]"
   ],
   "moves": [
-    {"action": "[Specific drop X / add Y or trade suggestion]", "priority": "immediate", "reasoning": "[why, citing actual stats and VOR above]"},
+    {"action": "[Specific drop X / add Y or trade suggestion]", "priority": "immediate", "reasoning": "[why, citing actual stats and VOR]"},
     {"action": "[Move 2]", "priority": "high", "reasoning": "[why]"},
     {"action": "[Move 3]", "priority": "medium", "reasoning": "[why]"}
   ],

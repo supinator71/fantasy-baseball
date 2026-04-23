@@ -53,6 +53,13 @@ export default function TeamAudit({ leagueSettings }) {
     }
   }, [selectedTeam])
 
+  // Auto-run audit whenever roster populates — Rich-Data-On-Load pattern
+  useEffect(() => {
+    if (roster.length > 0 && !loading) {
+      runAudit()
+    }
+  }, [roster])
+
   async function loadData() {
     setRosterLoading(true)
     setRoster([])
@@ -166,7 +173,8 @@ export default function TeamAudit({ leagueSettings }) {
         )}
       </div>
 
-      <InsightCard data={aiAnalysis?.audit} type="audit" loading={aiLoading && !audit} />
+      <InsightCard data={audit || aiAnalysis?.audit} type="audit" loading={aiLoading && !audit && !aiAnalysis} />
+
 
       {error && (
         <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', borderRadius: 8, padding: 16, marginBottom: 16, color: '#ef4444' }}>
@@ -175,15 +183,16 @@ export default function TeamAudit({ leagueSettings }) {
       )}
 
       {/* Roster preview */}
+      {/* Roster chip preview — shown while audit is running */}
       {rosterLoading && <div className="loading">Loading your roster...</div>}
 
       {!rosterLoading && roster.length > 0 && !audit && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 12 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600 }}>Roster ({roster.length} players)</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 600 }}>Roster ({roster.length} players) — Running analysis...</h3>
             <button className="btn btn-primary" onClick={runAudit} disabled={loading}
               style={{ padding: '10px 24px', fontSize: 14 }}>
-              {loading ? '⟳ Analyzing...' : '⚡ Run Full Audit'}
+              {loading ? '⟳ Analyzing...' : '⟳ Re-run Audit'}
             </button>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
