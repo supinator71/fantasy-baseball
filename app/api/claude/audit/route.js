@@ -227,29 +227,28 @@ ${ilPlayers.length ? ilPlayers.map(p => `  • ${p.name} (${p.position}) [${p.st
 BREAKING NEWS:
 ${news ? news.slice(0, 600) : 'None'}
 
-Perform a comprehensive team audit. Be specific — cite actual player names and stats.
-Respond ONLY with valid JSON (no markdown fences):
+Perform a comprehensive team audit. Be specific — cite actual player names, VOR values, and stats from the data above.
+Respond ONLY with valid JSON (no markdown fences). Do NOT include vorByPlayer — it is handled server-side.
 {
-  "grade": "[Apply grading scale above to Total VOR ${totalVOR} — be accurate]",
-  "championshipPath": "[one specific sentence citing actual roster strengths and how THIS team wins]",
+  "grade": "[engine-computed]",
+  "championshipPath": "[one sentence: how does THIS specific team win, citing 1-2 actual player names + their VOR/stats]",
   "strengths": [
-    "[Strength citing a specific player + their actual stat]",
-    "[Strength 2]",
-    "[Strength 3]"
+    "[cite player name + actual VOR value + stat]",
+    "[cite player name + actual VOR value + stat]",
+    "[cite player name + actual VOR value + stat]"
   ],
   "weaknesses": [
-    "[Weakness citing a specific gap or low-VOR player]",
-    "[Weakness 2]",
-    "[Weakness 3]"
+    "[cite specific gap, low-VOR player name, or missing category with numbers]",
+    "[cite specific gap or player + VOR]",
+    "[cite specific gap or player + VOR]"
   ],
   "moves": [
-    {"action": "[Specific drop X / add Y or trade suggestion]", "priority": "immediate", "reasoning": "[why, citing actual stats and VOR]"},
-    {"action": "[Move 2]", "priority": "high", "reasoning": "[why]"},
-    {"action": "[Move 3]", "priority": "medium", "reasoning": "[why]"}
-  ],
-  "vorByPlayer": ${JSON.stringify(vorTable.map(p => ({ name: p.name, position: p.position, vor: p.vor, scarcity: p.scarcity })))}
+    {"action": "[Drop X / Add Y — real names from the roster data]", "priority": "immediate", "reasoning": "[why, citing VOR numbers and stats]"},
+    {"action": "[Move 2 — real names]", "priority": "high", "reasoning": "[why]"},
+    {"action": "[Move 3 — real names]", "priority": "medium", "reasoning": "[why]"}
+  ]
 }`
-    }], 1800);
+    }], 1400);
 
     // ── Parse response ────────────────────────────────────────────────────────
     let parsed = {};
