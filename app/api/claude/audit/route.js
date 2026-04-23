@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
-import { callClaudeFast } from '@/lib/claude';
+import { callClaudeJSON } from '@/lib/claude';
 import { db } from '@/lib/database';
 import * as brain from '@/lib/fantasyBrain';
 import * as yahoo from '@/lib/yahooService';
@@ -186,7 +186,7 @@ export async function POST(request) {
     const topPlayer = vorTable[0];
 
     // ── Prompt ────────────────────────────────────────────────────────────────
-    const raw = await callClaudeFast([{
+    const raw = await callClaudeJSON([{
       role: 'user',
       content: `You are Goin' Yard HQ — an expert fantasy baseball roster analyst for the 2026 MLB season.
 
