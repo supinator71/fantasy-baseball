@@ -5,6 +5,7 @@ import { db } from '@/lib/database';
 import * as yahoo from '@/lib/yahooService';
 import * as mlbStats from '@/lib/mlbStatsService';
 import * as brain from '@/lib/fantasyBrain';
+import { calculateVOR } from '@/lib/fantasyBrain';
 
 // Yahoo scoring_type codes → human labels
 const SCORING_TYPE_MAP = {
@@ -35,16 +36,20 @@ function playerILTag(p) {
   return '';
 }
 
-function buildPlayerLine(p) {
+function buildPlayerLine(p, numTeams, scoringType) {
   const stats = p.stats || {};
   const parts = Object.entries(stats)
-    .filter(([id, v]) => STAT_MAP[id] && v !== '-' && v !== '' && v !== undefined && v !== null)
+    .filter(([id, v]) => STAT_MAP[id] && v !== '-' && v !== '' && v !== undefined && v !== null && v !== '0' && v !== 0)
     .map(([id, v]) => `${STAT_MAP[id]}:${v}`);
   const statStr = parts.length ? parts.join(' ') : 'no stats yet this season';
   const slot = p.slot || 'BN';
   const team = p.team ? `, ${p.team}` : '';
   const ilTag = playerILTag(p);
-  return `  • ${p.name} (${p.position}${team}) [${slot}]${ilTag} — ${statStr}`;
+  const rawPos = String(p.position || '').split('/')[0].trim();
+  const vorRaw = numTeams ? calculateVOR(stats, rawPos, numTeams, scoringType) : null;
+  const vor    = vorRaw !== null ? (typeof vorRaw === 'object' ? (vorRaw.vor ?? vorRaw.score ?? 0) : (vorRaw ?? 0)) : null;
+  const vorStr = vor !== null ? ` VOR:${Math.round(vor)}` : '';
+  return `  • ${p.name} (${p.position}${team}) [${slot}]${ilTag}${vorStr} — ${statStr}`;
 }
 
 export async function POST(request) {
@@ -119,15 +124,30 @@ export async function POST(request) {
     }
 
     // ── Build human-readable roster summary ───────────────────────────────────
+    const numTeams    = settings.num_teams    || 10;
+    const scoringType = settings.scoring_type || 'headpoint';
     const hitters  = roster.filter(p => !PITCHER_SLOTS.has(String(p.position || '').split('/')[0]));
     const pitchers = roster.filter(p =>  PITCHER_SLOTS.has(String(p.position || '').split('/')[0]));
 
+    // Compute VOR for every player so Claude has a real grading signal
+    const withVOR = roster.map(p => {
+      const rawPos = String(p.position || '').split('/')[0].trim();
+      const vorRaw = calculateVOR(p.stats || {}, rawPos, numTeams, scoringType);
+      const vor    = typeof vorRaw === 'object' ? (vorRaw.vor ?? vorRaw.score ?? 0) : (vorRaw ?? 0);
+      return { ...p, _vor: Math.round(vor) };
+    });
+    const totalVOR   = withVOR.reduce((s, p) => s + (p._vor || 0), 0);
+    const hitterVOR  = withVOR.filter(p => !PITCHER_SLOTS.has(String(p.position || '').split('/')[0])).reduce((s, p) => s + (p._vor || 0), 0);
+    const pitcherVOR = withVOR.filter(p =>  PITCHER_SLOTS.has(String(p.position || '').split('/')[0])).reduce((s, p) => s + (p._vor || 0), 0);
+    const avgVOR     = roster.length ? Math.round(totalVOR / roster.length) : 0;
+    const topPlayer  = [...withVOR].sort((a, b) => (b._vor || 0) - (a._vor || 0))[0];
+
     const rosterBlock = [
-      'HITTERS:',
-      ...(hitters.length ? hitters.map(buildPlayerLine) : ['  (none found)']),
+      `HITTERS (hitter VOR total: ${hitterVOR}):`,
+      ...(hitters.length ? hitters.map(p => buildPlayerLine(p, numTeams, scoringType)) : ['  (none found)']),
       '',
-      'PITCHERS:',
-      ...(pitchers.length ? pitchers.map(buildPlayerLine) : ['  (none found)']),
+      `PITCHERS (pitcher VOR total: ${pitcherVOR}):`,
+      ...(pitchers.length ? pitchers.map(p => buildPlayerLine(p, numTeams, scoringType)) : ['  (none found)']),
     ].join('\n');
 
     // ── Score waiver targets using the real fantasyBrain engine ─────────────
@@ -197,7 +217,7 @@ export async function POST(request) {
     // Split roster into active and IL for Claude context
     const ilPlayers     = roster.filter(p => playerILTag(p).includes('IL-UNAVAILABLE'));
     const activePlayers = roster.filter(p => !playerILTag(p).includes('IL-UNAVAILABLE'));
-    const activeBlock   = activePlayers.map(buildPlayerLine).join('\n') || '  (none)';
+    const activeBlock   = activePlayers.map(p => buildPlayerLine(p, numTeams, scoringType)).join('\n') || '  (none)';
     const ilBlock       = ilPlayers.length
       ? ilPlayers.map(p => `  • ${p.name} (${p.position}, ${p.team || '?'}) [${p.slot}] [⛔IL] — ${p.status || 'injured'}`).join('\n')
       : '  None';
@@ -213,7 +233,21 @@ LEAGUE: "${settings.name || league_key}" | Teams: ${settings.num_teams || 10} | 
 
 ⚠️ USE ONLY THE STATS BELOW — do not use your training data for player performance numbers. The stats below are the current 2026 season actuals from Yahoo Fantasy.
 
-ACTIVE ROSTER:
+ROSTER VOR SUMMARY (Value Over Replacement — higher = more valuable relative to position):
+• Team Total VOR: ${totalVOR} | Avg VOR per player: ${avgVOR}
+• Hitter VOR: ${hitterVOR} | Pitcher VOR: ${pitcherVOR}
+• Best player: ${topPlayer?.name || 'N/A'} (VOR:${topPlayer?._vor || 0})
+
+GRADING SCALE — base audit.grade on Total VOR of ${totalVOR} (be accurate, not generous):
+• A+ = Total VOR > 600 (elite contender)
+• A  = Total VOR 450-600 (strong)
+• A- = Total VOR 350-449 (above avg)
+• B+ = Total VOR 250-349 (solid)
+• B  = Total VOR 150-249 (average)
+• B- = Total VOR 80-149 (below average)
+• C  = Total VOR < 80 (weak/rebuilding)
+
+ACTIVE ROSTER (each player includes VOR score):
 ${activeBlock}
 
 ON IL (do NOT start or recommend these players):
