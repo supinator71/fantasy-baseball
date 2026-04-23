@@ -59,7 +59,7 @@ export default function TrophyCase() {
                 <div className={`card-signature ${cardDef.sig_style || ''}`}>{cardDef.signature_name}</div>
               )}
               {isUnlocked && cardDef.has_patch && (
-                <div className="card-patch" />
+                <div className={`card-patch ${cardDef.patch_type || 'jersey'}`} />
               )}
               {!isUnlocked && (
                 <div className="lock-overlay">

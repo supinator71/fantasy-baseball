@@ -10,8 +10,11 @@ export default function PackDropModal({ awardedCard, onClose }) {
         <h1 className="pack-title strobe-text">NEW CARD ACQUIRED!</h1>
         <div className={`pack-card-container drop-in ${awardedCard.rarity}`}>
           <img src={awardedCard.img} alt={awardedCard.name} className="pack-card-image" />
-          {awardedCard.rarity === 'legendary' && (
-            <div className="card-signature">Cyborg 71</div>
+          {awardedCard.has_signature && (
+            <div className={`card-signature ${awardedCard.sig_style || ''}`}>{awardedCard.signature_name}</div>
+          )}
+          {awardedCard.has_patch && (
+            <div className={`card-patch ${awardedCard.patch_type || 'jersey'}`} />
           )}
         </div>
         <div className="pack-card-details slide-up">

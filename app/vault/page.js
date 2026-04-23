@@ -52,7 +52,7 @@ export default function Vault() {
                       <div className={`card-signature ${cardDef.sig_style || ''}`}>{cardDef.signature_name}</div>
                     )}
                     {cardDef.has_patch && (
-                      <div className="card-patch" />
+                      <div className={`card-patch ${cardDef.patch_type || 'jersey'}`} />
                     )}
                     <div className="card-set-num">CARD #{cardDef.set_num}</div>
                   </div>
