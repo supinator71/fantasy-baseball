@@ -81,9 +81,17 @@ export default function TrophyCase() {
                   {unlocks[0].serialPosition} / {cardDef.serial_total}
                 </div>
               )}
-              <div className="back-content">
-                <h4>{cardDef.specialization || 'Player Intelligence'}</h4>
-                <p>{cardDef.lore || "A premium digital collectible celebrating the evolution of the national pastime."}</p>
+              <div className="back-content" style={{ padding: '0 12px' }}>
+                <h3 style={{ fontSize: 16, color: '#fff', marginBottom: 2 }}>{cardDef.playerName || cardDef.name}</h3>
+                <div style={{ fontSize: 11, color: cardDef.teamColor || '#00c8ff', fontWeight: 800, textTransform: 'uppercase', marginBottom: 12 }}>
+                  {cardDef.team || 'Goin\' Yard Core'} | {cardDef.position || 'Utility'}
+                </div>
+                
+                <div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 700, marginBottom: 4 }}>SPECIFICATION</div>
+                <h4 style={{ marginBottom: 12 }}>{cardDef.specialization || 'Player Intelligence'}</h4>
+                
+                <div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 700, marginBottom: 4 }}>BIOMETRIC LORE</div>
+                <p style={{ fontSize: 12, lineHeight: 1.4 }}>{cardDef.lore || "A premium digital collectible."}</p>
               </div>
               <div className="back-footer">
                 <span className="rarity-tag">{cardDef.rarity.toUpperCase()} UNIT</span>

@@ -58,12 +58,20 @@ export default function Vault() {
                   </div>
                   <div className="card-back-3d" style={{ borderColor: '#00c8ff' }}>
                     <div className="series">{getSeries(cardDef.id)}</div>
-                    <div className="back-content">
-                      <div style={{ color: '#00c8ff', fontSize: 11, fontWeight: 700, marginBottom: 4 }}>FACTORY SPECIFICATION</div>
-                      <h4>{cardDef.specialization || 'Player Intelligence'}</h4>
-                      <p>{cardDef.lore || "A premium digital collectible."}</p>
+                    <div className="back-content" style={{ padding: '0 12px' }}>
+                      <h3 style={{ fontSize: 16, color: '#fff', marginBottom: 2 }}>{cardDef.playerName || cardDef.name}</h3>
+                      <div style={{ fontSize: 11, color: cardDef.teamColor || '#00c8ff', fontWeight: 800, textTransform: 'uppercase', marginBottom: 12 }}>
+                        {cardDef.team || 'Goin\' Yard Core'} | {cardDef.position || 'Utility'}
+                      </div>
+                      
+                      <div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 700, marginBottom: 4 }}>SPECIFICATION</div>
+                      <h4 style={{ marginBottom: 12 }}>{cardDef.specialization || 'Player Intelligence'}</h4>
+                      
+                      <div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 700, marginBottom: 4 }}>BIOMETRIC LORE</div>
+                      <p style={{ fontSize: 12, lineHeight: 1.4 }}>{cardDef.lore || "A premium digital collectible."}</p>
+                      
                       {cardDef.serial_total && (
-                        <div className="card-serial-stamp" style={{ color: '#00c8ff', borderColor: 'rgba(0,200,255,0.4)' }}>
+                        <div className="card-serial-stamp" style={{ color: '#00c8ff', borderColor: 'rgba(0,200,255,0.4)', marginTop: 16 }}>
                           X / {cardDef.serial_total}
                         </div>
                       )}
