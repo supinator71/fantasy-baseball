@@ -58,14 +58,22 @@ export default function WaiverWire() {
     setAiRecsLoading(true);
     setAiRecsError('');
     try {
-      // Use scored list if already available from context, else raw players
       const available = scoredWaiver?.length > 0 ? scoredWaiver : rawPlayers;
       const { data } = await axios.post('/api/claude/waiver', {
         league_key: selectedLeague,
         available_players: available.slice(0, 25),
-        // my_roster is fetched server-side in the waiver route
+        // my_roster and pitching context are fetched server-side in the route
       });
       setAiRecs(data);
+      // If route returned fresh engine-scored players, update the table
+      if (data.scored?.length > 0) {
+        setRawPlayers(prev => {
+          // Merge: prefer scored data from API, keep any extras from raw list
+          const scoredNames = new Set(data.scored.map(p => p.name || p.player_name));
+          const extras = prev.filter(p => !scoredNames.has(p.name || p.player_name));
+          return [...data.scored, ...extras];
+        });
+      }
     } catch (err) {
       setAiRecsError(err.response?.data?.error || 'Analysis failed. Try again.');
     } finally {
