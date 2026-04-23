@@ -11,7 +11,7 @@ export async function POST() {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
   const trophyCase = db.getTrophyCase(guid);
   const lastClaim = trophyCase.last_daily_pack || '';
   
