@@ -47,20 +47,28 @@ export async function POST(request) {
       content: `${STAT_GUARDRAIL}
 League: ${settings.name || league_key || '?'} | Format: ${settings.scoring_type || 'Unknown'} | As of: ${nowDay}
 
+⚠️ YAHOO LEAGUE RULES — APPLY THESE EXACTLY:
+- The scoring week runs MONDAY MORNING through SUNDAY NIGHT. No exceptions.
+- IL slots are SEPARATE from active roster spots. Dropping an IL player frees an IL slot — NOT an active lineup spot.
+- DO NOT recommend dropping an IL player to "open an active spot." It will not work.
+- To add an active player, an active roster spot must already be open (or a non-IL player must be dropped).
+- Players listed as [⛔IL] below are on the IL slot — they are not taking up an active spot.
+
 MY ROSTER (VOR + 2026 Yahoo stats — use ONLY these numbers):
 ${rosterBlock}
 
 CONFIRMED 2-START PITCHER SCHEDULE (as of ${nowDay}):
-- Full 2-start value remaining: ${twoStartNames}
-- Next week 2-start: ${nextWeekNames}
+- Full 2-start value remaining this week: ${twoStartNames}
+- Next week 2-start targets: ${nextWeekNames}
 - Starting today: ${(pitching.today || []).join(', ') || 'None'}
 
 Opponent context: ${JSON.stringify(opponent || {})}
 Week context: ${week_context || ''}
 
 Build a weekly game plan using ONLY the stats and schedule above.
-Identify must-starts (prioritize pitchers with remaining starts this week), streaming targets from the schedule above, 
-and lineup slots to maximize for the ${settings.scoring_type || 'this'} format.`
+Identify must-starts (prioritize pitchers with remaining starts this week), streaming targets from the confirmed schedule,
+and lineup slots to maximize for the ${settings.scoring_type || 'this'} format.
+Remember: the week ends Sunday night — factor in remaining games when prioritizing streamers.`
     }]);
 
     return NextResponse.json({ gameplan: text });
