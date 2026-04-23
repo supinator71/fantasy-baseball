@@ -23,6 +23,7 @@ export default function Sidebar({ authenticated, isOpen, onClose, subscription }
     { href: '/baseball101', label: 'Baseball 101',          icon: '🎓' },
     { href: '/trophy',      label: 'Trophy Case',           icon: '🏆' },
     { href: '/vault',       label: 'Collector\'s Vault',    icon: '💎' },
+    { href: '/store',       label: 'Card Store',            icon: '🛍️' },
   ];
 
   if (!authenticated) return null;
