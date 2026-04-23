@@ -2,13 +2,27 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { getScoreboard, getUserTeamKey } from '@/lib/yahooService';
 
+// Comprehensive Yahoo Fantasy Baseball stat_id → human-readable name
 const STAT_NAMES = {
-  '7': 'R', '12': 'HR', '13': 'RBI', '16': 'SB', '3': 'AVG',
-  '6': 'OBP', '5': 'SLG', '8': 'H', '18': 'BB',
-  '28': 'W', '29': 'L', '32': 'SV', '42': 'K', '26': 'ERA', '27': 'WHIP',
-  '50': 'IP', '85': 'HLD', '83': 'QS', '60': 'H/AB'
+  '0': 'GP',   '1': 'GS',   '2': 'AB',   '3': 'AVG',  '4': 'OBP',
+  '5': 'SLG',  '6': 'OPS',  '7': 'R',    '8': 'H',    '9': '1B',
+  '10': '2B',  '11': '3B',  '12': 'HR',  '13': 'RBI', '14': 'SAC',
+  '15': 'SF',  '16': 'SB',  '17': 'CS',  '18': 'BB',  '19': 'IBB',
+  '20': 'HBP', '21': 'SO',  '22': 'GDP', '23': 'CYC', '24': 'E',
+  '25': 'TB',
+  // Pitching
+  '26': 'ERA', '27': 'WHIP','28': 'W',   '29': 'L',   '30': 'GS',
+  '31': 'G',   '32': 'SV',  '33': 'HA',  '34': 'BBA', '35': 'HRA',
+  '36': 'R_P', '37': 'ER',  '38': 'WP',  '39': 'BK',  '40': 'BS',
+  '41': 'HB',  '42': 'K',   '43': 'SHO', '44': 'CG',  '45': 'NH',
+  '46': 'PG',  '47': 'WinPct', '48': 'SV%', '49': 'K/9',
+  '50': 'IP',  '51': 'K/BB', '52': 'OBA', '53': 'GO/AO',
+  '54': 'TP',  '55': 'DP',  '56': 'QS%',
+  '57': 'NSV', '58': 'NSB', '59': 'TB_P',
+  '60': 'H/AB','61': 'XBH',
+  '83': 'QS',  '84': 'NSVH','85': 'HLD',
 };
-const LOWER_IS_BETTER = new Set(['26', '27', '29']);
+const LOWER_IS_BETTER = new Set(['26', '27', '29', '33', '34', '35', '37', '40']);
 
 function parseYahooMatchup(matchups, myTeamKey) {
   if (!matchups) return null;

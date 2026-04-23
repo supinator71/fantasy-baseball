@@ -4,7 +4,26 @@ import { callClaudeFast } from '@/lib/claude';
 import { db } from '@/lib/database';
 import * as yahoo from '@/lib/yahooService';
 
-const LOWER_IS_BETTER = new Set(['26', '27', '29']); // ERA, WHIP, L
+// Comprehensive Yahoo Fantasy Baseball stat_id → human-readable name
+const STAT_NAMES = {
+  '0': 'GP',   '1': 'GS',   '2': 'AB',   '3': 'AVG',  '4': 'OBP',
+  '5': 'SLG',  '6': 'OPS',  '7': 'R',    '8': 'H',    '9': '1B',
+  '10': '2B',  '11': '3B',  '12': 'HR',  '13': 'RBI', '14': 'SAC',
+  '15': 'SF',  '16': 'SB',  '17': 'CS',  '18': 'BB',  '19': 'IBB',
+  '20': 'HBP', '21': 'SO',  '22': 'GDP', '23': 'CYC', '24': 'E',
+  '25': 'TB',
+  '26': 'ERA', '27': 'WHIP','28': 'W',   '29': 'L',   '30': 'GS',
+  '31': 'G',   '32': 'SV',  '33': 'HA',  '34': 'BBA', '35': 'HRA',
+  '36': 'R_P', '37': 'ER',  '38': 'WP',  '39': 'BK',  '40': 'BS',
+  '41': 'HB',  '42': 'K',   '43': 'SHO', '44': 'CG',  '45': 'NH',
+  '46': 'PG',  '47': 'WinPct', '48': 'SV%', '49': 'K/9',
+  '50': 'IP',  '51': 'K/BB', '52': 'OBA', '53': 'GO/AO',
+  '54': 'TP',  '55': 'DP',  '56': 'QS%',
+  '57': 'NSV', '58': 'NSB', '59': 'TB_P',
+  '60': 'H/AB','61': 'XBH',
+  '83': 'QS',  '84': 'NSVH','85': 'HLD',
+};
+const LOWER_IS_BETTER = new Set(['26', '27', '29', '33', '34', '35', '37', '40']); // ERA, WHIP, L, HA, BBA, HRA, ER, BS
 
 // Safely extract a player name from Yahoo's nested name object
 function extractName(info) {
@@ -81,14 +100,18 @@ export async function POST(request) {
           : `⚡ Close match — gap is only ${gapAbs} points. Smart lineup moves can swing this.`;
 
     // ── Category comparison ──────────────────────────────────────────────────
+    // Translate numeric stat_ids to human-readable names for the AI
+    const resolveName = s => STAT_NAMES[s.stat_id] || s.name || s.stat_id;
     const categoryRows = (stats || []).map(s => {
+      const catName = resolveName(s);
       const myWin  = s.my_winning  ? ' ← YOU LEAD' : '';
       const oppWin = s.opp_winning ? ' ← OPP LEADS' : '';
-      return `  ${s.name || s.stat_id}: YOU ${s.my_value ?? '—'} vs OPP ${s.opp_value ?? '—'}${myWin}${oppWin}`;
+      const lowerBetter = LOWER_IS_BETTER.has(s.stat_id) ? ' (lower is better)' : '';
+      return `  ${catName}${lowerBetter}: YOU ${s.my_value ?? '—'} vs OPP ${s.opp_value ?? '—'}${myWin}${oppWin}`;
     }).join('\n');
 
-    const myWinningCats  = (stats || []).filter(s => s.my_winning).map(s => s.name || s.stat_id);
-    const oppWinningCats = (stats || []).filter(s => s.opp_winning).map(s => s.name || s.stat_id);
+    const myWinningCats  = (stats || []).filter(s => s.my_winning).map(s => resolveName(s));
+    const oppWinningCats = (stats || []).filter(s => s.opp_winning).map(s => resolveName(s));
 
     const prompt = `You are Goin' Yard HQ — an expert fantasy baseball matchup analyst.
 

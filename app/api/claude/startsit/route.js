@@ -76,7 +76,10 @@ Teams PLAYING today: ${[...teamsPlaying.abbrs].join(', ')}`
 
     const rosterBlock = [
       'ACTIVE PLAYERS (only recommend these):',
-      ...activePlayers.map(p => buildPlayerLine(p, teamsPlaying)),
+      ...activePlayers.map(p => {
+        const mlbStatus = p.is_starting === 'Yes' ? ' [MLB: Starting Today]' : (p.is_starting === 'No' ? ' [MLB: Not Starting/Bench]' : ' [MLB: No Game/Unknown]');
+        return buildPlayerLine(p, teamsPlaying) + mlbStatus;
+      }),
       '',
       'IL / UNAVAILABLE (do NOT recommend starting or benching — they cannot play):',
       ...ilPlayers.map(p => `  • ${p.name} (${p.position}) [${p.status || 'injured'}]`),
@@ -89,13 +92,13 @@ DO NOT mention any player not listed (e.g. Tyler Glasnow, Logan Webb, Tarik Skub
 DO NOT invent or estimate any stat values. If a stat is missing, say "no stats yet."
 DO NOT recommend starting IL/UNAVAILABLE players.
 
+📅 DAILY STARTING LINEUP RULES:
+1. Pay attention to the tags: [Fantasy Slot: BN] means the player is on your Fantasy Bench. [Fantasy Slot: C/1B/OF/Util/SP/RP] means they are in your Active Lineup.
+2. Pay attention to the MLB tags: [MLB: Starting Today] means they have a game and are confirmed starting. [MLB: Not Starting/Bench] means they have a game but are benched in real life. [MLB: No Game/Unknown] means their team is off today or their lineup isn't posted yet.
+3. ADVICE MUST RECOGNIZE BENCHINGS: Do not recommend "starting" a player who is already in an active Fantasy Slot. If a player is marked [MLB: Not Starting/Bench] or [MLB: No Game/Unknown], DO NOT tell the user to start them today, and recommend moving them to the Fantasy Bench [BN] if they are currently active.
+
 SCORING FORMAT: ${scoringLabel}
 LEAGUE: ${settings.name || league_key || 'Unknown'}
-
-FANTASY SLOT KEY (shown as [Slot:XX] next to each player):
-- Active slots (C, 1B, 2B, 3B, SS, OF, SP, RP, UTIL, P) = currently in fantasy starting lineup
-- [Slot:BN] = currently benched in fantasy lineup — manager has them sitting
-- [Slot:IL] or [Slot:IL+] = on fantasy IL — cannot move or play
 
 MY ROSTER — 2026 Yahoo season stats:
 ${rosterBlock}

@@ -162,16 +162,11 @@ export async function POST(request) {
     const hitters       = activePlayers.filter(p => !['SP','RP','P'].includes(String(p.position||'').split('/')[0]));
 
     const rosterBlock = [
-      'ACTIVE HITTERS:',
+      'ACTIVE HITTERS (these are your only drop candidates if you need to make room):',
       ...hitters.map(buildPlayerLine),
       '',
-      'ACTIVE PITCHERS:',
+      'ACTIVE PITCHERS (these are your only drop candidates if you need to make room):',
       ...pitchers.map(buildPlayerLine),
-      '',
-      'ON IL (do NOT recommend as starters, strengths, or trade targets):',
-      ...(ilPlayers.length
-        ? ilPlayers.map(p => `  • ${p.name} (${p.position}) [⛔IL/${p.status || '?'}]`)
-        : ['  None']),
     ].join('\n');
 
     // ── Pre-compute VOR server-side ───────────────────────────────────────────
@@ -209,10 +204,22 @@ DO NOT invent stats. If a stat is missing, say "stats not yet available."
 DO NOT recommend streaming pitchers who are NOT in the two-start list.
 ${standingsBlock}${pitchingBlock}
 
+⛔⛔⛔ YAHOO IL RULES — READ THIS BEFORE GIVING ANY ADVICE ⛔⛔⛔
+IL (Injured List) slots are COMPLETELY SEPARATE from active roster slots in Yahoo Fantasy.
+- Dropping an IL player frees an IL slot — it does NOT free an active lineup spot.
+- You CANNOT add an active player by dropping an IL player. It is mechanically impossible in Yahoo.
+- The ONLY way to open an active roster spot is to drop a NON-IL player (someone from the ACTIVE sections above).
+- Players in the "ON IL" section below occupy IL-only slots. They do NOT block any active roster moves.
+- DO NOT mention IL players as drop candidates for roster upgrades or in "moves". Period.
+- DO NOT mention them as strengths, streaming options, or trade targets.
+
 LEAGUE: "${settings.name || league_key}" | Teams: ${settings.num_teams || 10} | Format: ${scoringLabel}
 
 TEAM ROSTER — 2026 Yahoo season stats:
 ${rosterBlock}
+
+ON IL (⛔ these players occupy IL-ONLY slots — dropping them does NOT open an active spot):
+${ilPlayers.length ? ilPlayers.map(p => `  • ${p.name} (${p.position}) [⛔ IL SLOT — ${p.status || 'injured'}]`).join('\n') : '  None'}
 
 CATEGORY NEEDS (engine-computed):
 ${diagnosis.promptBlock || 'N/A'}
@@ -232,13 +239,11 @@ GRADING SCALE — base "grade" on Total VOR of ${totalVOR} (be accurate and hone
 • C  = Total VOR 30–79 (rebuilding)
 • D  = Total VOR < 30 (very early season)
 
-⛔ IL PLAYERS — do NOT mention as strengths or streaming options:
-${ilPlayers.length ? ilPlayers.map(p => `  • ${p.name} (${p.position}) [${p.status || 'injured'}]`).join('\n') : '  None'}
-
 BREAKING NEWS:
 ${news ? news.slice(0, 600) : 'None'}
 
 Perform a comprehensive team audit. Be specific — cite actual player names, VOR values, and stats from the data above.
+REMINDER: Do NOT suggest dropping any player from the "ON IL" section — it will not free an active roster spot.
 Respond ONLY with valid JSON (no markdown fences). Do NOT include vorByPlayer — it is handled server-side.
 {
   "grade": "[engine-computed]",

@@ -83,6 +83,22 @@ function sanitizeAnalysis(analysis, { roster, freeAgents, totalVOR }) {
     analysis.startSit.sits = analysis.startSit.sits.filter(s => onRoster(s.player));
   }
 
+  // 5. Pitching — enforce waiver vs roster availability
+  if (analysis.pitching) {
+    // "stream" implies adding from waivers, so they must be on the FA list
+    if (analysis.pitching.stream?.player && !onFAList(analysis.pitching.stream.player)) {
+      analysis.pitching.stream = null;
+    }
+    // "avoid" implies avoiding a start, so they must be on the roster
+    if (analysis.pitching.avoid?.player && !onRoster(analysis.pitching.avoid.player)) {
+      analysis.pitching.avoid = null;
+    }
+    // "twoStarters" represents players on your roster who have 2 starts
+    if (analysis.pitching.twoStarters?.length) {
+      analysis.pitching.twoStarters = analysis.pitching.twoStarters.filter(n => onRoster(n));
+    }
+  }
+
   return analysis;
 }
 
@@ -104,11 +120,12 @@ function buildPlayerLine(p, numTeams, scoringType) {
   const slot = p.slot || 'BN';
   const team = p.team ? `, ${p.team}` : '';
   const ilTag = playerILTag(p);
+  const mlbStatus = p.is_starting === 'Yes' ? ' [MLB: Starting Today]' : (p.is_starting === 'No' ? ' [MLB: Not Starting/Bench]' : ' [MLB: No Game/Unknown]');
   const rawPos = String(p.position || '').split('/')[0].trim();
   const vorRaw = numTeams ? brain.calculateVOR(stats, rawPos, numTeams, scoringType) : null;
   const vor    = vorRaw !== null ? (typeof vorRaw === 'object' ? (vorRaw.vor ?? vorRaw.score ?? 0) : (vorRaw ?? 0)) : null;
   const vorStr = vor !== null ? ` VOR:${Math.round(vor)}` : '';
-  return `  • ${p.name} (${p.position}${team}) [${slot}]${ilTag}${vorStr} — ${statStr}`;
+  return `  • ${p.name} (${p.position}${team}) [Fantasy Slot:${slot}]${ilTag}${mlbStatus}${vorStr} — ${statStr}`;
 }
 
 export async function POST(request) {
@@ -161,21 +178,38 @@ export async function POST(request) {
       mlbStats.getBreakingNews().catch(() => ''),
     ]);
 
-    // Fetch roster (needs teamKey first)
     let roster = [];
     if (teamKey) {
       try {
         const rosterRaw = await yahoo.getRoster(guid, league_key, teamKey);
         const playerKeys = [];
+        const slotMap = {};
         for (const item of (rosterRaw || [])) {
           const p = item?.player;
           if (Array.isArray(p)) {
             const info = Object.assign({}, ...(Array.isArray(p[0]) ? p[0] : []));
-            if (info.player_key) playerKeys.push(info.player_key);
+            if (info.player_key) {
+              playerKeys.push(info.player_key);
+              let pos = 'BN';
+              const spObj = p.find(x => x && x.selected_position);
+              if (spObj && spObj.selected_position) {
+                const sp = spObj.selected_position;
+                if (Array.isArray(sp)) {
+                  const pItem = sp.find(x => x && x.position);
+                  if (pItem) pos = pItem.position;
+                } else if (sp[1] && sp[1].position) {
+                  pos = sp[1].position;
+                } else if (sp.position) {
+                  pos = sp.position;
+                }
+              }
+              slotMap[info.player_key] = pos;
+            }
           }
         }
         if (playerKeys.length) {
-          roster = await yahoo.getBatchPlayerStats(guid, league_key, playerKeys, null);
+          const fetchedRoster = await yahoo.getBatchPlayerStats(guid, league_key, playerKeys, null);
+          roster = fetchedRoster.map(rp => ({ ...rp, slot: slotMap[rp.key] || 'BN' }));
         }
       } catch (e) {
         console.warn('[analyze] roster fetch failed:', e.message);
@@ -278,7 +312,7 @@ export async function POST(request) {
     const activePlayers = roster.filter(p => !playerILTag(p).includes('IL-UNAVAILABLE'));
     const activeBlock   = activePlayers.map(p => buildPlayerLine(p, numTeams, scoringType)).join('\n') || '  (none)';
     const ilBlock       = ilPlayers.length
-      ? ilPlayers.map(p => `  • ${p.name} (${p.position}, ${p.team || '?'}) [${p.slot}] [⛔IL] — ${p.status || 'injured'}`).join('\n')
+      ? ilPlayers.map(p => `  • ${p.name} (${p.position}) [⛔ IL SLOT — ${p.status || 'injured'}]`).join('\n')
       : '  None';
 
     const prompt = `You are Goin' Yard HQ — an expert fantasy baseball assistant. Be specific, data-driven, and name real players.
@@ -286,7 +320,20 @@ export async function POST(request) {
 ⚠️ SCORING FORMAT: ${scoringLabel}
 This determines ALL advice. For H2H Points: focus on maximizing total points scored this week, not category counts. Do NOT mention 5x5 categories, Roto rankings, or season-long category standing. For H2H Categories: focus on winning individual categories. For Roto: focus on season ranking.
 
-⛔ IL RULE: Players listed under "ON IL" below are INJURED and UNAVAILABLE. Do NOT recommend starting them, trading for them, or treating them as active contributors this week. Do NOT mention them as strengths. If they are taking up a roster spot a healthy player could use, flag that in waiver advice.
+⛔⛔⛔ YAHOO IL RULES — READ THIS BEFORE GIVING ANY ADVICE ⛔⛔⛔
+IL (Injured List) slots are COMPLETELY SEPARATE from active roster slots in Yahoo Fantasy.
+- Dropping an IL player frees an IL slot — it does NOT free an active lineup spot.
+- You CANNOT add an active player by dropping an IL player. It is mechanically impossible in Yahoo.
+- The ONLY way to open an active roster spot is to drop a NON-IL player (someone from the ACTIVE ROSTER section below).
+- Players in the "ON IL" section below occupy IL-only slots. They do NOT block any active roster moves.
+- DO NOT mention IL players as drop candidates for roster upgrades. Period.
+- DO NOT recommend starting them, trading for them, or treating them as active contributors.
+- DO NOT mention them as strengths.
+
+📅 DAILY STARTING LINEUP RULES:
+1. [Fantasy Slot: BN] = Fantasy Bench. [Fantasy Slot: C/1B/OF/Util/SP/RP] = Active Lineup.
+2. [MLB: Starting Today] = confirmed in today's MLB lineup. [MLB: Not Starting/Bench] = benched in real life. [MLB: No Game/Unknown] = team off or lineup not posted.
+3. Do not recommend "starting" someone already in an active slot. If a player is [MLB: Not Starting/Bench] or [MLB: No Game/Unknown] and in an active slot, recommend moving them to BN.
 
 LEAGUE: "${settings.name || league_key}" | Teams: ${settings.num_teams || 10} | Week: ${settings.current_week || '?'}
 
@@ -308,14 +355,11 @@ GRADING SCALE — base audit.grade on Total VOR of ${totalVOR} (be accurate and 
 • C  = Total VOR 30-79 (rebuilding)
 • D  = Total VOR < 30 (very early season / barely rostered)
 
-ACTIVE ROSTER (each player includes VOR score):
+ACTIVE ROSTER (these are your only drop candidates if you need to make room):
 ${activeBlock}
 
-ON IL (do NOT start or recommend these players):
+ON IL (⛔ these players occupy IL-ONLY slots — dropping them does NOT open an active spot):
 ${ilBlock}
-
-MY ROSTER:
-${rosterBlock}
 
 PITCHING INTELLIGENCE (as of ${nowDay}):
 ⚠️ CRITICAL PITCHING RULES:

@@ -79,7 +79,10 @@ export async function POST(request) {
 
     // ── Build roster context string for Claude ────────────────────────────────
     const rosterBlock = myRoster.length
-      ? myRoster.map(p => `  • ${p.name} (${p.position}) [${p.slot || 'BN'}] — ${readableStats(p)}`).join('\n')
+      ? myRoster.map(p => {
+          const mlbStatus = p.is_starting === 'Yes' ? ' [MLB: Starting Today]' : (p.is_starting === 'No' ? ' [MLB: Not Starting/Bench]' : ' [MLB: No Game/Unknown]');
+          return `  • ${p.name} (${p.position}) [Fantasy Slot:${p.slot || 'BN'}]${mlbStatus} — ${readableStats(p)}`;
+        }).join('\n')
       : '  (roster unavailable)';
 
     const scoredBlock = scored.slice(0, 10).map((p, i) =>
@@ -90,6 +93,11 @@ export async function POST(request) {
 
 ⚠️ DATA RULE: Use ONLY the player names, stats, and scores listed below.
 DO NOT reference players not shown. DO NOT invent stats.
+
+📅 DAILY STARTING LINEUP RULES:
+1. Pay attention to the tags: [Fantasy Slot: BN] means the player is on your Fantasy Bench. [Fantasy Slot: C/1B/OF/Util/SP/RP] means they are in your Active Lineup.
+2. Pay attention to the MLB tags: [MLB: Starting Today] means they have a game and are confirmed starting. [MLB: Not Starting/Bench] means they have a game but are benched in real life. [MLB: No Game/Unknown] means their team is off today or their lineup isn't posted yet.
+3. ADVICE MUST RECOGNIZE BENCHINGS: Do not recommend "starting" a player who is already in an active Fantasy Slot. If a player is marked [MLB: Not Starting/Bench] or [MLB: No Game/Unknown], DO NOT tell the user to start them today, and recommend moving them to the Fantasy Bench [BN] if they are currently active.
 
 LEAGUE: ${settings.name || league_key} | Format: ${settings.scoring_type === 'headpoint' ? 'H2H Points' : settings.scoring_type || 'H2H Points'} | Teams: ${settings.num_teams || 10}
 
