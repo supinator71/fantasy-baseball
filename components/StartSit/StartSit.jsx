@@ -1,22 +1,33 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useLeague } from '@/lib/context/LeagueContext';
 import AiQuestionBox from '../shared/AiQuestionBox';
-import InsightCard from '@/components/InsightCard/InsightCard';
 
 export default function StartSit() {
-  const { selectedLeague, leagueData, aiAnalysis, aiLoading } = useLeague();
+  const { selectedLeague, leagueData } = useLeague();
   const [roster, setRoster] = useState([]);
   const [rosterLoading, setRosterLoading] = useState(false);
   const [context, setContext] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const autoRanRef = useRef(false);
 
   useEffect(() => {
-    if (selectedLeague) loadRoster();
+    if (selectedLeague) {
+      autoRanRef.current = false;
+      loadRoster();
+    }
   }, [selectedLeague]);
+
+  // Auto-run daily analysis once when roster loads
+  useEffect(() => {
+    if (roster.length > 0 && !result && !loading && !autoRanRef.current) {
+      autoRanRef.current = true;
+      analyzeDailyLineup();
+    }
+  }, [roster]);
 
   async function loadRoster() {
     setRosterLoading(true);
@@ -61,9 +72,7 @@ export default function StartSit() {
         </div>
       </div>
 
-      <InsightCard data={aiAnalysis?.startSit} type="startSit" loading={aiLoading} />
-
-      {/* Roster + detailed analysis button */}
+      {/* Roster + re-analyze button */}
       {rosterLoading ? (
         <div className="loading" style={{ margin: '40px 0' }}>Loading your live roster...</div>
       ) : roster.length > 0 ? (
@@ -71,11 +80,13 @@ export default function StartSit() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 12 }}>
             <div>
               <h3 style={{ fontSize: 16, fontWeight: 600 }}>Your Roster ({roster.length} players)</h3>
-              <p style={{ fontSize: 13, color: '#94a3b8', margin: '4px 0 0 0' }}>Ready for today's analysis.</p>
+              <p style={{ fontSize: 13, color: '#94a3b8', margin: '4px 0 0 0' }}>
+                {loading ? 'Generating today\'s analysis...' : result ? 'Analysis complete — scroll down for recommendations.' : 'Ready for today\'s analysis.'}
+              </p>
             </div>
             <button className="btn btn-primary" onClick={analyzeDailyLineup} disabled={loading}
               style={{ padding: '12px 24px', fontSize: 15, background: 'linear-gradient(135deg, #00a86b 0%, #007a7a 100%)' }}>
-              {loading ? '⟳ Auto-generating Today\'s Lineup...' : '⚡ Optimize Today\'s Lineup'}
+              {loading ? '⟳ Analyzing Today\'s Lineup...' : '↻ Re-analyze Lineup'}
             </button>
           </div>
 
@@ -97,6 +108,13 @@ export default function StartSit() {
         </div>
       )}
 
+      {loading && !result && (
+        <div className="card" style={{ textAlign: 'center', padding: 32, marginBottom: 16 }}>
+          <div className="loading" style={{ fontSize: 15 }}>⚡ Building your personalized daily lineup...</div>
+          <p style={{ color: '#7aafc4', fontSize: 12, marginTop: 8 }}>Checking MLB schedules, starting lineups, and your bench...</p>
+        </div>
+      )}
+
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 style={{ marginBottom: 12 }}>Additional Context (optional)</h3>
         <textarea rows={3}
@@ -106,7 +124,7 @@ export default function StartSit() {
 
       {result && (
         <div className="card">
-          <h3 style={{ color: '#007a7a', marginBottom: 12 }}>Full Daily Analysis</h3>
+          <h3 style={{ color: '#007a7a', marginBottom: 12 }}>Today's Lineup Analysis</h3>
           <div className="ai-response">{result}</div>
           <AiQuestionBox
             context={`Start/Sit optimization context: ${result}`}
