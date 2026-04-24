@@ -28,6 +28,15 @@ export async function POST(request) {
        return NextResponse.json({ error: 'Invalid pack selection' }, { status: 400 });
     }
 
+    if (!stripe) {
+      // Graceful fallback for local testing or before Stripe is configured
+      console.log('Stripe not configured. Processing mock checkout.');
+      return NextResponse.json({ 
+        id: 'mock_session', 
+        url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/store?success=true&packId=${packId}` 
+      });
+    }
+
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
