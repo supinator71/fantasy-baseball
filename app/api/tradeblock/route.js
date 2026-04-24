@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import db from '@/lib/database';
+const db = require('@/lib/database');
 
 export async function GET(request) {
   try {
