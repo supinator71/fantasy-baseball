@@ -63,7 +63,6 @@ function parseTeamInfo(teamData) {
 export default function Standings() {
   const { leagues, selectedLeague, setSelectedLeague } = useLeague()
   const [standings, setStandings] = useState([])
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const { data: rawData, error: swrError, isLoading: loading, mutate: fetchStandings } = useSWR(
