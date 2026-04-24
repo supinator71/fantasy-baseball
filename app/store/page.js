@@ -34,7 +34,7 @@ export default function Store() {
     {
       id: 'titan_drop',
       name: 'Titan Syndicate Drop',
-      price: '$24.99',
+      price: '$19.99',
       color: '#d69e2e',
       description: 'The ultimate score. Contains 10 digital collectibles.',
       guarantee: 'Guarantees 1 Legendary autographed card.',
