@@ -39,7 +39,7 @@
 | #44 | Pixel Maverick | Hover-Base Stealer | Titan Station |
 | #31 | Lyra Void | Plasma Catcher | Europa Sub-Oceanic |
 | #1 | Ananya Turing | Relief Pitcher | Gliese 581g |
-| #19 | Laser Code | Manager | Europa Sub-Oceanic |
+| #19 | Elara | Manager | Europa Sub-Oceanic |
 | #78 | Unit 90-S | Designated Hacker | Mars Colony Prime |
 
 ## Silicon Valley Sentinels
