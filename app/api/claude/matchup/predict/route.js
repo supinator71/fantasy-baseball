@@ -113,11 +113,16 @@ export async function POST(request) {
     const myWinningCats  = (stats || []).filter(s => s.my_winning).map(s => resolveName(s));
     const oppWinningCats = (stats || []).filter(s => s.opp_winning).map(s => resolveName(s));
 
+    // ── Schedule Calculation ──────────────────────────────────────────────────
+    // Yahoo fantasy weeks start on Monday, end on Sunday night.
+    const todayNum = new Date().getDay(); // 0 = Sunday, 1 = Monday... 6 = Saturday
+    const daysRemaining = (7 - todayNum) % 7;
+
     const prompt = `You are Goin' Yard HQ — an expert fantasy baseball matchup analyst.
 
 ⚠️ DATA RULE: Analyze ONLY the data provided below. Do NOT use training data for player stats or availability.
 
-LEAGUE: ${settings.name || league_key} | Format: ${scoringLabel} | Week ${week || '?'}
+LEAGUE: ${settings.name || league_key} | Format: ${scoringLabel} | Week ${week || '?'} | ${daysRemaining} days remaining in matchup
 
 ${urgencyLabel}
 
@@ -138,9 +143,9 @@ ${rosterLines.length ? rosterLines.join('\n') : '(roster unavailable)'}
 ${!leading && gapAbs > 30 ? `
 TRIAGE PRIORITY: You are significantly behind. Do NOT say "you can still win" without specific actionable advice.
 Your response MUST include:
-1. Exact point deficit and how many days remain to close it
+1. Exact point deficit and how you can close it with ${daysRemaining} days remaining.
 2. Which bench players should START immediately to maximize scoring
-3. Which streaming moves (waiver pickups) address your weakest categories
+3. Based on the categories you are losing, what specific stat-profiles you should look to stream from the waiver wire (e.g. 'high-K relief pitcher', 'contact hitter with speed'). Do NOT invent or recommend specific free agent names.
 4. Which categories are mathematically closeable vs. already lost
 ` : ''}
 
