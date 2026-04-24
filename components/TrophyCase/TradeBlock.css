@@ -1,0 +1,126 @@
+.trade-block-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.trade-header {
+  margin-bottom: 32px;
+}
+
+.trade-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #1e3d5c;
+  padding-bottom: 12px;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: #7aafc4;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tab-btn:hover {
+  background: rgba(0, 200, 255, 0.1);
+  color: #00c8ff;
+}
+
+.tab-btn.active {
+  background: rgba(0, 200, 255, 0.15);
+  color: #00c8ff;
+  border: 1px solid rgba(0, 200, 255, 0.3);
+}
+
+.badge-count {
+  background: #ff0088;
+  color: white;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 800;
+}
+
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.trade-card-slot {
+  background: #0c1d35;
+  border: 1px solid #1e3d5c;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.trade-card-slot:hover {
+  transform: translateY(-4px);
+  border-color: #00c8ff;
+}
+
+.card-placeholder {
+  height: 200px;
+  background: linear-gradient(135deg, #112233, #0a1526);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #7aafc4;
+  border: 2px dashed #1e3d5c;
+}
+
+.trade-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.seller {
+  font-size: 13px;
+  color: #e2e8f0;
+}
+
+.seeking {
+  font-size: 12px;
+  color: #ffaa00;
+  font-style: italic;
+  padding: 8px;
+  background: rgba(255, 170, 0, 0.1);
+  border-radius: 6px;
+  border-left: 3px solid #ffaa00;
+}
+
+.make-offer-btn {
+  margin-top: 8px;
+  width: 100%;
+  font-size: 14px;
+}
+
+.add-to-block-btn {
+  background: transparent;
+  border: 2px dashed #00c8ff;
+  color: #00c8ff;
+  font-weight: 700;
+  padding: 16px 32px;
+  margin-top: 24px;
+}
+
+.add-to-block-btn:hover {
+  background: rgba(0, 200, 255, 0.1);
+}
