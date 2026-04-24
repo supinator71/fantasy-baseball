@@ -152,7 +152,7 @@ export default function TradeBlock() {
                       <option value="">-- Select a Card from your Vault --</option>
                       {myVault.map(c => (
                         <option key={c.instanceId} value={c.instanceId}>
-                          {c.playerName} ({c.team}) - {c.rarity.toUpperCase()}
+                          {c.playerName} ({c.team}) - {c.rarity?.toUpperCase() || 'UNKNOWN'}
                         </option>
                       ))}
                     </select>
@@ -175,7 +175,7 @@ export default function TradeBlock() {
                       <div style={{ padding: 10, textAlign: 'center' }}>
                         <img src={selectedCard.img} alt={selectedCard.playerName} style={{ width: '100%', borderRadius: 8, marginBottom: 8 }} />
                         <div style={{ fontWeight: 'bold' }}>{selectedCard.playerName}</div>
-                        <div style={{ fontSize: 12, color: selectedCard.teamColor || '#aaa' }}>{selectedCard.rarity.toUpperCase()}</div>
+                        <div style={{ fontSize: 12, color: selectedCard.teamColor || '#aaa' }}>{selectedCard.rarity?.toUpperCase() || 'UNKNOWN'}</div>
                       </div>
                     ) : (
                       <span style={{ color: 'var(--text-muted)' }}>Card Preview</span>
@@ -243,7 +243,7 @@ export default function TradeBlock() {
                 <option value="">-- Select Card --</option>
                 {myVault.map(c => (
                   <option key={c.instanceId} value={c.instanceId}>
-                    {c.playerName} - {c.rarity.toUpperCase()}
+                    {c.playerName} - {c.rarity?.toUpperCase() || 'UNKNOWN'}
                   </option>
                 ))}
               </select>

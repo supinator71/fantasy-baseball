@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-const db = require('@/lib/database');
+import { db } from '@/lib/database';
 
 export async function GET(request) {
   try {
@@ -9,17 +9,16 @@ export async function GET(request) {
     // We need to resolve the 'instanceId' back to the actual card data so the UI can render it
     // Wait, the listing just has instanceId and user guid.
     // For a global market, we need to inject the full card object from that user's trophy case!
-    const data = require('@/lib/database').load();
     const resolvedListings = listings.map(listing => {
-      const sellerCase = data.trophy_cases[listing.user];
+      const sellerCase = db.getTrophyCase(listing.user);
       const card = sellerCase?.unlocked_cards?.find(c => c.instanceId === listing.instanceId);
-      const sellerProfile = data.user_profiles[listing.user] || {};
+      const sellerProfile = db.getUserProfile(listing.user) || {};
       return {
         ...listing,
-        card: card || null, // the actual card object with rarity, name, img, etc.
+        card: card || null,
         username: sellerProfile.team_name || 'Anonymous Collector'
       };
-    }).filter(l => l.card !== null); // Only return listings where the card still exists
+    }).filter(l => l.card !== null);
 
     return NextResponse.json({ listings: resolvedListings });
   } catch (error) {
