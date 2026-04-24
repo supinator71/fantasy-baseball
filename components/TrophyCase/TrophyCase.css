@@ -570,3 +570,60 @@
   50% { opacity: 0.8; }
   100% { transform: scale(1.2) translateY(-120vh) rotate(-15deg); opacity: 0; }
 }
+
+/* === Rarity Foil Variations (Refractors/Prisms) === */
+.card-front-3d.epic::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, rgba(255,0,255,0.4), rgba(0,255,255,0.4), rgba(255,255,0,0.4));
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  opacity: 0.8;
+  z-index: 10;
+  animation: prism-shine 4s infinite linear;
+}
+
+.card-front-3d.legendary::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, rgba(255,215,0,0.6), rgba(255,255,255,0.8), rgba(255,140,0,0.6));
+  mix-blend-mode: color-dodge;
+  pointer-events: none;
+  opacity: 0.9;
+  z-index: 10;
+  animation: prism-shine 3s infinite linear;
+}
+
+@keyframes prism-shine {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.card-patch {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  border: 2px solid white;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+  z-index: 15;
+}
+
+.card-patch.jersey {
+  background: repeating-linear-gradient(45deg, #111, #111 5px, #333 5px, #333 10px);
+}
+
+.card-patch.metal {
+  background: linear-gradient(135deg, #ccc, #fff, #999);
+}
+
+.card-patch.motherboard {
+  background: #002200;
+  background-image: radial-gradient(#00ff00 1px, transparent 1px);
+  background-size: 8px 8px;
+}
