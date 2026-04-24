@@ -28,12 +28,14 @@ export async function POST(request) {
        return NextResponse.json({ error: 'Invalid pack selection' }, { status: 400 });
     }
 
+    const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
     if (!stripe) {
       // Graceful fallback for local testing or before Stripe is configured
       console.log('Stripe not configured. Processing mock checkout.');
       return NextResponse.json({ 
         id: 'mock_session', 
-        url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/store?success=true&packId=${packId}` 
+        url: `${origin}/store?success=true&packId=${packId}` 
       });
     }
 
@@ -46,8 +48,8 @@ export async function POST(request) {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/store?success=true&packId=${packId}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/store?canceled=true`,
+      success_url: `${origin}/store?success=true&packId=${packId}`,
+      cancel_url: `${origin}/store?canceled=true`,
       client_reference_id: guid,
       metadata: {
         packId: packId,
