@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import PackDropModal from '../../components/TrophyCase/PackDropModal';
@@ -42,24 +42,59 @@ export default function Store() {
     }
   ];
 
-  async function handleBuyPack(pack) {
-    // In the future, this will redirect to a Stripe checkout session.
-    // For now, we simulate the purchase and award the guaranteed card immediately.
+  useEffect(() => {
+    // Check if returning from Stripe checkout
+    const query = new URLSearchParams(window.location.search);
+    if (query.get('success')) {
+      const packId = query.get('packId');
+      if (packId) {
+        fulfillPurchase(packId);
+      }
+      // Clean up URL
+      window.history.replaceState({}, document.title, '/store');
+    }
+    if (query.get('canceled')) {
+      toast.error('Purchase was canceled.');
+      window.history.replaceState({}, document.title, '/store');
+    }
+  }, []);
+
+  async function fulfillPurchase(packId) {
     try {
       setLoading(true);
-      toast.success(`Mock Purchase: ${pack.name} acquired!`);
-      
+      const packDef = packs.find(p => p.id === packId);
       const { data } = await axios.post('/api/store/buy-pack', {
-        packId: pack.id,
-        forceRarity: pack.forceRarity
+        packId: packId,
+        forceRarity: packDef?.forceRarity || null
       });
-      
       setAwardedCard(data.awarded);
       setPackOpening(true);
+      toast.success('Payment successful! Pack delivered.');
+    } catch (e) {
+      toast.error('Failed to claim your pack. Please contact support.');
+    } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleBuyPack(pack) {
+    try {
+      setLoading(true);
+      
+      const { data } = await axios.post('/api/stripe/create-pack-checkout', {
+        packId: pack.id,
+        packName: pack.name
+      });
+      
+      if (data.url) {
+        window.location.href = data.url; // Redirect to Stripe
+      } else {
+        toast.error('Failed to initialize checkout.');
+        setLoading(false);
+      }
     } catch (e) {
       setLoading(false);
-      toast.error('Failed to process purchase.');
+      toast.error(e.response?.data?.error || 'Failed to start purchase process.');
     }
   }
 

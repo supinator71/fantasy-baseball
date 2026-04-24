@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import rosterData from '@/lib/rosterData';
+import { GALACTIC_ROSTER as rosterData } from '@/lib/rosterData';
 import '@/components/TrophyCase/TrophyCase.css';
 
 export default function TestGallery() {
