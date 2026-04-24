@@ -49,6 +49,12 @@ export default function TradeBlock() {
         >
           📩 Incoming Offers <span className="badge-count">0</span>
         </button>
+        <button 
+          className={`tab-btn ${activeTab === 'showcases' ? 'active' : ''}`}
+          onClick={() => setActiveTab('showcases')}
+        >
+          📖 Public Showcases
+        </button>
       </div>
 
       <div className="trade-content">
@@ -84,6 +90,37 @@ export default function TradeBlock() {
             {activeTab === 'offers' && (
               <div className="offers-section">
                 <p style={{ color: 'var(--text-muted)' }}>You have no pending trade offers.</p>
+              </div>
+            )}
+
+            {activeTab === 'showcases' && (
+              <div className="showcases-section">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                  <p style={{ color: 'var(--text-muted)' }}>Browse other collectors' public vaults to see their rarest pulls.</p>
+                  <label className="public-toggle">
+                    <input type="checkbox" defaultChecked={true} />
+                    <span>Make My Collection Public</span>
+                  </label>
+                </div>
+                
+                <div className="showcase-grid">
+                  <div className="showcase-user-card">
+                    <div className="user-avatar">🤖</div>
+                    <div className="user-info">
+                      <h3>CyberScout24</h3>
+                      <p>42 Unique Cards • 3 Legendaries</p>
+                    </div>
+                    <button className="btn btn-ghost">View Collection</button>
+                  </div>
+                  <div className="showcase-user-card">
+                    <div className="user-avatar">👽</div>
+                    <div className="user-info">
+                      <h3>DiamondHands</h3>
+                      <p>110 Unique Cards • 8 Legendaries</p>
+                    </div>
+                    <button className="btn btn-ghost">View Collection</button>
+                  </div>
+                </div>
               </div>
             )}
           </>

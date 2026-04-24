@@ -124,3 +124,85 @@
 .add-to-block-btn:hover {
   background: rgba(0, 200, 255, 0.1);
 }
+
+/* Showcases Tab */
+.public-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 200, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 200, 255, 0.3);
+  color: #00c8ff;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.public-toggle input[type="checkbox"] {
+  accent-color: #ff0088;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.showcase-user-card {
+  background: #0c1d35;
+  border: 1px solid #1e3d5c;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.showcase-user-card:hover {
+  transform: translateY(-4px);
+  border-color: #00c8ff;
+}
+
+.user-avatar {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #ff0088, #00c8ff);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(0, 200, 255, 0.3);
+}
+
+.user-info {
+  flex: 1;
+}
+
+.user-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+}
+
+.user-info p {
+  margin: 0;
+  font-size: 12px;
+  color: #7aafc4;
+}
+
+.showcase-user-card .btn-ghost {
+  font-size: 12px;
+  padding: 6px 12px;
+  border: 1px solid #1e3d5c;
+}
+
+.showcase-user-card .btn-ghost:hover {
+  border-color: #00c8ff;
+}
