@@ -166,10 +166,10 @@ export default function TrophyCase() {
           </div>
           {canClaimDaily ? (
              <button className="btn claim-btn pulse-glow" onClick={claimDailyPack} disabled={loading}>
-               🎁 Claim Daily Free Pack!
+               🎁 Claim Daily Free Card!
              </button>
           ) : (
-             <div className="claimed-text">Daily Pack Claimed. Check back tomorrow!</div>
+             <div className="claimed-text">Daily Card Claimed. Check back tomorrow!</div>
           )}
         </div>
       </div>

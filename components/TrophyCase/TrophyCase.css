@@ -478,3 +478,95 @@
 
 @keyframes sign-in {
 }
+
+/* Foil Pack Rip Animation */
+.foil-pack {
+  width: 300px;
+  height: 420px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #0f172a 50%, #0f172a 100%);
+  border-radius: 12px;
+  border: 4px solid #334155;
+  box-shadow: 0 0 30px rgba(0,200,255,0.2), inset 0 0 20px rgba(0,0,0,0.8);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  animation: float-pack 3s ease-in-out infinite;
+  z-index: 100;
+}
+
+.foil-pack:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 50px rgba(0, 200, 255, 0.5), inset 0 0 30px rgba(0,0,0,0.8);
+  border-color: #00c8ff;
+}
+
+.foil-texture {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.05) 0px,
+    rgba(255, 255, 255, 0.05) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+  pointer-events: none;
+}
+
+.foil-glare {
+  position: absolute;
+  top: -50%; left: -50%; right: -50%; bottom: -50%;
+  background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.1) 45%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.1) 55%, transparent 60%);
+  transform: rotate(45deg);
+  animation: foil-shine 6s linear infinite;
+  pointer-events: none;
+}
+
+.tap-to-rip {
+  margin-top: 40px;
+  padding: 12px 24px;
+  background: #ff0088;
+  color: white;
+  font-weight: 800;
+  border-radius: 8px;
+  font-size: 16px;
+  letter-spacing: 1px;
+  animation: pulse 1.5s infinite;
+  box-shadow: 0 4px 15px rgba(255, 0, 136, 0.5);
+  border: 2px solid #ff66b2;
+}
+
+@keyframes float-pack {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(1deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+@keyframes foil-shine {
+  0% { left: -100%; top: -100%; }
+  50% { left: 100%; top: 100%; }
+  100% { left: 100%; top: 100%; }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Ripped animation */
+.pack-ripped {
+  animation: rip-away 0.6s cubic-bezier(0.8, -0.2, 0.2, 1.5) forwards;
+  pointer-events: none;
+}
+
+@keyframes rip-away {
+  0% { transform: scale(1) translateY(0) rotate(0deg); opacity: 1; }
+  50% { opacity: 0.8; }
+  100% { transform: scale(1.2) translateY(-120vh) rotate(-15deg); opacity: 0; }
+}
