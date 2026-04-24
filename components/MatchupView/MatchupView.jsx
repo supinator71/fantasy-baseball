@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import useSWR from 'swr';
 import { useLeague } from '@/lib/context/LeagueContext';
 import InsightCard from '@/components/InsightCard/InsightCard';
 import { toast } from 'react-hot-toast';
@@ -21,28 +22,19 @@ function statsArrayToMap(statsArr) {
 
 export default function MatchupView() {
   const { selectedLeague, leagueData, aiAnalysis } = useLeague();
-  const [matchup, setMatchup] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [aiPrediction, setAiPrediction]     = useState(null);
   const [aiPredLoading, setAiPredLoading]   = useState(false);
   const [aiPredError, setAiPredError]       = useState('');
 
-  useEffect(() => {
-    if (selectedLeague) fetchMatchup();
-  }, [selectedLeague]);
+  // SWR automatically handles caching, deduping, and background refresh!
+  const { data: matchup, error, isLoading: loading } = useSWR(
+    selectedLeague ? `/api/yahoo/league/${selectedLeague}/matchup` : null
+  );
 
-  async function fetchMatchup() {
-    setLoading(true);
+  // Clear previous prediction when league changes
+  useEffect(() => {
     setAiPrediction(null);
-    try {
-      const res = await axios.get(`/api/yahoo/league/${selectedLeague}/matchup`);
-      setMatchup(res.data);
-    } catch (err) {
-      toast.error('Failed to load matchup');
-    } finally {
-      setLoading(false);
-    }
-  }
+  }, [selectedLeague]);
 
   // Auto-run prediction when matchup data loads
   useEffect(() => {

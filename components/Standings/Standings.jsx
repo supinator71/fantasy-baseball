@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import useSWR from 'swr'
 import { useLeague } from '@/lib/context/LeagueContext'
 
 function parseTeamInfo(teamData) {
@@ -65,50 +66,44 @@ export default function Standings() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const { data: rawData, error: swrError, isLoading: loading, mutate: fetchStandings } = useSWR(
+    selectedLeague ? `/api/yahoo/league/${selectedLeague}/standings` : null
+  )
+
   useEffect(() => {
-    if (selectedLeague) fetchStandings(selectedLeague)
-  }, [selectedLeague])
-
-  async function fetchStandings(leagueKey) {
-    if (!leagueKey) return
-    setLoading(true)
-    setError('')
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 15000) // 15s client timeout
-    try {
-      const { data } = await axios.get(`/api/yahoo/league/${leagueKey}/standings`, {
-        signal: controller.signal
-      })
-      const teams = []
-
-      if (data && Array.isArray(data)) {
-        for (const item of data) {
-          const parsed = parseTeamInfo(item)
-          if (parsed) teams.push(parsed)
-        }
-      } else if (data && typeof data === 'object') {
-        const count = parseInt(data['@attributes']?.count) || Object.keys(data).filter(k => /^\d+$/.test(k)).length
-        for (let i = 0; i < count; i++) {
-          const parsed = parseTeamInfo(data[i] || data[String(i)])
-          if (parsed) teams.push(parsed)
-        }
-      }
-
-      teams.sort((a, b) => a.rank - b.rank)
-      setStandings(teams)
-      if (teams.length === 0) setError('No standings data returned — the league may not have started yet.')
-    } catch (err) {
-      if (err.name === 'CanceledError' || err.name === 'AbortError') {
+    if (swrError) {
+      if (swrError.name === 'CanceledError' || swrError.name === 'AbortError') {
         setError('Standings timed out. Yahoo may be slow — hit Refresh to try again.')
       } else {
         setError('Could not load standings. Make sure you are connected to Yahoo.')
       }
-      setStandings([])
-    } finally {
-      clearTimeout(timeout)
-      setLoading(false)
+    } else {
+      setError('')
     }
-  }
+  }, [swrError])
+
+  useEffect(() => {
+    if (rawData) {
+      const teams = []
+      if (Array.isArray(rawData)) {
+        for (const item of rawData) {
+          const parsed = parseTeamInfo(item)
+          if (parsed) teams.push(parsed)
+        }
+      } else if (typeof rawData === 'object') {
+        const count = parseInt(rawData['@attributes']?.count) || Object.keys(rawData).filter(k => /^\d+$/.test(k)).length
+        for (let i = 0; i < count; i++) {
+          const parsed = parseTeamInfo(rawData[i] || rawData[String(i)])
+          if (parsed) teams.push(parsed)
+        }
+      }
+      teams.sort((a, b) => a.rank - b.rank)
+      setStandings(teams)
+      if (teams.length === 0) setError('No standings data returned — the league may not have started yet.')
+    } else {
+      setStandings([])
+    }
+  }, [rawData])
 
   const numTeams = standings.length
   const playoffCutoff = Math.ceil(numTeams / 2) // typically top half makes playoffs

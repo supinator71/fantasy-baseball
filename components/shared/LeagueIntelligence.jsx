@@ -1,28 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import useSWR from 'swr';
 import toast from 'react-hot-toast';
 
 export default function LeagueIntelligence({ leagueKey, isPro = true }) {  // TODO: set default back to false when re-enabling monetization
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (leagueKey) {  // isPro check removed for testing — add back: `&& isPro`
-      fetchTransactions();
-    }
-  }, [leagueKey, isPro]);
-
-  async function fetchTransactions() {
-    setLoading(true);
-    try {
-      const { data } = await axios.get(`/api/yahoo/league/${leagueKey}/transactions`);
-      setTransactions(data.slice(0, 10)); // Show last 10
-    } catch (err) {
-      toast.error('Failed to fetch rival intelligence.');
-    } finally {
-      setLoading(false);
-    }
-  }
+  // SWR handles caching and deduping, eliminating waterfall loading
+  const { data, isLoading: loading, mutate: fetchTransactions } = useSWR(
+    leagueKey ? `/api/yahoo/league/${leagueKey}/transactions` : null
+  );
+  
+  const transactions = Array.isArray(data) ? data.slice(0, 10) : [];
 
   if (!isPro) {
     return (

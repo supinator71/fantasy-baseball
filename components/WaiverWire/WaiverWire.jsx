@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
+import useSWR from 'swr';
 import { useLeague } from '@/lib/context/LeagueContext';
 import { toast } from 'react-hot-toast';
 import AiQuestionBox from '@/components/shared/AiQuestionBox';
@@ -21,37 +22,17 @@ const PRIORITY_COLORS = {
 export default function WaiverWire() {
   const { selectedLeague, aiAnalysis, aiLoading, scoredWaiver } = useLeague();
 
-  // Raw free-agent list (fetched on load, no Claude needed)
-  const [rawPlayers, setRawPlayers]       = useState([]);
-  const [playersLoading, setPlayersLoading] = useState(false);
-
   // Deep-dive AI analysis result
   const [aiRecs, setAiRecs]         = useState(null);   // { recommendations, scored }
   const [aiRecsLoading, setAiRecsLoading] = useState(false);
   const [aiRecsError, setAiRecsError]     = useState('');
 
-  useEffect(() => {
-    if (selectedLeague) {
-      setRawPlayers([]);
-      setAiRecs(null);
-      fetchPlayers();
-    }
-  }, [selectedLeague]);
-
-  // ── Step 1: fetch free agents automatically on load ──────────────────────
-  async function fetchPlayers() {
-    setPlayersLoading(true);
-    try {
-      const res = await axios.get(`/api/yahoo/league/${selectedLeague}/players`, {
-        params: { status: 'A' }
-      });
-      setRawPlayers(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      toast.error('Failed to load free agents');
-    } finally {
-      setPlayersLoading(false);
-    }
-  }
+  // ── Step 1: fetch free agents automatically using SWR ──────────────────────
+  const { data: rawPlayersData, error, isLoading: playersLoading, mutate: mutatePlayers } = useSWR(
+    selectedLeague ? `/api/yahoo/league/${selectedLeague}/players?status=A` : null
+  );
+  
+  const rawPlayers = Array.isArray(rawPlayersData) ? rawPlayersData : [];
 
   // ── Step 2: "Get AI Analysis" button → deep-dive Claude call ─────────────
   async function runWaiverAnalysis() {
@@ -67,12 +48,11 @@ export default function WaiverWire() {
       setAiRecs(data);
       // If route returned fresh engine-scored players, update the table
       if (data.scored?.length > 0) {
-        setRawPlayers(prev => {
-          // Merge: prefer scored data from API, keep any extras from raw list
+        mutatePlayers((prev) => {
           const scoredNames = new Set(data.scored.map(p => p.name || p.player_name));
-          const extras = prev.filter(p => !scoredNames.has(p.name || p.player_name));
+          const extras = (Array.isArray(prev) ? prev : []).filter(p => !scoredNames.has(p.name || p.player_name));
           return [...data.scored, ...extras];
-        });
+        }, false); // false = do not revalidate
       }
     } catch (err) {
       setAiRecsError(err.response?.data?.error || 'Analysis failed. Try again.');
@@ -142,7 +122,7 @@ export default function WaiverWire() {
               : `Available Free Agents (${displayPlayers.length})`}
           </span>
           <button
-            onClick={fetchPlayers}
+            onClick={() => mutatePlayers()}
             disabled={playersLoading}
             style={{ fontSize: 11, background: 'none', border: '1px solid #1e3d5c', borderRadius: 4, padding: '3px 10px', color: '#7aafc4', cursor: 'pointer' }}
           >

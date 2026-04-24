@@ -20,6 +20,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 import { LeagueProvider } from '@/lib/context/LeagueContext';
+import { SWRConfig } from 'swr';
 
 export default function RootLayout({ children }) {
   const [authStatus, setAuthStatus] = useState({ authenticated: false, loading: true });
@@ -64,6 +65,12 @@ export default function RootLayout({ children }) {
     }
   }
 
+  const swrOptions = {
+    fetcher: (url) => axios.get(url).then(res => res.data),
+    revalidateOnFocus: false, // Don't spam Yahoo API when tabbing back and forth
+    dedupingInterval: 10000, // 10 seconds deduping
+  };
+
   return (
     <html lang="en" className={`${rajdhani.variable} ${spaceGrotesk.variable}`}>
       <head>
@@ -72,6 +79,7 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <Toaster position="top-right" />
+        <SWRConfig value={swrOptions}>
         <LeagueProvider>
           <div className="app-layout">
             <Sidebar 
@@ -135,6 +143,7 @@ export default function RootLayout({ children }) {
             </div>
           </div>
         </LeagueProvider>
+        </SWRConfig>
       </body>
     </html>
   );
