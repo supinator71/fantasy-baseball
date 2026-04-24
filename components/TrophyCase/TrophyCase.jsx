@@ -95,6 +95,7 @@ export default function TrophyCase() {
               </div>
               <div className="back-footer">
                 <span className="rarity-tag">{cardDef.rarity.toUpperCase()} UNIT</span>
+                <div className="card-trademark">© 2046 Galactic Baseball Auth. TM Goin' Yard Collectibles.</div>
               </div>
             </div>
           </div>
