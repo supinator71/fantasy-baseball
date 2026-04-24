@@ -350,8 +350,10 @@
 .card-signature {
   position: absolute;
   bottom: 25%;
-  left: 50%;
-  transform: translateX(-50%) rotate(-5deg);
+  left: 0;
+  right: 0;
+  text-align: center;
+  transform: rotate(-5deg);
   font-family: 'Caveat', 'Playball', cursive, sans-serif;
   font-size: 32px;
   background: linear-gradient(135deg, #FFD700 0%, #FFF5CC 50%, #FFD700 100%);
@@ -362,18 +364,21 @@
   pointer-events: none;
   opacity: 0;
   animation: sign-in 0.8s 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-  white-space: nowrap;
+  white-space: normal;
+  padding: 0 10px;
+  word-wrap: break-word;
+  line-height: 0.9;
 }
 
 .card-signature.classic {
   font-family: 'Mrs Saint Delafield', cursive;
-  font-size: 42px;
-  transform: translateX(-50%) rotate(-2deg);
+  font-size: 38px;
+  transform: rotate(-2deg);
 }
 
 .card-signature.aggressive {
   font-family: 'Homemade Apple', cursive;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: bold;
 }
 
