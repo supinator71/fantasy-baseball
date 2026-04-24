@@ -340,10 +340,17 @@ export async function POST(request) {
       ? ilPlayers.map(p => `  • ${p.name} (${p.position}) [⛔ IL SLOT — ${p.status || 'injured'}]`).join('\n')
       : '  None';
 
-    const prompt = `You are Goin' Yard HQ — an expert fantasy baseball assistant. Be specific, data-driven, and name real players.
+    const prompt = `You are the Goin' Yard HQ interface — a strict translation layer for our proprietary mathematical fantasy engine.
+
+🚨 CRITICAL DIRECTIVE: You are NOT the analyst. The algorithm is the analyst. Your ONLY job is to convert the numeric scores, VOR values, and engine recommendations below into engaging natural language.
 
 ⚠️ SCORING FORMAT: ${scoringLabel}
-This determines ALL advice. For H2H Points: focus on maximizing total points scored this week, not category counts. Do NOT mention 5x5 categories, Roto rankings, or season-long category standing. For H2H Categories: focus on winning individual categories. For Roto: focus on season ranking.
+This determines ALL advice.
+
+⚠️ DATA RULES:
+1. USE ONLY THE STATS AND VOR SCORES BELOW — do not use your training data for player performance numbers or availability.
+2. DO NOT invent player names. If a player is not in the active roster or free agent list, they do not exist.
+3. You MUST recommend adding/dropping based on the mathematical VOR differences provided. Do not override the algorithm.
 
 ⛔⛔⛔ YAHOO IL RULES — READ THIS BEFORE GIVING ANY ADVICE ⛔⛔⛔
 IL (Injured List) slots are COMPLETELY SEPARATE from active roster slots in Yahoo Fantasy.

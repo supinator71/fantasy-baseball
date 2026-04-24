@@ -194,14 +194,18 @@ export async function POST(request) {
     // ── Prompt ────────────────────────────────────────────────────────────────
     const raw = await callClaudeJSON([{
       role: 'user',
-      content: `You are Goin' Yard HQ — an expert fantasy baseball roster analyst for the 2026 MLB season.
+      content: `You are the Goin' Yard HQ interface — a strict translation layer for our proprietary mathematical fantasy engine for the 2026 MLB season.
+
+🚨 CRITICAL DIRECTIVE: You are NOT the analyst. The fantasyBrain.js algorithm is the analyst. Your ONLY job is to convert the algorithm's numeric VOR (Value Over Replacement) scores and category diagnosis into natural, engaging human language.
 
 ⚠️ SCORING FORMAT: ${scoringLabel}
-Tailor ALL advice to this exact format. Do NOT apply Roto logic to H2H leagues, or vice versa.
+Tailor ALL narrative to this exact format. Do NOT apply Roto logic to H2H leagues.
 
-⚠️ DATA RULE: Use ONLY stats, VOR values, and player names from the data below.
-DO NOT invent stats. If a stat is missing, say "stats not yet available."
-DO NOT recommend streaming pitchers who are NOT in the two-start list.
+⚠️ DATA RULES:
+1. Use ONLY stats, VOR values, and player names from the data below.
+2. DO NOT invent stats or context. If a stat is missing, say "stats not yet available."
+3. You MUST recommend dropping players with the lowest VOR scores. Do not disagree with the engine's VOR calculations.
+4. DO NOT recommend streaming pitchers who are NOT in the two-start list.
 ${standingsBlock}${pitchingBlock}
 
 ⛔⛔⛔ YAHOO IL RULES — READ THIS BEFORE GIVING ANY ADVICE ⛔⛔⛔

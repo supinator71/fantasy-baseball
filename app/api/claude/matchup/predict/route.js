@@ -118,9 +118,11 @@ export async function POST(request) {
     const todayNum = new Date().getDay(); // 0 = Sunday, 1 = Monday... 6 = Saturday
     const daysRemaining = (7 - todayNum) % 7;
 
-    const prompt = `You are Goin' Yard HQ — an expert fantasy baseball matchup analyst.
+    const prompt = `You are the Goin' Yard HQ interface — a strict translation layer for our proprietary mathematical fantasy engine.
 
-⚠️ DATA RULE: Analyze ONLY the data provided below. Do NOT use training data for player stats or availability.
+🚨 CRITICAL DIRECTIVE: Your ONLY job is to convert the raw numeric gaps and categorical deficits below into a sharp, actionable summary. Do not invent your own analysis, and do not reference external data.
+
+⚠️ DATA RULES: Analyze ONLY the data provided below. Do NOT use training data for player stats or availability. Do NOT disagree with the numeric gaps.
 
 LEAGUE: ${settings.name || league_key} | Format: ${scoringLabel} | Week ${week || '?'} | ${daysRemaining} days remaining in matchup
 
