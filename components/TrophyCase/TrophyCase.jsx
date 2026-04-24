@@ -70,6 +70,12 @@ export default function TrophyCase() {
               {isUnlocked && count > 1 && (
                 <div className="dupe-badge">x{count}</div>
               )}
+              {isUnlocked && (
+                <div className="card-front-nameplate" style={{ borderLeftColor: cardDef.teamColor || '#fff' }}>
+                  <div className="plate-name">{cardDef.playerName || cardDef.name}</div>
+                  <div className="plate-team">{cardDef.team || 'Galactic'} | {cardDef.position || 'Player'}</div>
+                </div>
+              )}
               <div className="card-set-num">CARD #{cardDef.set_num}</div>
             </div>
 

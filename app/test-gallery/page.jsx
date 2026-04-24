@@ -51,6 +51,10 @@ export default function TestGallery() {
                     <img src={cardDef.img} alt={cardDef.name} className="card-image" />
                     <div className={`card-signature ${cardDef.sig_style}`}>{cardDef.signature_name}</div>
                     <div className={`card-patch ${cardDef.patch_type}`} />
+                    <div className="card-front-nameplate" style={{ borderLeftColor: cardDef.teamColor || '#fff' }}>
+                      <div className="plate-name">{cardDef.playerName}</div>
+                      <div className="plate-team">{cardDef.team} | {cardDef.position}</div>
+                    </div>
                     <div className="card-set-num">CARD #{cardDef.set_num}</div>
                   </div>
 

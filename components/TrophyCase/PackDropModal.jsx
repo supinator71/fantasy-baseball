@@ -36,6 +36,10 @@ export default function PackDropModal({ awardedCard, onClose }) {
             {awardedCard.has_patch && (
               <div className={`card-patch ${awardedCard.patch_type || 'jersey'}`} />
             )}
+            <div className="card-front-nameplate" style={{ borderLeftColor: awardedCard.teamColor || '#fff' }}>
+              <div className="plate-name">{awardedCard.playerName || awardedCard.name}</div>
+              <div className="plate-team">{awardedCard.team || 'Galactic'} | {awardedCard.position || 'Player'}</div>
+            </div>
           </div>
           <div className="pack-card-details slide-up">
             <h2 style={{ color: 'white' }}>{awardedCard.name}</h2>

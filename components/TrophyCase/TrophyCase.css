@@ -642,3 +642,33 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+
+.card-front-nameplate {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  border-left: 4px solid #fff;
+  padding: 6px 10px;
+  border-radius: 4px;
+  text-align: left;
+  z-index: 10;
+}
+.plate-name {
+  color: white;
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+.plate-team {
+  color: #aaa;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
