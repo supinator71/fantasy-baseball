@@ -21,10 +21,7 @@ export default function Sidebar({ authenticated, isOpen, onClose, subscription }
     { href: '/tradefinder', label: 'Trade Finder',          icon: '💡' },
     { href: '/gameplan',    label: 'Weekly Game Plan',      icon: '📅' },
     { href: '/baseball101', label: 'Baseball 101',          icon: '🎓' },
-    { href: '/trophy',      label: 'Trophy Case',           icon: '🏆' },
-    { href: '/vault',       label: 'Collector\'s Vault',    icon: '💎' },
-    { href: '/store',       label: 'Card Store',            icon: '🛍️' },
-    { href: '/tradeblock',  label: 'Trade Block',           icon: '🤝' },
+    { href: '/tradeblock',  label: 'League Trade Block',    icon: '🤝' },
   ];
 
   if (!authenticated) return null;
@@ -37,9 +34,6 @@ export default function Sidebar({ authenticated, isOpen, onClose, subscription }
           <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em', fontFamily: 'var(--font-heading)' }}>
             ⚾ Goin' Yard <span style={{ color: 'var(--primary)' }}>HQ</span>
           </div>
-          {subscription?.plan === 'pro' && (
-            <span className="badge" style={{ background: 'var(--primary)', color: 'white', marginTop: 4 }}>PRO</span>
-          )}
         </div>
 
         <div style={{ overflowY: 'auto', flex: 1, paddingBottom: 20 }}>

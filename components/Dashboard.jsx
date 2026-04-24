@@ -111,10 +111,6 @@ export default function Dashboard({ subscription }) {
           { label: 'Trade Finder',       icon: '💡', href: '/tradefinder',  desc: 'AI trade proposals' },
           { label: 'Weekly Game Plan',   icon: '📅', href: '/gameplan',     desc: 'Lineup optimizer' },
           { label: 'Baseball 101',       icon: '🎓', href: '/baseball101',  desc: 'Beginner metrics guide' },
-          { label: 'Card Shop',          icon: '💎', href: '/store',        desc: 'Purchase digital packs' },
-          { label: 'Trophy Case',        icon: '🏆', href: '/trophy',       desc: 'Gamification unlocks' },
-          { label: 'Trade Block',        icon: '🤝', href: '/tradeblock',   desc: 'Global card marketplace' },
-          { label: 'Upgrade to Pro',     icon: '⭐', href: '/upgrade',      desc: 'Unlock infinite AI insights' },
         ].map(item => (
           <a key={item.href} href={item.href} style={{ textDecoration: 'none' }}>
             <div className="card" style={{ cursor: 'pointer', transition: 'border-color 0.2s', padding: '16px' }}
@@ -239,7 +235,7 @@ export default function Dashboard({ subscription }) {
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, marginTop: 24 }}>
-        <LeagueIntelligence leagueKey={selectedLeague} isPro={subscription?.plan === 'pro'} />
+        <LeagueIntelligence leagueKey={selectedLeague} />
         <FeedbackBox />
       </div>
 
