@@ -6,21 +6,49 @@ import './TradeBlock.css';
 export default function TradeBlock() {
   const [activeTab, setActiveTab] = useState('market'); // 'market', 'my-block', 'offers'
   const [marketListings, setMarketListings] = useState([]);
+  const [myVault, setMyVault] = useState([]);
+  const [selectedCard, setSelectedCard] = useState(null);
+  const [seekingText, setSeekingText] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchMarket() {
-      try {
-        const { data } = await axios.get('/api/tradeblock');
-        setMarketListings(data.listings || []);
-      } catch (e) {
-        toast.error('Failed to load global market');
-      } finally {
-        setLoading(false);
-      }
+  const fetchMarket = async () => {
+    try {
+      const { data } = await axios.get('/api/tradeblock');
+      setMarketListings(data.listings || []);
+    } catch (e) {
+      toast.error('Failed to load global market');
     }
-    fetchMarket();
+  };
+
+  const fetchVault = async () => {
+    try {
+      const { data } = await axios.get('/api/trophy/album');
+      setMyVault(data.unlocked_cards || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    Promise.all([fetchMarket(), fetchVault()]).finally(() => setLoading(false));
   }, []);
+
+  const handlePostTrade = async () => {
+    if (!selectedCard || !seekingText.trim()) return toast.error("Select a card and state what you're seeking.");
+    try {
+      await axios.post('/api/tradeblock', {
+        instanceId: selectedCard.instanceId,
+        seeking: seekingText
+      });
+      toast.success("Card posted to Global Market!");
+      setSelectedCard(null);
+      setSeekingText('');
+      fetchMarket();
+      setActiveTab('market');
+    } catch (e) {
+      toast.error(e.response?.data?.error || "Failed to post trade");
+    }
+  };
 
   return (
     <div className="trade-block-container">
@@ -93,7 +121,47 @@ export default function TradeBlock() {
             {activeTab === 'my-block' && (
               <div className="my-block-section">
                 <p>Select cards from your Vault to place on the public Trade Block.</p>
-                <button className="btn add-to-block-btn">+ Add Card to Block</button>
+                <div style={{ display: 'flex', gap: 20, marginTop: 20 }}>
+                  <div style={{ flex: 1 }}>
+                    <select 
+                      className="form-control" 
+                      onChange={e => setSelectedCard(myVault.find(c => c.instanceId === e.target.value))}
+                      value={selectedCard?.instanceId || ''}
+                      style={{ background: '#0c1d35', color: '#fff', padding: 12, border: '1px solid #1e3d5c', borderRadius: 8, width: '100%', marginBottom: 16 }}
+                    >
+                      <option value="">-- Select a Card from your Vault --</option>
+                      {myVault.map(c => (
+                        <option key={c.instanceId} value={c.instanceId}>
+                          {c.playerName} ({c.team}) - {c.rarity.toUpperCase()}
+                        </option>
+                      ))}
+                    </select>
+                    
+                    <input 
+                      type="text" 
+                      placeholder="What are you seeking in return? (e.g. 'Any Epic Pitcher')" 
+                      value={seekingText}
+                      onChange={e => setSeekingText(e.target.value)}
+                      style={{ background: '#0c1d35', color: '#fff', padding: 12, border: '1px solid #1e3d5c', borderRadius: 8, width: '100%', marginBottom: 16 }}
+                    />
+                    
+                    <button className="btn btn-primary" onClick={handlePostTrade} disabled={!selectedCard || !seekingText.trim()}>
+                      + Post to Global Market
+                    </button>
+                  </div>
+                  
+                  <div style={{ width: 250, border: '1px dashed #1e3d5c', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)' }}>
+                    {selectedCard ? (
+                      <div style={{ padding: 10, textAlign: 'center' }}>
+                        <img src={selectedCard.img} alt={selectedCard.playerName} style={{ width: '100%', borderRadius: 8, marginBottom: 8 }} />
+                        <div style={{ fontWeight: 'bold' }}>{selectedCard.playerName}</div>
+                        <div style={{ fontSize: 12, color: selectedCard.teamColor || '#aaa' }}>{selectedCard.rarity.toUpperCase()}</div>
+                      </div>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)' }}>Card Preview</span>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
