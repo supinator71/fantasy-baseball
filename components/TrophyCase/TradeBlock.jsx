@@ -9,14 +9,17 @@ export default function TradeBlock() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Scaffold: Fetch trade block data here
-    setTimeout(() => {
-      setMarketListings([
-        { id: 1, player: 'Unit 91-E', user: 'CyberScout24', seeking: 'Any Legendary or Tokyo Tachyons players' },
-        { id: 2, player: 'Elijah Wilson', user: 'DiamondHands', seeking: 'Brooklyn Biotics Pitchers' }
-      ]);
-      setLoading(false);
-    }, 1000);
+    async function fetchMarket() {
+      try {
+        const { data } = await axios.get('/api/tradeblock');
+        setMarketListings(data.listings || []);
+      } catch (e) {
+        toast.error('Failed to load global market');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchMarket();
   }, []);
 
   return (
@@ -64,19 +67,26 @@ export default function TradeBlock() {
           <>
             {activeTab === 'market' && (
               <div className="market-grid">
-                {marketListings.map(listing => (
-                  <div key={listing.id} className="trade-card-slot">
-                    <div className="card-placeholder">
-                      <span>Card Image Here</span>
-                      <h3>{listing.player}</h3>
+                {marketListings.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)' }}>The Trade Block is currently empty. Post your cards to get started!</p>
+                ) : (
+                  marketListings.map(listing => (
+                    <div key={listing.id} className="trade-card-slot">
+                      <div className="card-placeholder" style={{ padding: 0, overflow: 'hidden' }}>
+                        <img src={listing.card.img} alt={listing.card.playerName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <div style={{ position: 'absolute', bottom: 10, left: 10, right: 10, background: 'rgba(0,0,0,0.8)', padding: 8, borderRadius: 4 }}>
+                          <div style={{ fontSize: 14, fontWeight: 'bold' }}>{listing.card.playerName}</div>
+                          <div style={{ fontSize: 10, color: listing.card.teamColor || '#aaa' }}>{listing.card.rarity.toUpperCase()}</div>
+                        </div>
+                      </div>
+                      <div className="trade-details">
+                        <div className="seller">Offered by: <strong>{listing.username}</strong></div>
+                        <div className="seeking">Seeking: {listing.seeking}</div>
+                        <button className="btn btn-primary make-offer-btn">Make Offer</button>
+                      </div>
                     </div>
-                    <div className="trade-details">
-                      <div className="seller">Offered by: <strong>{listing.user}</strong></div>
-                      <div className="seeking">Seeking: {listing.seeking}</div>
-                      <button className="btn btn-primary make-offer-btn">Make Offer</button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             )}
             
