@@ -12,6 +12,7 @@
     "@anthropic-ai/sdk": "^0.90.0",
     "axios": "^1.15.2",
     "cookie": "^1.1.1",
+    "ioredis": "^5.10.1",
     "iron-session": "^8.0.4",
     "lucide-react": "^1.8.0",
     "next": "16.2.4",

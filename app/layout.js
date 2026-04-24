@@ -26,7 +26,33 @@ export default function RootLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        const isAuthError = 
+          error.response?.status === 401 ||
+          (error.response?.status === 500 && (
+            error.response?.data?.error?.includes('refresh token') ||
+            error.response?.data?.error?.includes('Not authenticated') ||
+            error.response?.data?.error?.includes('No token found')
+          ));
+
+        if (isAuthError) {
+          if (window.location.pathname !== '/') {
+            toast.error('Session expired. Please sign in again.', { duration: 5000 });
+            setAuthStatus({ authenticated: false, loading: false });
+            axios.post('/api/auth/logout').finally(() => {
+              window.location.href = '/';
+            });
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+
     checkAuth();
+
+    return () => axios.interceptors.response.eject(interceptor);
   }, []);
 
   async function checkAuth() {
