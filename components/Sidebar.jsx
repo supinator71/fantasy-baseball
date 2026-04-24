@@ -24,6 +24,7 @@ export default function Sidebar({ authenticated, isOpen, onClose, subscription }
     { href: '/trophy',      label: 'Trophy Case',           icon: '🏆' },
     { href: '/vault',       label: 'Collector\'s Vault',    icon: '💎' },
     { href: '/store',       label: 'Card Store',            icon: '🛍️' },
+    { href: '/tradeblock',  label: 'Trade Block',           icon: '🤝' },
   ];
 
   if (!authenticated) return null;

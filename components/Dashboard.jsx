@@ -111,8 +111,9 @@ export default function Dashboard({ subscription }) {
           { label: 'Trade Finder',       icon: '💡', href: '/tradefinder',  desc: 'AI trade proposals' },
           { label: 'Weekly Game Plan',   icon: '📅', href: '/gameplan',     desc: 'Lineup optimizer' },
           { label: 'Baseball 101',       icon: '🎓', href: '/baseball101',  desc: 'Beginner metrics guide' },
-          { label: 'Pitching Intel',     icon: '🎯', href: '/pitching',   desc: 'Advanced pitcher analytics' },
+          { label: 'Card Shop',          icon: '💎', href: '/store',        desc: 'Purchase digital packs' },
           { label: 'Trophy Case',        icon: '🏆', href: '/trophy',       desc: 'Gamification unlocks' },
+          { label: 'Trade Block',        icon: '🤝', href: '/tradeblock',   desc: 'Global card marketplace' },
           { label: 'Upgrade to Pro',     icon: '⭐', href: '/upgrade',      desc: 'Unlock infinite AI insights' },
         ].map(item => (
           <a key={item.href} href={item.href} style={{ textDecoration: 'none' }}>

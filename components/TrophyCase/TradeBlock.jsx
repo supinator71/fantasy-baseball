@@ -10,6 +10,10 @@ export default function TradeBlock() {
   const [selectedCard, setSelectedCard] = useState(null);
   const [seekingText, setSeekingText] = useState('');
   const [loading, setLoading] = useState(true);
+  
+  // Make Offer State
+  const [offerModalListing, setOfferModalListing] = useState(null);
+  const [offerSelectedCard, setOfferSelectedCard] = useState(null);
 
   const fetchMarket = async () => {
     try {
@@ -47,6 +51,22 @@ export default function TradeBlock() {
       setActiveTab('market');
     } catch (e) {
       toast.error(e.response?.data?.error || "Failed to post trade");
+    }
+  };
+
+  const submitOffer = async () => {
+    if (!offerSelectedCard || !offerModalListing) return toast.error("Select a card to offer");
+    try {
+      // Stubbed API call to /api/tradeblock/offer
+      await axios.post('/api/tradeblock/offer', {
+        listingId: offerModalListing.id,
+        offerInstanceId: offerSelectedCard.instanceId
+      });
+      toast.success("Offer submitted successfully!");
+      setOfferModalListing(null);
+      setOfferSelectedCard(null);
+    } catch (e) {
+      toast.error(e.response?.data?.error || "Failed to submit offer");
     }
   };
 
@@ -110,7 +130,7 @@ export default function TradeBlock() {
                       <div className="trade-details">
                         <div className="seller">Offered by: <strong>{listing.username}</strong></div>
                         <div className="seeking">Seeking: {listing.seeking}</div>
-                        <button className="btn btn-primary make-offer-btn">Make Offer</button>
+                        <button className="btn btn-primary make-offer-btn" onClick={() => setOfferModalListing(listing)}>Make Offer</button>
                       </div>
                     </div>
                   ))
@@ -204,6 +224,38 @@ export default function TradeBlock() {
           </>
         )}
       </div>
+
+      {offerModalListing && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ background: '#0a192f', border: '1px solid #1e3d5c', maxWidth: 500, padding: 24, borderRadius: 12 }}>
+            <h2>Make Offer to {offerModalListing.username}</h2>
+            <p>They are offering: <strong>{offerModalListing.card.playerName}</strong></p>
+            <p style={{ color: '#00c8ff' }}>Seeking: {offerModalListing.seeking}</p>
+            
+            <div style={{ marginTop: 24 }}>
+              <label>Select a card to offer from your Vault:</label>
+              <select 
+                className="form-control" 
+                onChange={e => setOfferSelectedCard(myVault.find(c => c.instanceId === e.target.value))}
+                value={offerSelectedCard?.instanceId || ''}
+                style={{ background: '#0c1d35', color: '#fff', padding: 12, border: '1px solid #1e3d5c', borderRadius: 8, width: '100%', marginTop: 8 }}
+              >
+                <option value="">-- Select Card --</option>
+                {myVault.map(c => (
+                  <option key={c.instanceId} value={c.instanceId}>
+                    {c.playerName} - {c.rarity.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setOfferModalListing(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={submitOffer} disabled={!offerSelectedCard}>Submit Offer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
