@@ -22,6 +22,9 @@ export default function Sidebar({ authenticated, isOpen, onClose, subscription }
     { href: '/gameplan',    label: 'Weekly Game Plan',      icon: '📅' },
     { href: '/baseball101', label: 'Baseball 101',          icon: '🎓' },
     { href: '/tradeblock',  label: 'League Trade Block',    icon: '🤝' },
+    { href: '/trophy',      label: 'Collector\'s Album',    icon: '🎴' },
+    { href: '/vault',       label: 'Vault (Gallery)',       icon: '🏛️' },
+    { href: '/store',       label: 'Card Store (FREE)',     icon: '🛍️' },
   ];
 
   if (!authenticated) return null;

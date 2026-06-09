@@ -111,6 +111,9 @@ export default function Dashboard({ subscription }) {
           { label: 'Trade Finder',       icon: '💡', href: '/tradefinder',  desc: 'AI trade proposals' },
           { label: 'Weekly Game Plan',   icon: '📅', href: '/gameplan',     desc: 'Lineup optimizer' },
           { label: 'Baseball 101',       icon: '🎓', href: '/baseball101',  desc: 'Beginner metrics guide' },
+          { label: 'Collector\'s Album', icon: '🎴', href: '/trophy',    desc: 'Your digital card album' },
+          { label: 'Vault (Gallery)',    icon: '🏛️', href: '/vault',     desc: 'View unlocked collectibles' },
+          { label: 'Card Store',         icon: '🛍️', href: '/store',     desc: 'Open free card packs' },
         ].map(item => (
           <a key={item.href} href={item.href} style={{ textDecoration: 'none' }}>
             <div className="card" style={{ cursor: 'pointer', transition: 'border-color 0.2s', padding: '16px' }}
