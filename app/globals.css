@@ -1651,4 +1651,177 @@ tr:hover td {
   }
 }
 
+/* ==========================================================================
+   🌌 GALACTIC MODE OVERLAYS & SCI-FI DESIGN
+   ========================================================================== */
+
+/* Toggle Switch Styling */
+.galactic-switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.galactic-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.galactic-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.08);
+  transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.galactic-slider:before {
+  position: absolute;
+  content: "";
+  height: 12px;
+  width: 12px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--text-muted);
+  transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+input:checked + .galactic-slider {
+  background-color: rgba(0, 240, 255, 0.1);
+  border-color: #00f0ff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+
+input:checked + .galactic-slider:before {
+  background-color: #00f0ff;
+  transform: translateX(18px);
+  box-shadow: 0 0 8px #00f0ff;
+}
+
+.galactic-slider.round {
+  border-radius: 20px;
+}
+
+.galactic-slider.round:before {
+  border-radius: 50%;
+}
+
+/* Theme variables override for Galactic Mode */
+[data-theme="galactic"] {
+  --primary: #00f0ff;      /* Cosmic Neon Cyan */
+  --primary-hover: #33f5ff;
+  --secondary: #d600ff;    /* Cosmic Neon Purple */
+  --secondary-hover: #e033ff;
+  
+  --bg-app: #03030d;       /* Deep space black */
+  --bg-card: rgba(14, 8, 32, 0.5);
+  --bg-card-hover: rgba(24, 12, 54, 0.6);
+  --border: rgba(214, 0, 255, 0.2);
+  --border-glow: rgba(0, 240, 255, 0.5);
+  
+  --text-main: #f5f2ff;
+  --text-muted: #9ba1c7;
+}
+
+/* Glow effects & animations when Galactic Mode is active */
+[data-theme="galactic"] body {
+  background-image: 
+    radial-gradient(circle at 85% 15%, rgba(214, 0, 255, 0.15), transparent 45%),
+    radial-gradient(circle at 15% 85%, rgba(0, 240, 255, 0.12), transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(10, 6, 38, 0.96), #03030d 100%);
+  background-attachment: fixed;
+  background-size: 110% 110%;
+  animation: space-glow-drift 15s ease-in-out infinite alternate;
+}
+
+[data-theme="galactic"] .card {
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.6), 
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 12px rgba(214, 0, 255, 0.05);
+  border: 1px solid rgba(214, 0, 255, 0.25);
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+[data-theme="galactic"] .card:hover {
+  box-shadow: 
+    0 16px 48px rgba(0, 0, 0, 0.7), 
+    0 0 24px rgba(0, 240, 255, 0.2), 
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-color: #00f0ff;
+  transform: translateY(-4px);
+}
+
+[data-theme="galactic"] .btn-primary {
+  background: linear-gradient(135deg, #00f0ff 0%, #0077ff 100%);
+  box-shadow: 0 4px 14px rgba(0, 240, 255, 0.3);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  color: #03030f;
+  text-shadow: none;
+}
+
+[data-theme="galactic"] .btn-primary:hover {
+  background: linear-gradient(135deg, #33f5ff 0%, #2b8cff 100%);
+  box-shadow: 0 6px 20px rgba(0, 240, 255, 0.55);
+}
+
+[data-theme="galactic"] .btn-ghost {
+  border-color: rgba(214, 0, 255, 0.3);
+  background: rgba(214, 0, 255, 0.03);
+}
+
+[data-theme="galactic"] .btn-ghost:hover {
+  border-color: #00f0ff;
+  background: rgba(0, 240, 255, 0.08);
+  color: #fff;
+}
+
+[data-theme="galactic"] .sidebar {
+  background: rgba(4, 3, 12, 0.85);
+  border-right: 1px solid rgba(214, 0, 255, 0.25);
+  box-shadow: 6px 0 28px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="galactic"] .sidebar-nav-item.active {
+  background: rgba(214, 0, 255, 0.15);
+  border-right: 3px solid #00f0ff;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+  box-shadow: inset -5px 0 15px rgba(214, 0, 255, 0.1);
+}
+
+[data-theme="galactic"] input:focus, 
+[data-theme="galactic"] select:focus, 
+[data-theme="galactic"] textarea:focus {
+  border-color: #00f0ff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="galactic"] .mobile-topbar {
+  background: rgba(4, 3, 12, 0.95);
+  border-bottom: 1px solid rgba(214, 0, 255, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="galactic"] .mobile-topbar span {
+  background: linear-gradient(135deg, #fff 40%, #00f0ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* space drift animation definition */
+@keyframes space-glow-drift {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 5% 5%;
+  }
+}
+
 

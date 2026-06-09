@@ -4,9 +4,11 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import axios from 'axios';
+import { useGalacticMode } from '@/lib/context/GalacticThemeContext';
 
 export default function Sidebar({ authenticated, isOpen, onClose, subscription }) {
   const pathname = usePathname();
+  const { galacticModeEnabled, toggleGalacticMode } = useGalacticMode();
 
   const navItems = [
     { href: '/',            label: 'Dashboard',             icon: '⚾' },
@@ -36,6 +38,17 @@ export default function Sidebar({ authenticated, isOpen, onClose, subscription }
         <div style={{ padding: '0 16px 20px', borderBottom: '1px solid var(--border)', marginBottom: 8 }}>
           <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em', fontFamily: 'var(--font-heading)' }}>
             ⚾ Goin' Yard <span style={{ color: 'var(--primary)' }}>HQ</span>
+          </div>
+          
+          {/* Galactic Mode Toggle Switch */}
+          <div className="galactic-sidebar-toggle" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid var(--border)', transition: 'all 0.3s' }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: galacticModeEnabled ? '#00f0ff' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-heading)', letterSpacing: '0.05em' }}>
+              🌌 {galacticModeEnabled ? 'GALACTIC MODE' : 'STANDARD'}
+            </span>
+            <label className="galactic-switch">
+              <input type="checkbox" checked={galacticModeEnabled} onChange={toggleGalacticMode} />
+              <span className="galactic-slider round"></span>
+            </label>
           </div>
         </div>
 
