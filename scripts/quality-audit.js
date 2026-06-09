@@ -45,26 +45,26 @@ const LEAGUE_TYPES = [
 
 // Roster with Yahoo stat IDs (as returned by getBatchPlayerStats)
 const VIRTUAL_ROSTER = [
-  { name: 'Aaron Judge',       position: 'OF', slot: 'OF',  team: 'NYY', stats: { '7': '28', '12': '9',  '13': '24', '16': '2',  '3': '.302', '18': '15' } },
-  { name: 'Freddie Freeman',   position: '1B', slot: '1B',  team: 'LAD', stats: { '7': '22', '12': '6',  '13': '20', '16': '1',  '3': '.315', '18': '18' } },
-  { name: 'Jose Ramirez',      position: '3B', slot: '3B',  team: 'CLE', stats: { '7': '24', '12': '7',  '13': '22', '16': '5',  '3': '.281', '18': '12' } },
-  { name: 'Willy Adames',      position: 'SS', slot: 'SS',  team: 'SF',  stats: { '7': '16', '12': '5',  '13': '18', '16': '1',  '3': '.248', '18': '8'  } },
-  { name: 'Ronald Acuna Jr.',  position: 'OF', slot: 'OF',  team: 'ATL', stats: { '7': '30', '12': '8',  '13': '20', '16': '12', '3': '.298', '18': '20' } },
-  { name: 'Christian Yelich',  position: 'OF', slot: 'BN',  team: 'MIL', stats: { '7': '18', '12': '4',  '13': '16', '16': '3',  '3': '.274', '18': '14' } },
-  { name: 'Max Muncy',         position: '2B', slot: '2B',  team: 'LAD', stats: { '7': '14', '12': '5',  '13': '15', '16': '0',  '3': '.238', '18': '16' } },
+  { name: 'Aaron Judge',       position: 'OF', slot: 'OF',  team: 'NYY', stats: { '7': '28', '12': '9',  '13': '24', '16': '2',  '3': '.302', '18': '15', xwoba: 0.410, woba: 0.395, bat_speed: 78.5, bbe: 80, blasts: 25, bolts: 1 } },
+  { name: 'Freddie Freeman',   position: '1B', slot: '1B',  team: 'LAD', stats: { '7': '22', '12': '6',  '13': '20', '16': '1',  '3': '.315', '18': '18', xwoba: 0.380, woba: 0.375, bat_speed: 73.2, bbe: 75, blasts: 10, bolts: 0 } },
+  { name: 'Jose Ramirez',      position: '3B', slot: '3B',  team: 'CLE', stats: { '7': '24', '12': '7',  '13': '22', '16': '5',  '3': '.281', '18': '12', xwoba: 0.370, woba: 0.365, bat_speed: 72.5, bbe: 70, blasts: 9, bolts: 4 } },
+  { name: 'Willy Adames',      position: 'SS', slot: 'SS',  team: 'SF',  stats: { '7': '16', '12': '5',  '13': '18', '16': '1',  '3': '.248', '18': '8',  xwoba: 0.325, woba: 0.320, bat_speed: 71.8, bbe: 65, blasts: 7, bolts: 1 } },
+  { name: 'Ronald Acuna Jr.',  position: 'OF', slot: 'OF',  team: 'ATL', stats: { '7': '30', '12': '8',  '13': '20', '16': '12', '3': '.298', '18': '20', xwoba: 0.395, woba: 0.390, bat_speed: 76.8, bbe: 85, blasts: 18, bolts: 8 } },
+  { name: 'Christian Yelich',  position: 'OF', slot: 'BN',  team: 'MIL', stats: { '7': '18', '12': '4',  '13': '16', '16': '3',  '3': '.274', '18': '14', xwoba: 0.345, woba: 0.340, bat_speed: 72.1, bbe: 60, blasts: 6, bolts: 3 } },
+  { name: 'Max Muncy',         position: '2B', slot: '2B',  team: 'LAD', stats: { '7': '14', '12': '5',  '13': '15', '16': '0',  '3': '.238', '18': '16', xwoba: 0.335, woba: 0.325, bat_speed: 74.0, bbe: 55, blasts: 8, bolts: 0 } },
   // Pitchers
-  { name: 'Lucas Giolito',     position: 'SP', slot: 'SP',  team: 'SD',  stats: { '28': '3', '42': '38', '26': '3.12', '27': '1.08', '50': '34.2', '83': '4' } },
-  { name: 'Joe Ryan',          position: 'SP', slot: 'SP',  team: 'MIN', stats: { '28': '2', '42': '31', '26': '3.58', '27': '1.15', '50': '28.1', '83': '3' } },
-  { name: 'Bailey Ober',       position: 'SP', slot: 'SP',  team: 'MIN', stats: { '28': '2', '42': '27', '26': '4.21', '27': '1.22', '50': '25.2', '83': '2' } },
-  { name: 'George Kirby',      position: 'SP', slot: 'BN',  team: 'SEA', stats: { '28': '3', '42': '33', '26': '2.89', '27': '1.01', '50': '31.0', '83': '4' } },
-  { name: 'Kenley Jansen',     position: 'RP', slot: 'RP',  team: 'BOS', stats: { '32': '6', '42': '18', '26': '2.45', '27': '0.98', '50': '14.2' } },
+  { name: 'Lucas Giolito',     position: 'SP', slot: 'SP',  team: 'SD',  stats: { '28': '3', '42': '38', '26': '3.12', '27': '1.08', '50': '34.2', '83': '4', xera: 2.85, era: 3.12, total_swings: 150, swords: 8, pitch_movement: 2.1, bolts: 0 } },
+  { name: 'Joe Ryan',          position: 'SP', slot: 'SP',  team: 'MIN', stats: { '28': '2', '42': '31', '26': '3.58', '27': '1.15', '50': '28.1', '83': '3', xera: 3.20, era: 3.58, total_swings: 130, swords: 6, pitch_movement: 1.8, bolts: 0 } },
+  { name: 'Bailey Ober',       position: 'SP', slot: 'SP',  team: 'MIN', stats: { '28': '2', '42': '27', '26': '4.21', '27': '1.22', '50': '25.2', '83': '2', xera: 3.80, era: 4.21, total_swings: 110, swords: 4, pitch_movement: 1.6, bolts: 0 } },
+  { name: 'George Kirby',      position: 'SP', slot: 'BN',  team: 'SEA', stats: { '28': '3', '42': '33', '26': '2.89', '27': '1.01', '50': '31.0', '83': '4', xera: 2.60, era: 2.89, total_swings: 140, swords: 7, pitch_movement: 1.9, bolts: 1 } },
+  { name: 'Kenley Jansen',     position: 'RP', slot: 'RP',  team: 'BOS', stats: { '32': '6', '42': '18', '26': '2.45', '27': '0.98', '50': '14.2', xera: 2.20, era: 2.45, total_swings: 70, swords: 4, pitch_movement: 1.5, bolts: 0 } },
 ];
 
 const VIRTUAL_FREE_AGENTS = [
-  { name: 'Anthony Santander', position: 'OF', team: 'TOR', stats: { '7': '18', '12': '7',  '13': '19', '16': '1',  '3': '.259' } },
-  { name: 'Nick Pivetta',      position: 'SP', team: 'BOS', stats: { '28': '2', '42': '24', '26': '3.91', '27': '1.19', '50': '23.0' } },
-  { name: 'Tanner Houck',      position: 'SP', team: 'BOS', stats: { '28': '1', '42': '20', '26': '4.15', '27': '1.28', '50': '19.1' } },
-  { name: 'Joey Meneses',      position: '1B', team: 'WSH', stats: { '7': '12', '12': '3',  '13': '14', '16': '0',  '3': '.261' } },
+  { name: 'Anthony Santander', position: 'OF', team: 'TOR', recent_pa: 25, recent_xwoba: 0.380, season_xwoba: 0.320, stats: { '7': '18', '12': '7',  '13': '19', '16': '1',  '3': '.259', xwoba: 0.340, woba: 0.335, bat_speed: 76.1, bbe: 60, blasts: 12, bolts: 1 } },
+  { name: 'Nick Pivetta',      position: 'SP', team: 'BOS', recent_ip: 20, recent_xera: 2.70, season_xera: 3.50, stats: { '28': '2', '42': '24', '26': '3.91', '27': '1.19', '50': '23.0', xera: 3.35, era: 3.91, total_swings: 120, swords: 6, pitch_movement: 2.8, bolts: 0 } },
+  { name: 'Tanner Houck',      position: 'SP', team: 'BOS', recent_ip: 15, recent_xera: 3.80, season_xera: 4.15, stats: { '28': '1', '42': '20', '26': '4.15', '27': '1.28', '50': '19.1', xera: 3.65, era: 4.15, total_swings: 100, swords: 5, pitch_movement: 1.8, bolts: 0 } },
+  { name: 'Joey Meneses',      position: '1B', team: 'WSH', recent_pa: 22, recent_xwoba: 0.250, season_xwoba: 0.310, stats: { '7': '12', '12': '3',  '13': '14', '16': '0',  '3': '.261', xwoba: 0.290, woba: 0.320, bat_speed: 69.5, bbe: 50, blasts: 3, bolts: 0 } },
 ];
 
 // ─── SCORING_TYPE_MAP (mirrors analyze route) ─────────────────────────────────
@@ -342,6 +342,52 @@ section('12. CROSS-LEAGUE CONSISTENCY CHECK');
     const vors = playerVORsByLeague[lt.id];
     check(`${lt.label}: Giolito VOR >= Ober VOR (lower ERA)`, vors[7], undefined, { gte: vors[8] });
   }
+}
+
+section('13. 2026 STATCAST METRICS');
+{
+  // Test detectBreakoutRegression for Hitter (Strong Breakout)
+  const breakoutHitter = brain.detectBreakoutRegression({
+    xwoba: 0.385, woba: 0.315, bat_speed: 76.5, bbe: 50, blasts: 10
+  }, 'hitter');
+  check('Breakout Hitter: breakoutScore is 40', breakoutHitter.breakoutScore, 40);
+  check('Breakout Hitter: Strong Breakout Candidate', breakoutHitter.verdict, 'STRONG BREAKOUT CANDIDATE');
+
+  // Test detectBreakoutRegression for Hitter (Regression Risk)
+  const regressedHitter = brain.detectBreakoutRegression({
+    xwoba: 0.280, woba: 0.325, bat_speed: 67.0, bbe: 40, blasts: 1
+  }, 'hitter');
+  check('Regressed Hitter: breakoutScore is -25', regressedHitter.breakoutScore, -25);
+  check('Regressed Hitter: High Regression Risk', regressedHitter.verdict, 'HIGH REGRESSION RISK');
+
+  // Test detectBreakoutRegression for Pitcher
+  const breakoutPitcher = brain.detectBreakoutRegression({
+    xera: 2.80, era: 3.50, total_swings: 100, swords: 6, pitch_movement: 2.2
+  }, 'pitcher');
+  check('Breakout Pitcher: breakoutScore is 40', breakoutPitcher.breakoutScore, 40);
+
+  // Test streamingValue with Statcast
+  const stream1 = brain.streamingValue(
+    { total_swings: 100, swords: 5, pitch_movement: 1.8, bolts: 2 },
+    { xwoba: 0.285 },
+    'headpoint'
+  );
+  check('Stream points format with high-bolts: score is 95', stream1.score, 95);
+  check('Stream points format: grade is Elite stream', stream1.grade, 'Elite stream');
+
+  // Test scoreWaiverTarget with Statcast trends
+  const mockSettings = { scoring_type: 'headpoint', num_teams: 12 };
+  const targetHitter = {
+    position: 'OF',
+    recent_pa: 25,
+    recent_xwoba: 0.380,
+    season_xwoba: 0.310,
+    stats: { bbe: 30, blasts: 6, bolts: 4, bat_speed: 78.2 }
+  };
+  const waiverResult = brain.scoreWaiverTarget(targetHitter, [], mockSettings, null, null);
+  check('Waiver target with elite Statcast metrics gets score >= 85', waiverResult.score >= 85, true);
+  check('Waiver target with elite Statcast metrics priority is MUST ADD or High priority', ['MUST ADD', 'High priority'].includes(waiverResult.priority), true);
+  check('Waiver target reasoning contains Statcast details', waiverResult.reasoning, undefined, { contains: 'Statcast' });
 }
 
 // ─── SUMMARY ──────────────────────────────────────────────────────────────────
