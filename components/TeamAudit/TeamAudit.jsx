@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import { toast } from 'react-hot-toast'
 import PackDropModal from '../TrophyCase/PackDropModal'
 import { useLeague } from '@/lib/context/LeagueContext'
 import InsightCard from '@/components/InsightCard/InsightCard'
@@ -121,16 +122,18 @@ export default function TeamAudit({ leagueSettings }) {
   async function checkTrophyUnlocks(auditData) {
     const grade = auditData?.grade || '';
     if (grade.startsWith('A')) {
-      // Award premium card
       try {
         const { data } = await axios.post('/api/trophy/award', { trigger: 'audit_aplus' });
-        if (data?.awarded) setAwardedCard(data.awarded);
+        if (data?.success) {
+          toast.success('🏆 Elite Achievement! You earned 1x Titan Syndicate Drop token. Go to the Store to open it!');
+        }
       } catch (e) {}
     } else if (grade.startsWith('B')) {
-      // Award base card
       try {
         const { data } = await axios.post('/api/trophy/award', { trigger: 'audit_b' });
-        if (data?.awarded) setAwardedCard(data.awarded);
+        if (data?.success) {
+          toast.success('🏆 Milestone! You earned 1x Premium Hobby Box token. Go to the Store to open it!');
+        }
       } catch (e) {}
     }
   }

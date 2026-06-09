@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import { toast } from 'react-hot-toast'
 import LastUpdated from '../shared/LastUpdated'
 import PackDropModal from '../TrophyCase/PackDropModal'
 import AiQuestionBox from '../shared/AiQuestionBox'
@@ -66,7 +67,9 @@ export default function MatchupPredictor({ leagueSettings }) {
     if (sbCat && sbCat.winner === 'me') {
       try {
         const { data } = await axios.post('/api/trophy/award', { trigger: 'stolen_base_win' });
-        if (data?.awarded) setAwardedCard(data.awarded);
+        if (data?.success) {
+          toast.success('🏆 Milestone! Projecting Stolen Bases win! Earned 1x Premium Hobby Box token. Go to the Store to open it!');
+        }
       } catch (e) {}
     }
   }
