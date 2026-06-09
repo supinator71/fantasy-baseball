@@ -28,7 +28,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const tokenCookie = cookieStore.get('yahoo_auth_token');
     
     if (!tokenCookie) {

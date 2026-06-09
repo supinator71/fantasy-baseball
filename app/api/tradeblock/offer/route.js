@@ -4,7 +4,7 @@ import { db } from '@/lib/database';
 
 export async function POST(request) {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const tokenCookie = cookieStore.get('yahoo_auth_token');
     
     // We get the listing ID and the instanceId of the card being offered

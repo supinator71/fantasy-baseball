@@ -21,8 +21,8 @@ export const metadata = {
   description: "AI Fantasy Baseball Intelligence",
 };
 
-export default function RootLayout({ children }) {
-  const cookieStore = cookies();
+export default async function RootLayout({ children }) {
+  const cookieStore = await cookies();
   const galacticModeEnabled = cookieStore.get('galactic_mode')?.value === 'true';
 
   return (
