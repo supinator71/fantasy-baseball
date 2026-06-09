@@ -53,7 +53,7 @@ export default function Sidebar({ authenticated, isOpen, onClose, subscription }
         </div>
 
         <div style={{ overflowY: 'auto', flex: 1, paddingBottom: 20 }}>
-          {navItems.map(item => {
+          {navItems.filter(item => galacticModeEnabled || !['/trophy', '/vault', '/store'].includes(item.href)).map(item => {
             const isActive = pathname === item.href;
             return (
               <Link key={item.href} href={item.href} onClick={onClose}

@@ -5,9 +5,12 @@ import LastUpdated from './shared/LastUpdated'
 import LeagueIntelligence from './shared/LeagueIntelligence'
 import FeedbackBox from './shared/FeedbackBox'
 import { useLeague } from '@/lib/context/LeagueContext'
+import { useGalacticMode } from '@/lib/context/GalacticThemeContext'
+import TokenWallet from './TrophyCase/TokenWallet'
 
 export default function Dashboard({ subscription }) {
   const { leagues, selectedLeague, setSelectedLeague, loading, refreshAnalysis, refreshesRemaining, refreshLimitReached, aiLoading } = useLeague()
+  const { galacticModeEnabled } = useGalacticMode()
   const [fromCache, setFromCache] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [cachedAt, setCachedAt] = useState(null)
@@ -50,39 +53,70 @@ export default function Dashboard({ subscription }) {
   }
 
 
+  const dashboardItems = [
+    { label: 'My Roster',          icon: '👥', href: '/roster',    desc: 'Manage your players' },
+    { label: 'Waiver Wire',        icon: '🔄', href: '/waiver',    desc: 'Find hidden gems' },
+    { label: 'Start / Sit',        icon: '⚡', href: '/startsit',  desc: 'Optimize your lineup' },
+    { label: 'Trade Analyzer',     icon: '🤝', href: '/trade',     desc: 'Evaluate trades' },
+    { label: 'Standings',          icon: '🏆', href: '/standings', desc: 'Track your position' },
+    { label: 'Matchup Predictor',  icon: '⚔️', href: '/matchup',      desc: 'AI weekly predictions' },
+    { label: 'Team Audit',         icon: '📊', href: '/audit',        desc: 'Grade your team' },
+    { label: 'Trade Finder',       icon: '💡', href: '/tradefinder',  desc: 'AI trade proposals' },
+    { label: 'Weekly Game Plan',   icon: '📅', href: '/gameplan',     desc: 'Lineup optimizer' },
+    { label: 'Baseball 101',       icon: '🎓', href: '/baseball101',  desc: 'Beginner metrics guide' },
+    { label: 'Collector\'s Album', icon: '🎴', href: '/trophy',    desc: 'Your digital card album' },
+    { label: 'Vault (Gallery)',    icon: '🏛️', href: '/vault',     desc: 'View unlocked collectibles' },
+    { label: 'Card Store',         icon: '🛍️', href: '/store',     desc: 'Open free card packs' },
+  ].filter(item => galacticModeEnabled || !['/trophy', '/vault', '/store'].includes(item.href));
+
   return (
     <div style={{ position: 'relative' }}>
       {/* Hero Banner */}
-      <div style={{
+      <div className="dashboard-hero-banner" style={{
         display: 'flex', alignItems: 'center', gap: 20, marginBottom: 28,
-        background: 'linear-gradient(135deg, rgba(192,17,31,0.12) 0%, rgba(0,50,120,0.15) 100%)',
-        border: '1px solid rgba(192,17,31,0.25)', borderRadius: 16,
+        background: galacticModeEnabled 
+          ? 'linear-gradient(135deg, rgba(0,240,255,0.12) 0%, rgba(214,0,255,0.15) 100%)'
+          : 'linear-gradient(135deg, rgba(192,17,31,0.12) 0%, rgba(0,50,120,0.15) 100%)',
+        border: galacticModeEnabled
+          ? '1px solid rgba(0,240,255,0.35)'
+          : '1px solid rgba(192,17,31,0.25)', 
+        borderRadius: 16,
         padding: '20px 20px', flexWrap: 'wrap', position: 'relative', overflow: 'hidden'
       }}>
         {/* Decorative background glow */}
         <div style={{
           position: 'absolute', right: -40, top: -40,
           width: 160, height: 160, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(192,17,31,0.15), transparent 70%)',
+          background: galacticModeEnabled
+            ? 'radial-gradient(circle, rgba(0,240,255,0.2), transparent 70%)'
+            : 'radial-gradient(circle, rgba(192,17,31,0.15), transparent 70%)',
           pointerEvents: 'none'
         }} />
         <img
           src="/cyborg_batflip.png"
           alt="Goin' Yard Mascot"
           className="mascot-hero"
+          style={galacticModeEnabled ? { border: '3px solid rgba(0,240,255,0.6)', filter: 'drop-shadow(0 0 20px rgba(0,240,255,0.5))' } : {}}
         />
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4, fontFamily: 'var(--font-heading)' }}>
+          <div style={{ fontSize: 11, color: galacticModeEnabled ? '#00f0ff' : 'var(--primary)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4, fontFamily: 'var(--font-heading)' }}>
             ⚡ AI-Powered Fantasy Intelligence
           </div>
           <h1 style={{ fontSize: 'clamp(22px, 6vw, 34px)', fontWeight: 800, marginBottom: 4, letterSpacing: -1, lineHeight: 1.1 }}>
-            Goin' Yard <span style={{ color: 'var(--primary)' }}>Intelligence</span> HQ
+            Goin' Yard <span style={{ color: galacticModeEnabled ? '#00f0ff' : 'var(--primary)' }}>Intelligence</span> HQ
           </h1>
           <p style={{ color: '#7aafc4', fontSize: 14, margin: 0, lineHeight: 1.4 }}>
             Welcome back to <strong style={{ color: '#f8fafc' }}>goinyard.app</strong> — your automated fantasy analytics command center.
           </p>
         </div>
       </div>
+
+      {/* Real-time Token Wallet in Galactic Mode */}
+      {galacticModeEnabled && (
+        <div style={{ marginBottom: 28 }}>
+          <TokenWallet />
+        </div>
+      )}
 
       {syncing && (
         <div style={{
@@ -100,25 +134,11 @@ export default function Dashboard({ subscription }) {
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 28 }}>
-        {[
-          { label: 'My Roster',          icon: '👥', href: '/roster',    desc: 'Manage your players' },
-          { label: 'Waiver Wire',        icon: '🔄', href: '/waiver',    desc: 'Find hidden gems' },
-          { label: 'Start / Sit',        icon: '⚡', href: '/startsit',  desc: 'Optimize your lineup' },
-          { label: 'Trade Analyzer',     icon: '🤝', href: '/trade',     desc: 'Evaluate trades' },
-          { label: 'Standings',          icon: '🏆', href: '/standings', desc: 'Track your position' },
-          { label: 'Matchup Predictor',  icon: '⚔️', href: '/matchup',      desc: 'AI weekly predictions' },
-          { label: 'Team Audit',         icon: '📊', href: '/audit',        desc: 'Grade your team' },
-          { label: 'Trade Finder',       icon: '💡', href: '/tradefinder',  desc: 'AI trade proposals' },
-          { label: 'Weekly Game Plan',   icon: '📅', href: '/gameplan',     desc: 'Lineup optimizer' },
-          { label: 'Baseball 101',       icon: '🎓', href: '/baseball101',  desc: 'Beginner metrics guide' },
-          { label: 'Collector\'s Album', icon: '🎴', href: '/trophy',    desc: 'Your digital card album' },
-          { label: 'Vault (Gallery)',    icon: '🏛️', href: '/vault',     desc: 'View unlocked collectibles' },
-          { label: 'Card Store',         icon: '🛍️', href: '/store',     desc: 'Open free card packs' },
-        ].map(item => (
+        {dashboardItems.map(item => (
           <a key={item.href} href={item.href} style={{ textDecoration: 'none' }}>
             <div className="card" style={{ cursor: 'pointer', transition: 'border-color 0.2s', padding: '16px' }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = '#007a7a'}
-              onMouseLeave={e => e.currentTarget.style.borderColor = '#1e3d5c'}>
+              onMouseEnter={e => e.currentTarget.style.borderColor = galacticModeEnabled ? '#00f0ff' : '#007a7a'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = galacticModeEnabled ? 'rgba(214,0,255,0.25)' : '#1e3d5c'}>
               <div style={{ fontSize: 28, marginBottom: 6 }}>{item.icon}</div>
               <div style={{ fontWeight: 600, marginBottom: 2, fontSize: 13, lineHeight: 1.2 }}>{item.label}</div>
               <div style={{ color: '#7aafc4', fontSize: 12 }}>{item.desc}</div>
