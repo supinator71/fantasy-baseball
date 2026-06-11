@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
@@ -9,20 +9,16 @@ export default function RosterManager({ leagueSettings }) {
   const [loading, setLoading] = useState(false)
   const [trendMap, setTrendMap] = useState({})
 
-  useEffect(() => {
-    fetchLeagues()
-  }, [])
-
-  async function fetchLeagues() {
+  const fetchLeagues = useCallback(async () => {
     try {
       const { data } = await axios.get('/api/yahoo/leagues')
       setLeagues(data)
       if (data[0]?.league_key) setSelectedLeague(data[0].league_key)
     } catch {}
-  }
+  }, [])
 
   // Fetch value trends for roster players (non-blocking)
-  async function fetchTrends(playerList) {
+  const fetchTrends = useCallback(async (playerList) => {
     try {
       const players = playerList.map(p => ({ name: p.name, adp: 200 }))
       const { data } = await axios.post('/api/mlb/roster-value', { players, leagueSize: 12 })
@@ -34,9 +30,9 @@ export default function RosterManager({ leagueSettings }) {
     } catch (e) {
       console.log('Trend fetch skipped:', e.message)
     }
-  }
+  }, [])
 
-  async function fetchRoster() {
+  const fetchRoster = useCallback(async () => {
     if (!selectedLeague) return
     setLoading(true)
     try {
@@ -92,11 +88,15 @@ export default function RosterManager({ leagueSettings }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedLeague, fetchTrends])
+
+  useEffect(() => {
+    fetchLeagues()
+  }, [fetchLeagues])
 
   useEffect(() => {
     if (selectedLeague) fetchRoster()
-  }, [selectedLeague])
+  }, [selectedLeague, fetchRoster])
 
   const active = roster.filter(p => p.status !== 'BN' && p.status !== 'IL')
   const bench = roster.filter(p => p.status === 'BN')

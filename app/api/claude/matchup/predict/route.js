@@ -25,6 +25,12 @@ const STAT_NAMES = {
 };
 const LOWER_IS_BETTER = new Set(['26', '27', '29', '33', '34', '35', '37', '40']); // ERA, WHIP, L, HA, BBA, HRA, ER, BS
 
+const IL_STATUSES = new Set(['IL', 'IL+', 'IL7', 'IL10', 'IL15', 'IL60', 'DL', 'O', 'OUT', 'SUSP', 'NA', 'DTD', 'Q', 'QUESTIONABLE']);
+function isPlayerInjured(p) {
+  const status = String(p.status || p.injury || '').toUpperCase();
+  return IL_STATUSES.has(status) || ['DTD', 'IL', 'DL', 'OUT', 'QUESTIONABLE'].some(s => status.includes(s));
+}
+
 // Safely extract a player name from Yahoo's nested name object
 function extractName(info) {
   if (!info) return null;
@@ -55,19 +61,30 @@ export async function POST(request) {
       : settings.scoring_type === 'roto'    ? 'Rotisserie'
       : settings.scoring_type               || 'H2H Points';
 
+    // Helper to format key stats
+    const formatStats = (stats) => {
+      const interested = ['3', '7', '8', '12', '13', '16', '18', '26', '27', '28', '32', '42', '50', '83', '85'];
+      return Object.entries(stats || {})
+        .filter(([id, v]) => interested.includes(id) && v != null && v !== '' && v !== '-' && v !== '0' && v !== 0)
+        .map(([id, v]) => `${STAT_NAMES[id] || id}:${v}`)
+        .join(' ') || 'no stats yet';
+    };
+
     // ── Fetch roster with slot info ──────────────────────────────────────────
     let rosterLines = [];
     try {
       const teamKey = await yahoo.getUserTeamKey(guid, league_key);
       if (teamKey) {
         const rosterData = await yahoo.getRoster(guid, league_key, teamKey);
+        const playerKeys = [];
+        const slotMap = {};
         for (const item of (rosterData || [])) {
           const p = item?.player;
           if (!p || !Array.isArray(p)) continue;
           const info = Object.assign({}, ...(Array.isArray(p[0]) ? p[0] : []));
-          const name = extractName(info);
-          if (!name) continue;
-          // Get slot
+          if (!info.player_key) continue;
+          playerKeys.push(info.player_key);
+          
           const selPos = p[1]?.selected_position;
           let slot = 'BN';
           if (Array.isArray(selPos)) {
@@ -76,12 +93,69 @@ export async function POST(request) {
           } else if (selPos?.position) {
             slot = selPos.position;
           }
-          const pos = info.display_position || info.primary_position || '?';
-          rosterLines.push(`  • ${name} (${pos}) [${slot}]`);
+          slotMap[info.player_key] = slot;
+        }
+
+        if (playerKeys.length) {
+          const players = await yahoo.getBatchPlayerStats(guid, league_key, playerKeys, null);
+          console.log('[matchup/predict] Fetched', players.length, 'players for roster stats.');
+
+          const activeHealthy = [];
+          const activeInjured = [];
+          const healthyBench = [];
+          const injuredBench = [];
+
+          for (const p of players) {
+            const slot = slotMap[p.key] || 'BN';
+            const injuryStatus = p.status || p.injury || '';
+            const isInjured = isPlayerInjured(p);
+            const injuryLabel = injuryStatus ? ` (Status: ${injuryStatus})` : '';
+            const line = `  • ${p.name} (${p.position}) [Slot: ${slot}]${injuryLabel}`;
+
+            const isBenchOrIL = slot === 'BN' || slot === 'IL';
+            if (isBenchOrIL) {
+              if (isInjured) {
+                injuredBench.push(line);
+              } else {
+                healthyBench.push(line);
+              }
+            } else {
+              if (isInjured) {
+                activeInjured.push(line);
+              } else {
+                activeHealthy.push(line);
+              }
+            }
+          }
+
+          rosterLines.push('ACTIVE PLAYERS IN LINEUP (HEALTHY):');
+          rosterLines.push(activeHealthy.length ? activeHealthy.join('\n') : '  • (none)');
+          
+          rosterLines.push('\nACTIVE PLAYERS IN LINEUP (⚠️ INJURED/DTD - RECOMMEND BENCHING OR SWAPPING THEM):');
+          rosterLines.push(activeInjured.length ? activeInjured.join('\n') : '  • (none)');
+          
+          rosterLines.push('\nHEALTHY BENCH PLAYERS (ELIGIBLE TO BE ACTIVATED):');
+          rosterLines.push(healthyBench.length ? healthyBench.join('\n') : '  • (none)');
+          
+          rosterLines.push('\nINJURED/UNAVAILABLE BENCH OR IL PLAYERS (⛔ DO NOT START/ACTIVATE):');
+          rosterLines.push(injuredBench.length ? injuredBench.join('\n') : '  • (none)');
         }
       }
     } catch (e) {
       console.warn('[matchup/predict] Roster fetch failed:', e.message);
+    }
+
+    // ── Fetch available waiver targets ───────────────────────────────────────
+    let availableBlock = '';
+    try {
+      const availableRaw = await yahoo.getPlayers(guid, league_key, 'FA', 0, null) || [];
+      console.log('[matchup/predict] Fetched', availableRaw.length, 'available players.');
+      const healthyFA = availableRaw.filter(p => !isPlayerInjured(p));
+      availableBlock = healthyFA.slice(0, 15).map((p, idx) => {
+        return `  • ${p.name} (${p.position}) - Team: ${p.team} | Stats: ${formatStats(p.stats)}`;
+      }).join('\n');
+    } catch (e) {
+      console.warn('[matchup/predict] Available players fetch failed:', e.message);
     }
 
     // ── Score gap and urgency ────────────────────────────────────────────────
@@ -120,9 +194,10 @@ export async function POST(request) {
 
     const prompt = `You are the Goin' Yard HQ interface — a strict translation layer for our proprietary mathematical fantasy engine.
 
-🚨 CRITICAL DIRECTIVE: Your ONLY job is to convert the raw numeric gaps and categorical deficits below into a sharp, actionable summary. Do not invent your own analysis, and do not reference external data.
+🚨 CRITICAL DIRECTIVE: Your ONLY job is to convert the raw numeric gaps, roster health, and waiver options below into a sharp, actionable summary. Do not invent your own analysis, and do not reference external data.
 
 ⚠️ DATA RULES: Analyze ONLY the data provided below. Do NOT use training data for player stats or availability. Do NOT disagree with the numeric gaps.
+⚠️ INJURY RULES: Do NOT suggest starting or activating players who have a status like IL, O, or DTD or are on the Injured List/disabled. You MUST leave them on the bench or recommend keeping them on the Injured List.
 
 LEAGUE: ${settings.name || league_key} | Format: ${scoringLabel} | Week ${week || '?'} | ${daysRemaining} days remaining in matchup
 
@@ -139,17 +214,17 @@ ${categoryRows || '(no category data)'}
 YOU ARE WINNING: ${myWinningCats.join(', ') || 'none yet'}
 OPPONENT LEADS:  ${oppWinningCats.join(', ') || 'none yet'}
 
-MY ROSTER (slot shown — BN = bench, active slot = starting):
+MY ROSTER (categorized by slot and health status):
 ${rosterLines.length ? rosterLines.join('\n') : '(roster unavailable)'}
 
-${!leading && gapAbs > 30 ? `
-TRIAGE PRIORITY: You are significantly behind. Do NOT say "you can still win" without specific actionable advice.
+TOP AVAILABLE FREE AGENTS ON WAIVER WIRE:
+${availableBlock || '(no waiver options available)'}
+
 Your response MUST include:
-1. Exact point deficit and how you can close it with ${daysRemaining} days remaining.
-2. Which bench players should START immediately to maximize scoring
-3. Based on the categories you are losing, what specific stat-profiles you should look to stream from the waiver wire (e.g. 'high-K relief pitcher', 'contact hitter with speed'). Do NOT invent or recommend specific free agent names.
-4. Which categories are mathematically closeable vs. already lost
-` : ''}
+1. Exact point/category deficit and how you can close it with ${daysRemaining} days remaining.
+2. Which healthy bench players should START immediately to maximize scoring. Do NOT recommend starting injured players who have a status like IL, O, or DTD under any circumstances! Double-check their Status before making recommendations.
+3. Specific waiver wire streaming targets suggested from the "TOP AVAILABLE FREE AGENTS ON WAIVER WIRE" list above to address the categories you are losing or to maximize scoring. Recommend specific players by name from that list, citing their stats. Do NOT give generic stat-profile descriptions (like "look for high-K pitchers") without recommending actual named players from the list. Do NOT suggest players who are not in the provided free agent list, and do NOT recommend injured free agents.
+4. Which categories are mathematically closeable vs. already lost.
 
 Provide sharp, specific, actionable advice based ONLY on the data above.`;
 

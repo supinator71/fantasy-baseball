@@ -1,6 +1,7 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import './TrophyCase.css';
 
@@ -15,11 +16,7 @@ export default function TokenWallet() {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchTokens();
-  }, []);
-
-  async function fetchTokens() {
+  const fetchTokens = useCallback(async () => {
     try {
       const { data } = await axios.get('/api/trophy/album');
       if (data?.tokens) {
@@ -30,7 +27,11 @@ export default function TokenWallet() {
       console.error('Failed to load wallet balances:', e);
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    fetchTokens();
+  }, [fetchTokens]);
 
   const tokenMetadata = [
     {

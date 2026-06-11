@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import MarkdownRenderer from './MarkdownRenderer';
 
 export default function AiQuestionBox({ context, leagueKey, title = "Ask a Follow-up", icon = "🧠", placeholder = "Ask a specific question about these results..." }) {
   const [question, setQuestion] = useState('');
@@ -57,8 +58,10 @@ export default function AiQuestionBox({ context, leagueKey, title = "Ask a Follo
 
       {answer && (
         <div style={{ marginTop: 20, padding: 20, borderRadius: 12, background: 'rgba(0, 0, 0, 0.3)', borderLeft: '4px solid #00a86b' }}>
-          <div style={{ fontSize: 13, color: '#00a86b', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Scout's Follow-up:</div>
-          <div className="ai-response" style={{ fontSize: 15, lineHeight: 1.6 }}>{answer}</div>
+          <div style={{ fontSize: 13, color: '#00a86b', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{"Scout's Follow-up:"}</div>
+          <div className="ai-response" style={{ fontSize: 15, lineHeight: 1.6 }}>
+            <MarkdownRenderer text={answer} />
+          </div>
         </div>
       )}
     </div>

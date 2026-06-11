@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Toaster, toast } from 'react-hot-toast';
 import Sidebar from '@/components/Sidebar';
@@ -18,6 +18,15 @@ function InnerLayout({ children }) {
   const [authStatus, setAuthStatus] = useState({ authenticated: false, loading: true });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { galacticModeEnabled, toggleGalacticMode } = useGalacticMode();
+
+  const checkAuth = useCallback(async () => {
+    try {
+      const { data } = await axios.get('/api/auth/status');
+      setAuthStatus({ ...data, loading: false });
+    } catch {
+      setAuthStatus({ authenticated: false, loading: false });
+    }
+  }, []);
 
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
@@ -47,16 +56,7 @@ function InnerLayout({ children }) {
     checkAuth();
 
     return () => axios.interceptors.response.eject(interceptor);
-  }, []);
-
-  async function checkAuth() {
-    try {
-      const { data } = await axios.get('/api/auth/status');
-      setAuthStatus({ ...data, loading: false });
-    } catch {
-      setAuthStatus({ authenticated: false, loading: false });
-    }
-  }
+  }, [checkAuth]);
 
   return (
     <div className="app-layout">

@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import { useLeague } from '@/lib/context/LeagueContext';
 import InsightCard from '@/components/InsightCard/InsightCard';
 import { toast } from 'react-hot-toast';
+import MarkdownRenderer from '@/components/shared/MarkdownRenderer';
 
 // Convert the [{stat_id, name, value}] array from the API into {R: 8, HR: 2, ...}
 function statsArrayToMap(statsArr) {
@@ -128,7 +129,9 @@ export default function MatchupView() {
           <div style={{ fontSize: 11, fontWeight: 700, color: '#06b6d4', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
             ⚔️ Deep Matchup Prediction
           </div>
-          <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{aiPrediction}</div>
+          <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.7 }}>
+            <MarkdownRenderer text={aiPrediction} />
+          </div>
           <button className="btn btn-ghost" style={{ marginTop: 12, fontSize: 12 }} onClick={runMatchupPrediction} disabled={aiPredLoading}>
             ↻ Re-run Prediction
           </button>

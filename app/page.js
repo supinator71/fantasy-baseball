@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import Dashboard from '@/components/Dashboard';
@@ -8,18 +8,18 @@ import Dashboard from '@/components/Dashboard';
 export default function Home() {
   const [authStatus, setAuthStatus] = useState({ authenticated: false, loading: true });
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  async function checkAuth() {
+  const checkAuth = useCallback(async () => {
     try {
       const { data } = await axios.get('/api/auth/status');
       setAuthStatus({ ...data, loading: false });
     } catch {
       setAuthStatus({ authenticated: false, loading: false });
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   if (authStatus.loading) return <div className="loading">⚾ Loading HQ...</div>;
 

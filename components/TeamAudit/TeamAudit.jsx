@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast'
 import PackDropModal from '../TrophyCase/PackDropModal'
 import { useLeague } from '@/lib/context/LeagueContext'
 import InsightCard from '@/components/InsightCard/InsightCard'
+import MarkdownRenderer from '@/components/shared/MarkdownRenderer'
 
 function GradeBadge({ grade }) {
   const g = String(grade || '').charAt(0).toUpperCase()
@@ -291,8 +292,8 @@ export default function TeamAudit({ leagueSettings }) {
           {(!audit.strengths || audit.strengths.length === 0) && audit.raw && (
             <div className="card" style={{ marginBottom: 16 }}>
               <h3 style={{ color: '#4aafdb', marginBottom: 12, fontSize: 15 }}>🧠 Deep Analysis</h3>
-              <div style={{ color: '#e2e8f0', fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                {audit.raw.replace(/```json/g, '').replace(/```/g, '')}
+              <div style={{ color: '#e2e8f0', fontSize: 13, lineHeight: 1.6 }}>
+                <MarkdownRenderer text={audit.raw.replace(/```json/g, '').replace(/```/g, '')} />
               </div>
             </div>
           )}

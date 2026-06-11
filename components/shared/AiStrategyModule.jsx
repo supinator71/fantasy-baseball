@@ -1,20 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useLeague } from '@/lib/context/LeagueContext';
 import AiQuestionBox from '../shared/AiQuestionBox';
+import MarkdownRenderer from './MarkdownRenderer';
 
 export default function AiStrategyModule({ title, focus, icon = "⚡" }) {
   const { selectedLeague, leagueData } = useLeague();
   const [strategy, setStrategy] = useState('');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (selectedLeague) fetchStrategy();
-  }, [selectedLeague]);
-
-  async function fetchStrategy() {
+  const fetchStrategy = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await axios.post('/api/ai/ask', {
@@ -28,7 +25,11 @@ export default function AiStrategyModule({ title, focus, icon = "⚡" }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [selectedLeague, leagueData, title, focus]);
+
+  useEffect(() => {
+    if (selectedLeague) fetchStrategy();
+  }, [selectedLeague, fetchStrategy]);
 
   return (
     <div className="ai-strategy-module">
@@ -41,8 +42,8 @@ export default function AiStrategyModule({ title, focus, icon = "⚡" }) {
         {loading ? (
           <div className="loading">Consulting the Front Office...</div>
         ) : (
-          <div className="ai-response" style={{ fontSize: 16, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-            {strategy}
+          <div className="ai-response" style={{ fontSize: 16, lineHeight: 1.7 }}>
+            <MarkdownRenderer text={strategy} />
           </div>
         )}
       </div>

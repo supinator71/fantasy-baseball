@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import AiQuestionBox from '../shared/AiQuestionBox'
 import InsightCard from '@/components/InsightCard/InsightCard'
+import MarkdownRenderer from '../shared/MarkdownRenderer'
 import { useLeague } from '@/lib/context/LeagueContext'
 
 
 export default function PitchingIntel({ subscription }) {
-  const { leagues, selectedLeague, setSelectedLeague, aiAnalysis, aiLoading } = useLeague()
+  const { leagues, selectedLeague, setSelectedLeague, aiAnalysis, aiLoading, refreshAnalysis } = useLeague()
   const [availablePitchers, setAvailablePitchers] = useState([])
   const [myRoster, setMyRoster] = useState([])
   const [myPitchers, setMyPitchers] = useState([])
@@ -22,13 +23,7 @@ export default function PitchingIntel({ subscription }) {
   const [pitchingContext, setPitchingContext] = useState({ today: [], currentWeekTwoStart: [], nextWeekTwoStart: [] })
 
 
-  useEffect(() => {
-    if (selectedLeague) {
-       fetchData()
-    }
-  }, [selectedLeague])
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     try {
       const [rosterRes, availableRes, contextRes] = await Promise.all([
@@ -63,7 +58,13 @@ export default function PitchingIntel({ subscription }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [selectedLeague])
+
+  useEffect(() => {
+    if (selectedLeague) {
+       fetchData()
+    }
+  }, [selectedLeague, fetchData])
 
   // AI recommendation — master analyze InsightCard shows on load;
   // "Get Pitching Strategy" button calls targeted pitching route (Haiku, cheap).
@@ -79,7 +80,7 @@ export default function PitchingIntel({ subscription }) {
         available_pitchers: availablePitchers.slice(0, 15),
         pitching_context: pitchingContext,
       });
-      setPitchingRec(data.recommendation || data.analysis || data.summary || '');
+      setPitchingRec(data.recommendation || data.recommendations || data.analysis || data.summary || '');
     } catch (err) {
       setPitchingError(err.response?.data?.error || 'Analysis failed.');
     } finally {
@@ -142,14 +143,16 @@ export default function PitchingIntel({ subscription }) {
               <h3 style={{ color: '#00a86b', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>The Pitching Playbook</h3>
             </div>
           </div>
-          <InsightCard data={aiAnalysis?.pitching} type="pitching" loading={aiLoading} />
+          <InsightCard data={aiAnalysis?.pitching} type="pitching" loading={aiLoading} onRefresh={refreshAnalysis} />
           {pitchingError && (
             <div style={{ color: '#ef4444', fontSize: 13, marginTop: 8 }}>{pitchingError}</div>
           )}
           {pitchingRec && (
             <div style={{ marginTop: 12, padding: '12px 16px', background: '#0c1d35', borderRadius: 8, borderLeft: '3px solid #00a86b' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#00a86b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Deep Pitching Analysis</div>
-              <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{pitchingRec}</div>
+              <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.7 }}>
+                <MarkdownRenderer text={pitchingRec} />
+              </div>
             </div>
           )}
           <AiQuestionBox 

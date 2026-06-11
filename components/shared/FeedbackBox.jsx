@@ -29,7 +29,7 @@ export default function FeedbackBox() {
       <div className="card" style={{ textAlign: 'center', padding: 24 }}>
         <div style={{ fontSize: 32, marginBottom: 12 }}>📬</div>
         <h4 style={{ margin: 0 }}>Thanks for the feedback!</h4>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>Your input helps us build a better assistant. Keep goin' yard!</p>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>{"Your input helps us build a better assistant. Keep goin' yard!"}</p>
         <button className="btn btn-ghost" style={{ marginTop: 16 }} onClick={() => setSubmitted(false)}>Send another note</button>
       </div>
     );

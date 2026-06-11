@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useLeague } from '@/lib/context/LeagueContext';
 import InsightCard from '@/components/InsightCard/InsightCard';
 import AiQuestionBox from '@/components/shared/AiQuestionBox';
 import Standings from '@/components/Standings/Standings';
+import MarkdownRenderer from '@/components/shared/MarkdownRenderer';
 
 export default function StandingsPage() {
   const { leagues, selectedLeague, setSelectedLeague, aiAnalysis, aiLoading, leagueData } = useLeague();
@@ -17,22 +18,22 @@ export default function StandingsPage() {
   const [aiRecLoading, setAiRecLoading] = useState(false);
   const [aiRecError, setAiRecError]     = useState('');
 
-  useEffect(() => {
-    if (selectedLeague) {
-      setStandingsData([]);
-      setAiRec('');
-      fetchStandingsForAi(selectedLeague);
-    }
-  }, [selectedLeague]);
-
-  async function fetchStandingsForAi(key) {
+  const fetchStandingsForAi = useCallback(async (key) => {
     try {
       const { data } = await axios.get(`/api/yahoo/league/${key}/standings`);
       if (Array.isArray(data)) setStandingsData(data);
     } catch (e) {
       // non-fatal — Standings component handles its own display
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (selectedLeague) {
+      setStandingsData([]);
+      setAiRec('');
+      fetchStandingsForAi(selectedLeague);
+    }
+  }, [selectedLeague, fetchStandingsForAi]);
 
   function buildStandingsBlock() {
     if (!standingsData.length) return 'Standings not yet loaded.';
@@ -113,8 +114,8 @@ Use only the data above. Be specific about team names and records.`,
           <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
             🏆 Standings Analysis
           </div>
-          <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-            {aiRec}
+          <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.7 }}>
+            <MarkdownRenderer text={aiRec} />
           </div>
         </div>
       )}

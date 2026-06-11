@@ -1,6 +1,6 @@
 'use client';
  
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import PackDropModal from '../../components/TrophyCase/PackDropModal';
@@ -12,11 +12,7 @@ export default function Store() {
   const [awardedCard, setAwardedCard] = useState(null);
   const [tokens, setTokens] = useState({ premium_hobby: 0, titan_drop: 0 });
  
-  useEffect(() => {
-    fetchTokens();
-  }, []);
- 
-  async function fetchTokens() {
+  const fetchTokens = useCallback(async () => {
     try {
       const { data } = await axios.get('/api/trophy/album');
       if (data?.tokens) {
@@ -25,7 +21,11 @@ export default function Store() {
     } catch (e) {
       console.error('Failed to fetch tokens:', e);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    fetchTokens();
+  }, [fetchTokens]);
  
   async function handleBuyPack(pack) {
     try {

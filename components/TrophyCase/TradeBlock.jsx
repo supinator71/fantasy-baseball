@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import './TradeBlock.css';
@@ -15,27 +16,27 @@ export default function TradeBlock() {
   const [offerModalListing, setOfferModalListing] = useState(null);
   const [offerSelectedCard, setOfferSelectedCard] = useState(null);
 
-  const fetchMarket = async () => {
+  const fetchMarket = useCallback(async () => {
     try {
       const { data } = await axios.get('/api/tradeblock');
       setMarketListings(data.listings || []);
     } catch (e) {
       toast.error('Failed to load global market');
     }
-  };
+  }, []);
 
-  const fetchVault = async () => {
+  const fetchVault = useCallback(async () => {
     try {
       const { data } = await axios.get('/api/trophy/album');
       setMyVault(data.unlocked_cards || []);
     } catch (e) {
       console.error(e);
     }
-  };
+  }, []);
 
   useEffect(() => {
     Promise.all([fetchMarket(), fetchVault()]).finally(() => setLoading(false));
-  }, []);
+  }, [fetchMarket, fetchVault]);
 
   const handlePostTrade = async () => {
     if (!selectedCard || !seekingText.trim()) return toast.error("Select a card and state what you're seeking.");
@@ -194,7 +195,7 @@ export default function TradeBlock() {
             {activeTab === 'showcases' && (
               <div className="showcases-section">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                  <p style={{ color: 'var(--text-muted)' }}>Browse other collectors' public vaults to see their rarest pulls.</p>
+                  <p style={{ color: 'var(--text-muted)' }}>{"Browse other collectors' public vaults to see their rarest pulls."}</p>
                   <label className="public-toggle">
                     <input type="checkbox" defaultChecked={true} />
                     <span>Make My Collection Public</span>

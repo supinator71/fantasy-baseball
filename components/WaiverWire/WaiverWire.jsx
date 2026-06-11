@@ -7,6 +7,7 @@ import { useLeague } from '@/lib/context/LeagueContext';
 import { toast } from 'react-hot-toast';
 import AiQuestionBox from '@/components/shared/AiQuestionBox';
 import InsightCard from '@/components/InsightCard/InsightCard';
+import MarkdownRenderer from '@/components/shared/MarkdownRenderer';
 
 const PRIORITY_COLORS = {
   'MUST ADD':             { bg: 'rgba(0,168,107,0.15)',   color: '#00a86b', border: 'rgba(0,168,107,0.4)' },
@@ -20,7 +21,7 @@ const PRIORITY_COLORS = {
 };
 
 export default function WaiverWire() {
-  const { selectedLeague, aiAnalysis, aiLoading, scoredWaiver } = useLeague();
+  const { selectedLeague, aiAnalysis, aiLoading, scoredWaiver, refreshAnalysis, runAnalysis } = useLeague();
 
   // Deep-dive AI analysis result
   const [aiRecs, setAiRecs]         = useState(null);   // { recommendations, scored }
@@ -31,6 +32,13 @@ export default function WaiverWire() {
   const { data: rawPlayersData, error, isLoading: playersLoading, mutate: mutatePlayers } = useSWR(
     selectedLeague ? `/api/yahoo/league/${selectedLeague}/players?status=A` : null
   );
+
+  async function handleRefresh() {
+    if (selectedLeague) {
+      await runAnalysis(selectedLeague, false);
+      mutatePlayers();
+    }
+  }
   
   const rawPlayers = Array.isArray(rawPlayersData) ? rawPlayersData : [];
 
@@ -90,7 +98,7 @@ export default function WaiverWire() {
       </div>
 
       {/* Master-analyze InsightCard — shows on load from cache, no button needed */}
-      <InsightCard data={aiAnalysis?.waiver} type="waiver" loading={aiLoading && !aiAnalysis} />
+      <InsightCard data={aiAnalysis?.waiver} type="waiver" loading={aiLoading && !aiAnalysis} onRefresh={refreshAnalysis} />
 
       {/* Deep-dive AI narration result */}
       {aiRecsError && (
@@ -104,8 +112,8 @@ export default function WaiverWire() {
           <div style={{ fontSize: 11, fontWeight: 700, color: '#4aafdb', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
             ⚡ AI Add/Drop Recommendations
           </div>
-          <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-            {aiRecs.recommendations}
+          <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.7 }}>
+            <MarkdownRenderer text={aiRecs.recommendations} />
           </div>
         </div>
       )}
@@ -122,11 +130,11 @@ export default function WaiverWire() {
               : `Available Free Agents (${displayPlayers.length})`}
           </span>
           <button
-            onClick={() => mutatePlayers()}
-            disabled={playersLoading}
+            onClick={handleRefresh}
+            disabled={playersLoading || aiLoading}
             style={{ fontSize: 11, background: 'none', border: '1px solid #1e3d5c', borderRadius: 4, padding: '3px 10px', color: '#7aafc4', cursor: 'pointer' }}
           >
-            {playersLoading ? '...' : '↻ Refresh'}
+            {playersLoading || aiLoading ? '...' : '↻ Refresh'}
           </button>
         </div>
 

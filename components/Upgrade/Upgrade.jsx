@@ -26,7 +26,7 @@ export default function UpgradePage({ subscription, onUpgradeComplete }) {
   return (
     <div className="upgrade-page">
       <div className="upgrade-header">
-        <h1>⚾ Upgrade to Goin' Yard Pro</h1>
+        <h1>{"⚾ Upgrade to Goin' Yard Pro"}</h1>
         <p className="upgrade-subtitle">
           Professional-grade fantasy intelligence for serious managers. Unlimited AI, 2 leagues included.
         </p>
@@ -115,7 +115,7 @@ export function UpgradePrompt({ usage, onUpgrade }) {
   return (
     <div className="upgrade-prompt">
       <div className="upgrade-prompt-icon">🧠</div>
-      <h3>You've used {usage?.count || 3}/{usage?.limit || 3} free insights today</h3>
+      <h3>{"You've"} used {usage?.count || 3}/{usage?.limit || 3} free insights today</h3>
       <p>Upgrade to Pro for unlimited AI-powered analysis all season long.</p>
       <button className="pricing-cta compact" onClick={onUpgrade}>
         Upgrade Now →

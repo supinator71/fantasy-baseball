@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 import { useLeague } from '@/lib/context/LeagueContext'
 import InsightCard from '@/components/InsightCard/InsightCard'
+import MarkdownRenderer from '../shared/MarkdownRenderer'
 
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 const DAY_EMOJI = {
@@ -55,15 +56,7 @@ export default function GamePlan({ leagueSettings }) {
   // Use leagues from context, fall back to local fetch
   const allLeagues = leagues.length ? leagues : localLeagues
 
-  useEffect(() => {
-    if (ctxLeague && !selectedLeague) setSelectedLeague(ctxLeague)
-  }, [ctxLeague])
-
-  useEffect(() => {
-    if (selectedLeague) loadRoster()
-  }, [selectedLeague])
-
-  async function loadRoster() {
+  const loadRoster = useCallback(async () => {
     setRosterLoading(true)
     setRoster([])
     setPlan(null)
@@ -108,7 +101,15 @@ export default function GamePlan({ leagueSettings }) {
     } finally {
       setRosterLoading(false)
     }
-  }
+  }, [selectedLeague])
+
+  useEffect(() => {
+    if (ctxLeague && !selectedLeague) setSelectedLeague(ctxLeague)
+  }, [ctxLeague, selectedLeague])
+
+  useEffect(() => {
+    if (selectedLeague) loadRoster()
+  }, [selectedLeague, loadRoster])
 
   async function generatePlan() {
     if (!roster.length) return
@@ -306,7 +307,9 @@ export default function GamePlan({ leagueSettings }) {
           {plan.rawPlan && (
             <div className="card gameplan-section">
               <h4 className="section-title">📝 Full Briefing</h4>
-              <div className="ai-response-prose">{plan.rawPlan}</div>
+              <div className="ai-response-prose">
+                <MarkdownRenderer text={plan.rawPlan} />
+              </div>
             </div>
           )}
 

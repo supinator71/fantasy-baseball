@@ -343,6 +343,7 @@ tr:hover td {
 .sidebar h2 span {
   background: linear-gradient(135deg, #fff, #94a3b8);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -641,6 +642,7 @@ tr:hover td {
   font-size: 2rem;
   background: linear-gradient(135deg, #fff 30%, var(--accent, #00c8ff));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -1090,9 +1092,6 @@ tr:hover td {
   gap: 20px;
 }
 
-.gameplan-section {
-  /* Override hover lift for plan cards — looks janky with many cards */
-}
 
 .gameplan-section:hover {
   transform: none;
@@ -1405,9 +1404,6 @@ tr:hover td {
   background: rgba(245, 158, 11, 0.06);
 }
 
-.standings-row.playoff td {
-  /* subtle highlight */
-}
 
 .rank-badge {
   display: inline-flex;
@@ -1811,6 +1807,7 @@ input:checked + .galactic-slider:before {
 [data-theme="galactic"] .mobile-topbar span {
   background: linear-gradient(135deg, #fff 40%, #00f0ff 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -1856,6 +1853,7 @@ input:checked + .galactic-slider:before {
 .wallet-header h2 span {
   background: linear-gradient(135deg, #fff 30%, #00f0ff 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   font-family: var(--font-heading);
   letter-spacing: -0.02em;

@@ -75,6 +75,66 @@ export async function POST(request) {
       const cached = db.getAnalysisCache(guid, cacheKey);
       if (cached) {
         console.log(`[audit] Serving cached result for ${guid}:${league_key}`);
+        try {
+          // Re-calculate live VOR table and grade to keep it up to date
+          const targetTeamKey = team_key || await yahoo.getUserTeamKey(guid, league_key).catch(() => null);
+          let roster = frontendRoster;
+          if (targetTeamKey) {
+            const rosterData = await yahoo.getRoster(guid, league_key, targetTeamKey);
+            const playerKeys = [];
+            const slotMap = {};
+            for (const rosterItem of (rosterData || [])) {
+              const p = rosterItem?.player;
+              if (!p || !Array.isArray(p)) continue;
+              const info = Object.assign({}, ...(Array.isArray(p[0]) ? p[0] : []));
+              if (!info.player_key) continue;
+              playerKeys.push(info.player_key);
+              let slot = 'BN';
+              const selPos = p[1]?.selected_position;
+              if (selPos) {
+                if (Array.isArray(selPos)) {
+                  const posItem = selPos.find(s => s && typeof s === 'object' && s.position);
+                  slot = posItem?.position || 'BN';
+                } else if (selPos?.position) {
+                  slot = selPos.position;
+                } else if (typeof selPos === 'string') {
+                  slot = selPos;
+                }
+              }
+              slotMap[info.player_key] = slot;
+            }
+            if (playerKeys.length) {
+              const withStats = await yahoo.getBatchPlayerStats(guid, league_key, playerKeys, null);
+              roster = withStats.map(p => ({ ...p, slot: slotMap[p.key] || 'BN' }));
+            }
+          }
+          const activePlayers = roster.filter(p => !playerILTag(p).includes('IL'));
+          const liveVorTable = activePlayers.map(p => {
+            const rawPos = String(p.position || '').split('/')[0].trim();
+            const vor = brain.calculateVOR(p.stats || {}, rawPos, settings.num_teams || 10, settings.scoring_type || 'headpoint');
+            const scarcity = brain.getPositionalScarcity(rawPos, settings.num_teams || 10);
+            return {
+              name: p.name,
+              position: rawPos,
+              vor: typeof vor === 'object' ? (vor.vor ?? vor.score ?? 0) : (vor ?? 0),
+              scarcity: scarcity.tier || 'moderate',
+            };
+          }).sort((a, b) => b.vor - a.vor);
+          const liveTotalVOR = liveVorTable.reduce((s, p) => s + (p.vor || 0), 0);
+          const liveAvgVOR = liveVorTable.length ? Math.round(liveTotalVOR / liveVorTable.length) : 0;
+          const liveGrade = computeGrade(liveTotalVOR);
+
+          return NextResponse.json({
+            ...cached,
+            grade: liveGrade,
+            totalVOR: liveTotalVOR,
+            avgVOR: liveAvgVOR,
+            vorByPlayer: liveVorTable,
+            fromCache: true
+          });
+        } catch (e) {
+          console.warn('[audit] Live cache audit update failed, serving cached payload:', e.message);
+        }
         return NextResponse.json({ ...cached, fromCache: true });
       }
     }

@@ -18,18 +18,65 @@ export async function POST(request) {
     const { giving, receiving, my_roster, their_roster, league_key } = await request.json();
     const settings = db.getLeagueSettings(guid, league_key) || {};
 
+    // Helper to find player's position & stats from rosters
+    const resolvePlayer = (pName) => {
+      const nameNorm = String(pName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      if (!nameNorm) return { name: pName, position: 'OF', stats: {} };
+
+      const findInList = (list) => {
+        return (list || []).find(x => {
+          const xName = String(x?.name || x?.player_name || x || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+          return xName === nameNorm || xName.includes(nameNorm) || nameNorm.includes(xName);
+        });
+      };
+
+      const found = findInList(my_roster) || findInList(their_roster);
+      if (found && typeof found === 'object') {
+        return {
+          name: found.name || found.player_name || pName,
+          position: found.position || 'OF',
+          stats: found.stats || {}
+        };
+      }
+      return { name: pName, position: 'OF', stats: {} };
+    };
+
+    const normalizePlayers = (players) => {
+      const arr = Array.isArray(players) ? players : [players].filter(Boolean);
+      return arr.map(p => {
+        if (typeof p === 'string') {
+          return resolvePlayer(p);
+        } else if (p && typeof p === 'object') {
+          if (!p.position || !p.stats) {
+            const resolved = resolvePlayer(p.name || p.player_name);
+            return {
+              ...resolved,
+              ...p,
+              position: p.position || resolved.position,
+              stats: p.stats || resolved.stats
+            };
+          }
+          return p;
+        }
+        return { name: String(p), position: 'OF', stats: {} };
+      });
+    };
+
+    const normalizedGiving = normalizePlayers(giving);
+    const normalizedReceiving = normalizePlayers(receiving);
+
     // Score every player in the trade using the real VOR engine
     const vorScore = (players) => (players || []).map(p => {
-      const pos = String(p.position || p).split('/')[0].trim();
+      const pos = String(p.position || 'OF').split('/')[0].trim();
       const vor = brain.calculateVOR(p.stats || {}, pos, settings.num_teams || 10, settings.scoring_type || 'headpoint');
       const statStr = Object.entries(p.stats || {})
         .filter(([, v]) => v !== null && v !== undefined && v !== '')
         .map(([k, v]) => `${k}:${v}`).join(' ');
-      return `  • ${p.name || p} — VOR: ${vor.toFixed(1)} | ${statStr || 'no stats available'}`;
+      return `  • ${p.name} — VOR: ${vor.toFixed(1)} | ${statStr || 'no stats available'}`;
     }).join('\n');
 
-    const givingBlock    = vorScore(Array.isArray(giving)    ? giving    : [{ name: giving }]);
-    const receivingBlock = vorScore(Array.isArray(receiving) ? receiving : [{ name: receiving }]);
+    const givingBlock    = vorScore(normalizedGiving);
+    const receivingBlock = vorScore(normalizedReceiving);
 
     const text = await callClaudeFast([{
       role: 'user',

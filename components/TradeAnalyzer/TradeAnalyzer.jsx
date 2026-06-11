@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -16,24 +17,25 @@ export default function TradeAnalyzer() {
   const [evalResult, setEvalResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (selectedLeague) fetchMyRoster();
-  }, [selectedLeague]);
-
-  useEffect(() => {
-    runEvaluation();
-  }, [giving, receiving]);
-
-  async function fetchMyRoster() {
+  const fetchMyRoster = useCallback(async () => {
     try {
       const res = await axios.get(`/api/yahoo/league/${selectedLeague}/myroster`);
       setMyRoster(res.data.players || []);
     } catch (err) {
       console.error('Failed to load roster', err);
     }
-  }
+  }, [selectedLeague]);
 
-  async function searchPlayers() {
+  const runEvaluation = useCallback(() => {
+    if (giving.length === 0 && receiving.length === 0) {
+      setEvalResult(null);
+      return;
+    }
+    const result = evaluateTrade(giving, receiving, myRoster, leagueData?.settings || {});
+    setEvalResult(result);
+  }, [giving, receiving, myRoster, leagueData]);
+
+  const searchPlayers = useCallback(async () => {
     if (!searchQuery) return;
     setLoading(true);
     try {
@@ -46,16 +48,15 @@ export default function TradeAnalyzer() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [selectedLeague, searchQuery]);
 
-  function runEvaluation() {
-    if (giving.length === 0 && receiving.length === 0) {
-      setEvalResult(null);
-      return;
-    }
-    const result = evaluateTrade(giving, receiving, myRoster, leagueData?.settings || {});
-    setEvalResult(result);
-  }
+  useEffect(() => {
+    if (selectedLeague) fetchMyRoster();
+  }, [selectedLeague, fetchMyRoster]);
+
+  useEffect(() => {
+    runEvaluation();
+  }, [giving, receiving, runEvaluation]);
 
   const addToGiving = (p) => {
     if (!giving.find(x => x.player_key === p.player_key)) setGiving([...giving, p]);

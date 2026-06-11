@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+/* eslint-disable react-hooks/set-state-in-effect */
+import React, { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 
 export default function TradeFinder({ leagueSettings }) {
@@ -17,11 +18,7 @@ export default function TradeFinder({ leagueSettings }) {
     }).catch(() => {})
   }, [])
 
-  useEffect(() => {
-    if (selectedLeague) loadRoster()
-  }, [selectedLeague])
-
-  async function loadRoster() {
+  const loadRoster = useCallback(async () => {
     setRosterLoading(true)
     setResult(null)
     setError('')
@@ -33,7 +30,11 @@ export default function TradeFinder({ leagueSettings }) {
     } finally {
       setRosterLoading(false)
     }
-  }
+  }, [selectedLeague])
+
+  useEffect(() => {
+    if (selectedLeague) loadRoster()
+  }, [selectedLeague, loadRoster])
 
   async function findTrades() {
     if (!roster.length) return

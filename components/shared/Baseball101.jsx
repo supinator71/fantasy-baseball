@@ -5,7 +5,7 @@ export default function Baseball101() {
     <div className="main-content">
       <h1 style={{ fontSize: 32, marginBottom: 8, color: 'var(--text-main)' }}>🎓 Baseball 101</h1>
       <p style={{ color: 'var(--text-muted)', marginBottom: 32, fontSize: 16 }}>
-        The beginner's guide to understanding the sport and dominating your fantasy league.
+        {"The beginner's guide to understanding the sport and dominating your fantasy league."}
       </p>
 
       {/* The Core Objective */}
@@ -94,7 +94,7 @@ export default function Baseball101() {
           <div>
             <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>VOR (Value Over Replacement)</div>
             <div style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.5 }}>
-              This is the holy grail metric for fantasy baseball. VOR calculates how many more points/stats a player produces compared to a totally average, "free" replacement-level player you could just pick off the Waiver Wire. 
+              This is the holy grail metric for fantasy baseball. VOR calculates how many more points/stats a player produces compared to a totally average, &quot;free&quot; replacement-level player you could just pick off the Waiver Wire. 
               <br/><br/>
               <strong>Why it matters:</strong> A First Baseman who hits 25 home runs is good, but a Catcher who hits 25 home runs has an exponentially higher VOR, because good hitting catchers are incredibly rare! VOR tells you exactly who is actually helping you win your league by accounting for positional scarcity.
             </div>

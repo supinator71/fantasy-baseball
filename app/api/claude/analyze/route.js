@@ -160,6 +160,8 @@ export async function POST(request) {
     const { league_key, force = false } = await request.json();
     if (!league_key) return NextResponse.json({ error: 'league_key required' }, { status: 400 });
 
+    const settings = db.getLeagueSettings(guid, league_key) || {};
+
     // ── Daily cache check — return cached result unless user explicitly force-refreshes ──
     if (!force) {
       const cached = db.getAnalysisCache(guid, league_key);
@@ -167,6 +169,80 @@ export async function POST(request) {
         const used = db.getForceRefreshCount(guid);
         const remaining = Math.max(0, db.DAILY_FORCE_LIMIT - used);
         console.log(`[analyze] Cache hit for ${guid}:${league_key} (${remaining} force refreshes remaining today)`);
+        
+        try {
+          // Fetch live data to update scoredWaiver and VOR programmatically
+          const [teamKey, pitching, freeAgents] = await Promise.all([
+            yahoo.getUserTeamKey(guid, league_key),
+            mlbStats.getTwoStartPitchers().catch(() => ({ currentWeek: [], nextWeek: [] })),
+            yahoo.getPlayers(guid, league_key, 'A', 0, null).catch(() => []),
+          ]);
+
+          let roster = [];
+          if (teamKey) {
+            const rosterRaw = await yahoo.getRoster(guid, league_key, teamKey);
+            const playerKeys = [];
+            const slotMap = {};
+            for (const item of (rosterRaw || [])) {
+              const p = item?.player;
+              if (Array.isArray(p)) {
+                const info = Object.assign({}, ...(Array.isArray(p[0]) ? p[0] : []));
+                if (info.player_key) {
+                  playerKeys.push(info.player_key);
+                  let pos = 'BN';
+                  const spObj = p.find(x => x && x.selected_position);
+                  if (spObj && spObj.selected_position) {
+                    const sp = spObj.selected_position;
+                    if (Array.isArray(sp)) {
+                      const pItem = sp.find(x => x && x.position);
+                      if (pItem) pos = pItem.position;
+                    } else if (sp[1] && sp[1].position) {
+                      pos = sp[1].position;
+                    } else if (sp.position) {
+                      pos = sp.position;
+                    }
+                  }
+                  slotMap[info.player_key] = pos;
+                }
+              }
+            }
+            if (playerKeys.length) {
+              const fetchedRoster = await yahoo.getBatchPlayerStats(guid, league_key, playerKeys, null);
+              roster = fetchedRoster.map(rp => ({ ...rp, slot: slotMap[rp.key] || 'BN' }));
+            }
+          }
+
+          const numTeams = settings.num_teams || 10;
+          const scoringType = settings.scoring_type || 'headpoint';
+          const withVOR = roster.map(p => {
+            const rawPos = String(p.position || '').split('/')[0].trim();
+            const vorRaw = brain.calculateVOR(p.stats || {}, rawPos, numTeams, scoringType);
+            const vor = typeof vorRaw === 'object' ? (vorRaw.vor ?? vorRaw.score ?? 0) : (vorRaw ?? 0);
+            return { ...p, _vor: Math.round(vor) };
+          });
+          const liveTotalVOR = withVOR.reduce((s, p) => s + (p._vor || 0), 0);
+          const liveAvgVOR = roster.length ? Math.round(liveTotalVOR / roster.length) : 0;
+
+          const rosterDiag = brain.buildRosterDiagnosis(roster, settings, null, pitching);
+          const liveScoredWaiver = freeAgents.slice(0, 25).map(p => {
+            const wScore = brain.scoreWaiverTarget(p, roster, settings, rosterDiag.categoryNeeds, pitching);
+            return { ...p, waiverScore: wScore };
+          }).sort((a, b) => (b.waiverScore?.score ?? 0) - (a.waiverScore?.score ?? 0));
+
+          const updatedPayload = {
+            ...cached,
+            scoredWaiver: liveScoredWaiver.slice(0, 10),
+            totalVOR: liveTotalVOR,
+            avgVOR: liveAvgVOR
+          };
+          if (updatedPayload.analysis?.audit) {
+            updatedPayload.analysis.audit.grade = computeGrade(liveTotalVOR);
+          }
+          return NextResponse.json({ ...updatedPayload, fromCache: true, refreshesRemaining: remaining });
+        } catch (e) {
+          console.warn('[analyze] Live cache update failed, falling back to cached payload:', e.message);
+        }
+
         return NextResponse.json({ ...cached, fromCache: true, refreshesRemaining: remaining });
       }
     }
@@ -190,8 +266,6 @@ export async function POST(request) {
         // No cache at all yet — fall through to Haiku auto-analysis (don't block entirely)
       }
     }
-
-    const settings = db.getLeagueSettings(guid, league_key) || {};
 
     // ── Fetch all needed data in parallel ─────────────────────────────────────
     const [teamKey, pitching, freeAgents, newsRaw, teamsPlayingRaw] = await Promise.all([
@@ -369,6 +443,8 @@ IL (Injured List) slots are COMPLETELY SEPARATE from active roster slots in Yaho
 
 LEAGUE: "${settings.name || league_key}" | Teams: ${settings.num_teams || 10} | Week: ${settings.current_week || '?'}
 
+⚠️ POSITION MATCHING RULE: When recommending a player to cover a positional gap, void, or team need, you MUST double check that the recommended player actually plays that position. For example, do NOT suggest a 3B player (like Josh Jung) or a 1B/2B/OF player (like Spencer Steer) to cover a Catcher (C) gap, nor vice-versa. Align the gaps with the exact matching positions.
+
 ⚠️ USE ONLY THE STATS BELOW — do not use your training data for player performance numbers. The stats below are the current 2026 season actuals from Yahoo Fantasy.
 
 ROSTER VOR SUMMARY (Value Over Replacement — higher = more valuable relative to position):
@@ -405,8 +481,15 @@ ${twoStartBlock}
 NEXT WEEK — pitchers with 2 confirmed starts next week (add now to benefit):
 ${nextWeekBlock}
 
-TOP FREE AGENTS (available now):
-${freeAgents.slice(0, 10).map(p => `  • ${p.name} (${p.position}) — ${p.team}`).join('\n') || '  None'}
+TOP FREE AGENTS (available now, ranked by fantasyBrain):
+${scoredWaiver.slice(0, 10).map((p, i) => {
+  const stats = p.stats || {};
+  const parts = Object.entries(stats)
+    .filter(([id, v]) => STAT_MAP[id] && v !== '-' && v !== '' && v !== undefined && v !== null && v !== '0')
+    .map(([id, v]) => `${STAT_MAP[id]}:${v}`);
+  const statStr = parts.length ? parts.join(' ') : 'no stats yet';
+  return `  ${i + 1}. ${p.name} (${p.position}, ${p.team || '?'}) Score:${p.waiverScore?.score} Priority:${p.waiverScore?.priority}\n     Stats: ${statStr}\n     Reason: ${p.waiverScore?.reasoning || 'N/A'}`;
+}).join('\n') || '  None'}
 
 BREAKING NEWS (MLB — last 24h):
 ${newsRaw || '  No recent news available'}
@@ -490,14 +573,12 @@ The JSON keys below are FORMAT INSTRUCTIONS — replace ALL quoted placeholder t
   }
 }`;
 
-    // ── Select model: Sonnet for force-refresh (quality), Haiku for daily auto-load (cost) ──
-    const model = force ? 'sonnet' : 'haiku';
-    console.log(`[analyze] Running ${force ? 'FORCE (Sonnet)' : 'AUTO (Haiku)'} analysis for ${guid}:${league_key}`);
-    const raw = force
-      ? await callClaude([{ role: 'user', content: prompt }], 4096)
-      : await callClaudeFast([{ role: 'user', content: prompt }], 4096);
+    // ── Select model: all analysis routed through Haiku to keep costs minimal ──
+    const model = 'haiku';
+    console.log(`[analyze] Running ${force ? 'FORCE' : 'AUTO'} analysis (Haiku) for ${guid}:${league_key}`);
+    const raw = await callClaudeFast([{ role: 'user', content: prompt }], 4096);
 
-    // Increment Sonnet counter only on actual force-refresh calls
+    // Increment force-refresh counter on manual updates
     if (force) db.incrementForceRefreshCount(guid);
 
     let analysis = {};

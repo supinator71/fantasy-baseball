@@ -99,6 +99,7 @@ export async function POST(request) {
 3. DO NOT invent stats or context.
 4. You MUST recommend adding the players with the highest Engine Scores. Do not disagree with the engine.
 5. If the engine tags a player as "MUST ADD" or "CRITICAL STREAM", you must reflect that urgency exactly.
+6. When discussing positional voids or needs, ensure the players recommended actually match that position eligibility (e.g. do not recommend a 3B player like Josh Jung or a 1B/2B/OF player like Spencer Steer to cover a Catcher (C) gap). Always be positionally precise.
 
 📅 DAILY STARTING LINEUP RULES:
 1. Pay attention to the tags: [Fantasy Slot: BN] means the player is on your Fantasy Bench. [Fantasy Slot: C/1B/OF/Util/SP/RP] means they are in your Active Lineup.

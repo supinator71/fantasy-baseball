@@ -10,6 +10,16 @@ DO NOT use your training data to supply ERA, AVG, HR, or any other stat values.
 DO NOT recommend pitchers not listed in the confirmed probable pitcher schedule below.
 `;
 
+function tryParseJSON(text) {
+  try {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    return JSON.parse(match[0]);
+  } catch (e) {
+    return null;
+  }
+}
+
 export async function POST(request) {
   const session = await getSession();
   const guid = session.yahoo_guid;
@@ -53,10 +63,25 @@ export async function POST(request) {
     const twoStartNames = (pitching.remainingTwoStarters || []).join(', ') || 'None';
     const nextWeekNames = (pitching.nextWeek || []).slice(0, 8).join(', ') || 'None';
 
-    const text = await callClaudeFast([{
-      role: 'user',
-      content: `${STAT_GUARDRAIL}
-League: ${settings.name || league_key || '?'} | Format: ${settings.scoring_type || 'Unknown'} | As of: ${nowDay}
+    // ── Run lineup optimizer ─────────────────────────────────────────────────
+    const weekSchedule = {};
+    activePlayers.forEach(p => {
+      const team = String(p.team || '').toUpperCase();
+      weekSchedule[team] = brain.getWeeklyGameCount(team, settings.current_week || 1);
+    });
+    const lineupOpt = brain.optimizeLineup(activePlayers, weekSchedule, settings.scoring_type, settings.num_teams || 10);
+    const diagnosis = brain.buildRosterDiagnosis(my_roster || [], settings || {});
+
+    const lineupOptStarters = lineupOpt.starters?.slice(0, 10).map(p => `${p.player_name} — ${p.weekGames} games, confidence: ${p.confidence}`).join('\n') || 'None';
+    const volumePlays = lineupOpt.volumePlays?.map(p => p.player_name).join(', ') || 'None';
+
+    const scoringLabel = settings.scoring_type === 'headpoint' ? 'H2H Points'
+      : settings.scoring_type === 'headone' ? 'H2H Categories'
+      : settings.scoring_type === 'roto'    ? 'Rotisserie'
+      : settings.scoring_type               || 'H2H Points';
+
+    const prompt = `${STAT_GUARDRAIL}
+League: ${settings.name || league_key || '?'} | Format: ${scoringLabel} | As of: ${nowDay}
 
 ⛔⛔⛔ YAHOO IL RULES — READ THIS BEFORE GIVING ANY ADVICE ⛔⛔⛔
 IL (Injured List) slots are COMPLETELY SEPARATE from active roster slots in Yahoo Fantasy.
@@ -71,6 +96,7 @@ IL (Injured List) slots are COMPLETELY SEPARATE from active roster slots in Yaho
 1. [Fantasy Slot: BN] = Fantasy Bench. [Fantasy Slot: C/1B/OF/Util/SP/RP] = Active Lineup.
 2. [MLB: Starting Today] = confirmed in today's MLB lineup. [MLB: Not Starting/Bench] = benched in real life. [MLB: No Game/Unknown] = team off or lineup not posted.
 3. Do not recommend "starting" someone already in an active slot. If a player is [MLB: Not Starting/Bench] or [MLB: No Game/Unknown] and in an active slot, recommend moving them to BN.
+4. ⚠️ POSITION MATCHING RULE: When recommending lineup changes, daily moves, or key decisions, you MUST ensure that the player's position eligibility matches the slot you are recommending them for. For example, do NOT suggest playing a 3B player (like Josh Jung) or a 1B/2B/OF player (like Spencer Steer) in a Catcher (C) slot, nor a hitter in a pitching slot. Align all recommendations with the exact matching positions.
 
 ACTIVE ROSTER (these are your only drop candidates if you need to make room):
 ${activeBlock}
@@ -83,17 +109,71 @@ CONFIRMED 2-START PITCHER SCHEDULE (as of ${nowDay}):
 - Next week 2-start targets: ${nextWeekNames}
 - Starting today: ${(pitching.today || []).join(', ') || 'None'}
 
-Opponent context: ${JSON.stringify(opponent || {})}
+LINEUP OPTIMIZER RESULTS (active players only):
+Top starters:
+${lineupOptStarters}
+Volume Plays (7-game teams): ${volumePlays}
+
+POINTS ANALYSIS: ${opponent ? (brain.analyzeCategories(opponent.my_stats || {}, [{ stats: opponent.opp_stats || {} }], settings.scoring_type)?.advice || '') : (diagnosis.catAnalysis?.advice || '')}
+
+${opponent ? `MATCHUP: vs ${opponent.opponent_name || 'opponent'}\nTheir projected stats: ${JSON.stringify(opponent.opp_stats || {})}` : 'No specific matchup data — optimize for maximum total points output.'}
 Week context: ${week_context || ''}
 
-Build a weekly game plan using ONLY the stats and schedule above.
+You are the Goin' Yard HQ interface — a strict translation layer for our proprietary mathematical fantasy engine.
 Identify must-starts (prioritize pitchers with remaining starts this week), streaming targets from the confirmed schedule,
 and lineup slots to maximize for the ${settings.scoring_type || 'this'} format.
-Remember: the week ends Sunday night — factor in remaining games when prioritizing streamers.
-REMINDER: Do NOT suggest dropping any player from the "ON IL" section — it will not free an active roster spot.`
-    }]);
 
-    return NextResponse.json({ gameplan: text });
+CRITICAL JSON ESCAPING RULES: You MUST use double quotes for all JSON keys and string values. Do NOT use single quotes for JSON properties. If you need to use a quote inside your text prose, use single quotes (e.g., "He is a 'must-start' player"). You MUST NOT use raw newlines inside string values; use the literal sequence \\n.
+Return ONLY valid JSON (no markdown wrapping):
+{
+  "weeklyProjection": { "myProjected": "350 pts", "opponentProjected": "310 pts", "confidence": "medium" },
+  "swingCategories": ["Total Points"],
+  "dailyMoves": {
+    "monday": "A clear sentence about what to do Monday",
+    "tuesday": "A clear sentence about Tuesday's move",
+    "wednesday": "A clear sentence about Wednesday's adjustment",
+    "thursday": "A clear sentence about Thursday's adjustment",
+    "friday": "A clear sentence about Friday's adjustment",
+    "saturday": "A clear sentence about Saturday's adjustment",
+    "sunday": "A clear sentence about Sunday's adjustment"
+  },
+  "keyDecisions": [{ "decision": "A readable question about the decision", "recommendation": "Player name", "reasoning": "A persuasive sentence explaining why in terms of points" }]
+}`;
+
+    const text = await callClaudeFast([{ role: 'user', content: prompt }], 1500);
+    const parsed = tryParseJSON(text);
+
+    if (parsed) {
+      return NextResponse.json({
+        ...parsed,
+        gameplan: text,
+        lineupOptimizer: lineupOpt,
+        catAnalysis: diagnosis.catAnalysis
+      });
+    }
+
+    // Robust Fallback
+    const _myProj = text.match(/"myProjected"\s*:\s*"([^"]+)"/i);
+    const _oppProj = text.match(/"opponentProjected"\s*:\s*"([^"]+)"/i);
+    const _conf = text.match(/"confidence"\s*:\s*"([^"]+)"/i);
+
+    return NextResponse.json({
+      gameplan: text,
+      rawPlan: text,
+      weeklyProjection: {
+        myProjected: _myProj ? _myProj[1] : '?',
+        opponentProjected: _oppProj ? _oppProj[1] : '?',
+        confidence: _conf ? _conf[1] : 'low',
+      },
+      lineupOptimizer: lineupOpt,
+      catAnalysis: diagnosis.catAnalysis,
+      optimalLineup: [],
+      volumePlays: [],
+      swingCategories: [],
+      keyDecisions: [],
+      dailyMoves: {}
+    });
+
   } catch (err) {
     console.error('[claude/gameplan]', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });

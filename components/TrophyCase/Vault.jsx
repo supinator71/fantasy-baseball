@@ -32,7 +32,7 @@ export default function Vault() {
   return (
     <div className="vault-container">
       <div className="vault-header">
-        <h1>💎 The Collector's Vault</h1>
+        <h1>{"💎 The Collector's Vault"}</h1>
         <p>Master Reference: All 36 Series 1 & 2 Collectibles</p>
       </div>
 

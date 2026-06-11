@@ -101,7 +101,7 @@ export default function TrophyCase() {
               </div>
               <div className="back-footer">
                 <span className="rarity-tag">{cardDef.rarity.toUpperCase()} UNIT</span>
-                <div className="card-trademark">© 2046 Galactic Baseball Auth. TM Goin' Yard Collectibles.</div>
+                <div className="card-trademark">{"© 2046 Galactic Baseball Auth. TM Goin' Yard Collectibles."}</div>
               </div>
             </div>
           </div>
@@ -160,7 +160,7 @@ export default function TrophyCase() {
       <PackDropModal awardedCard={packOpening ? awardedCard : null} onClose={() => setPackOpening(false)} />
       <div className="trophy-header">
         <div>
-          <h1 style={{ fontSize: 36, marginBottom: 8 }}>🏆 The Collector's Album</h1>
+          <h1 style={{ fontSize: 36, marginBottom: 8 }}>{"🏆 The Collector's Album"}</h1>
           <p style={{ color: 'var(--text-muted)' }}>
             Earn premium digital trading cards by dominating your league, maintaining an A+ roster, and spotting rising rookies.
             <a href="/vault" style={{ color: 'var(--primary)', marginLeft: 8, textDecoration: 'none', fontWeight: 600 }}>View Full Collection →</a>
