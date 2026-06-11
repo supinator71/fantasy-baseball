@@ -5,8 +5,8 @@ import { getPlayers } from '@/lib/yahooService';
 export async function GET(request, { params }) {
   const { leagueKey } = await params;
   const { searchParams } = new URL(request.url);
-  const rawStatus = searchParams.get('status') || 'FA';
-  const status = rawStatus === 'A' ? 'FA' : rawStatus;
+  const rawStatus = searchParams.get('status') || 'A';
+  const status = rawStatus;
   const position = searchParams.get('position') || null;
   const start = parseInt(searchParams.get('start') || '0', 10);
 
