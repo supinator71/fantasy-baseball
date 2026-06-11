@@ -3,6 +3,8 @@ import { getSession } from '@/lib/session';
 import { callClaudeFast } from '@/lib/claude';
 import { db } from '@/lib/database';
 import * as yahoo from '@/lib/yahooService';
+import * as mlbStats from '@/lib/mlbStatsService';
+import * as brain from '@/lib/fantasyBrain';
 
 // Comprehensive Yahoo Fantasy Baseball stat_id → human-readable name
 const STAT_NAMES = {
@@ -70,7 +72,10 @@ export async function POST(request) {
         .join(' ') || 'no stats yet';
     };
 
+    const pitchingContext = await mlbStats.getTwoStartPitchers().catch(() => ({ currentWeek: [], nextWeek: [], today: [], pitcherDetails: {} }));
+
     // ── Fetch roster with slot info ──────────────────────────────────────────
+    let players = [];
     let rosterLines = [];
     try {
       const teamKey = await yahoo.getUserTeamKey(guid, league_key);
@@ -97,7 +102,7 @@ export async function POST(request) {
         }
 
         if (playerKeys.length) {
-          const players = await yahoo.getBatchPlayerStats(guid, league_key, playerKeys, null);
+          players = await yahoo.getBatchPlayerStats(guid, league_key, playerKeys, null);
           console.log('[matchup/predict] Fetched', players.length, 'players for roster stats.');
 
           const activeHealthy = [];
@@ -145,14 +150,21 @@ export async function POST(request) {
       console.warn('[matchup/predict] Roster fetch failed:', e.message);
     }
 
+    const diagnosis = brain.buildRosterDiagnosis(players, settings, matchup_data, pitchingContext);
+
     // ── Fetch available waiver targets ───────────────────────────────────────
     let availableBlock = '';
     try {
       const availableRaw = await yahoo.getPlayers(guid, league_key, 'FA', 0, null) || [];
       console.log('[matchup/predict] Fetched', availableRaw.length, 'available players.');
       const healthyFA = availableRaw.filter(p => !isPlayerInjured(p));
-      availableBlock = healthyFA.slice(0, 15).map((p, idx) => {
-        return `  • ${p.name} (${p.position}) - Team: ${p.team} | Stats: ${formatStats(p.stats)}`;
+      const scoredFA = healthyFA.slice(0, 15).map(p => {
+        const wScore = brain.scoreWaiverTarget(p, players, settings, diagnosis.categoryNeeds, pitchingContext);
+        return { ...p, waiverScore: wScore };
+      }).sort((a, b) => (b.waiverScore?.score ?? 0) - (a.waiverScore?.score ?? 0));
+
+      availableBlock = scoredFA.map(p => {
+        return `  • ${p.name} (${p.position}) - Team: ${p.team} | Score: ${p.waiverScore?.score} | Priority: ${p.waiverScore?.priority} | Stats: ${formatStats(p.stats)}\n    Reason: ${p.waiverScore?.reasoning || 'N/A'}`;
       }).join('\n');
     } catch (e) {
       console.warn('[matchup/predict] Available players fetch failed:', e.message);
@@ -202,6 +214,8 @@ export async function POST(request) {
 LEAGUE: ${settings.name || league_key} | Format: ${scoringLabel} | Week ${week || '?'} | ${daysRemaining} days remaining in matchup
 
 ${urgencyLabel}
+
+${diagnosis.promptBlock}
 
 LIVE SCORE:
   ${myTeam.name}: ${myPts} pts

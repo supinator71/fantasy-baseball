@@ -54,20 +54,17 @@ export default function Dashboard({ subscription }) {
 
 
   const dashboardItems = [
-    { label: 'My Roster',          icon: '👥', href: '/roster',    desc: 'Manage your players' },
-    { label: 'Waiver Wire',        icon: '🔄', href: '/waiver',    desc: 'Find hidden gems' },
-    { label: 'Start / Sit',        icon: '⚡', href: '/startsit',  desc: 'Optimize your lineup' },
-    { label: 'Trade Analyzer',     icon: '🤝', href: '/trade',     desc: 'Evaluate trades' },
-    { label: 'Standings',          icon: '🏆', href: '/standings', desc: 'Track your position' },
+    { label: 'My Roster',          icon: '👥', href: '/roster',       desc: 'Manage your roster & audit' },
+    { label: 'Waiver Wire',        icon: '🔄', href: '/waiver',       desc: 'Find waiver additions' },
+    { label: 'Start / Sit',        icon: '⚡', href: '/startsit',     desc: 'Optimize active lineup' },
+    { label: 'Trades',             icon: '⇌',  href: '/trade',        desc: 'Analyze & find trades' },
+    { label: 'Standings',          icon: '🏆', href: '/standings',    desc: 'Track league position' },
     { label: 'Matchup Predictor',  icon: '⚔️', href: '/matchup',      desc: 'AI weekly predictions' },
-    { label: 'Team Audit',         icon: '📊', href: '/audit',        desc: 'Grade your team' },
-    { label: 'Trade Finder',       icon: '💡', href: '/tradefinder',  desc: 'AI trade proposals' },
-    { label: 'Weekly Game Plan',   icon: '📅', href: '/gameplan',     desc: 'Lineup optimizer' },
-    { label: 'Baseball 101',       icon: '🎓', href: '/baseball101',  desc: 'Beginner metrics guide' },
-    { label: 'Collector\'s Album', icon: '🎴', href: '/trophy',    desc: 'Your digital card album' },
-    { label: 'Vault (Gallery)',    icon: '🏛️', href: '/vault',     desc: 'View unlocked collectibles' },
-    { label: 'Card Store',         icon: '🛍️', href: '/store',     desc: 'Open free card packs' },
-  ].filter(item => galacticModeEnabled || !['/trophy', '/vault', '/store'].includes(item.href));
+    { label: 'League Trade Block', icon: '🤝', href: '/tradeblock',   desc: 'See players on block' },
+    { label: 'Collector\'s Album', icon: '🎴', href: '/trophy',       desc: 'Your digital card album' },
+    { label: 'Vault (Gallery)',    icon: '🏛️', href: '/vault',        desc: 'View unlocked collectibles' },
+    { label: 'Card Store',         icon: '🛍️', href: '/store',        desc: 'Open free card packs' },
+  ].filter(item => galacticModeEnabled || !['/tradeblock', '/trophy', '/vault', '/store'].includes(item.href));
 
   return (
     <div style={{ position: 'relative' }}>

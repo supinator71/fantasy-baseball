@@ -1,22 +1,14 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
+import { useLeague } from '@/lib/context/LeagueContext'
 
 export default function TradeFinder({ leagueSettings }) {
-  const [leagues, setLeagues] = useState([])
-  const [selectedLeague, setSelectedLeague] = useState('')
+  const { selectedLeague, leagues } = useLeague()
   const [roster, setRoster] = useState([])
   const [rosterLoading, setRosterLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    axios.get('/api/yahoo/leagues').then(({ data }) => {
-      setLeagues(data)
-      if (data[0]?.league_key) setSelectedLeague(data[0].league_key)
-    }).catch(() => {})
-  }, [])
 
   const loadRoster = useCallback(async () => {
     setRosterLoading(true)
@@ -64,14 +56,8 @@ export default function TradeFinder({ leagueSettings }) {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: 28, fontWeight: 700 }}>◆ Trade Finder</h1>
-          <p style={{ color: '#7aafc4' }}>AI identifies your surpluses and voids, then generates trade proposals with pitch language</p>
-        </div>
-        <select value={selectedLeague} onChange={e => setSelectedLeague(e.target.value)} style={{ width: 200 }}>
-          {leagues.map((l, i) => <option key={i} value={l.league_key}>{l.name || l.league_key}</option>)}
-        </select>
+      <div style={{ marginBottom: 20 }}>
+        <p style={{ color: '#7aafc4', margin: 0 }}>AI identifies your surpluses and voids, then generates trade proposals with pitch language</p>
       </div>
 
       {error && (

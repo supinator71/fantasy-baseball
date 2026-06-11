@@ -54,6 +54,61 @@ function buildPlayerLine(p) {
   return `  • ${p.name} (${p.position}) [${p.slot || 'BN'}]${tag ? ' ' + tag : ''} — ${parts.join(' ') || 'no stats yet'}`;
 }
 
+function sanitizeAnalysis(analysis, { roster, freeAgents, totalVOR }) {
+  const normName = n => String(n || '').toLowerCase().replace(/[^a-z]/g, '');
+
+  const rosterSet = new Set(roster.map(p => normName(p.name)));
+  const faSet     = new Set(freeAgents.map(p => normName(p.name)));
+
+  const onRoster = name => rosterSet.has(normName(name));
+  const onFAList = name => faSet.has(normName(name));
+
+  // 1. Audit grade — always engine-computed
+  analysis.grade = computeGrade(totalVOR);
+
+  // 2. Audit moves — verify Drop is on roster, Add is on FA list
+  if (analysis.moves?.length) {
+    analysis.moves = analysis.moves.map(move => {
+      let action = move.action || '';
+      
+      const dropMatch = action.match(/Drop\s+([^/]+?)(?:\s+\(VOR|$|\/|Add)/i);
+      const addMatch  = action.match(/Add\s+([^/]+?)(?:\s+\(VOR|$|\/|Drop)/i);
+
+      let isDropValid = true;
+      let isAddValid = true;
+
+      if (dropMatch && dropMatch[1]) {
+        const dropPlayer = dropMatch[1].trim();
+        if (!onRoster(dropPlayer)) {
+          isDropValid = false;
+        }
+      }
+
+      if (addMatch && addMatch[1]) {
+        const addPlayer = addMatch[1].trim();
+        if (!onFAList(addPlayer)) {
+          isAddValid = false;
+        }
+      }
+
+      if (addMatch && addMatch[1] && !isAddValid) {
+        const topFA = freeAgents[0];
+        if (topFA) {
+          action = action.replace(new RegExp(`Add\\s+${addMatch[1].replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}`, 'i'), `Add ${topFA.name}`);
+          move.reasoning = `${move.reasoning} (Suggested substitute: ${topFA.name} is the top available waiver option).`;
+        }
+      }
+
+      return {
+        ...move,
+        action
+      };
+    });
+  }
+
+  return analysis;
+}
+
 export async function POST(request) {
   const session = await getSession();
   const guid = session.yahoo_guid;
@@ -140,15 +195,17 @@ export async function POST(request) {
     }
 
     // ── Fetch rich context server-side in parallel ────────────────────────────
-    const [pitchingCtx, newsRaw, standingsRaw] = await Promise.allSettled([
+    const [pitchingCtx, newsRaw, standingsRaw, freeAgentsRaw] = await Promise.allSettled([
       mlbStats.getTwoStartPitchers().catch(() => ({ currentWeek: [], nextWeek: [], pitcherDetails: {} })),
       mlbStats.getBreakingNews().catch(() => ''),
       yahoo.getStandings(guid, league_key).catch(() => []),
+      yahoo.getPlayers(guid, league_key, 'A', 0, null).catch(() => []),
     ]);
 
     const pitchingContext = pitchingCtx.status === 'fulfilled' ? pitchingCtx.value : { currentWeek: [], nextWeek: [], pitcherDetails: {} };
     const news            = newsRaw.status     === 'fulfilled' ? newsRaw.value     : '';
     const standings       = standingsRaw.status === 'fulfilled' ? standingsRaw.value : [];
+    const freeAgents      = freeAgentsRaw.status === 'fulfilled' ? freeAgentsRaw.value : [];
 
     // ── Fetch the actual team roster with stats server-side ───────────────────
     // Prefer server-fetched roster over frontend data — guarantees stats are present
@@ -247,6 +304,21 @@ export async function POST(request) {
     // ── Roster diagnosis for category needs ──────────────────────────────────
     const diagnosis = brain.buildRosterDiagnosis(activePlayers, settings, null, pitchingContext);
 
+    // ── Score waiver targets using the real fantasyBrain engine ─────────────
+    const scoredWaiver = freeAgents.slice(0, 25).map(p => {
+      const wScore = brain.scoreWaiverTarget(p, activePlayers, settings, diagnosis.categoryNeeds, pitchingContext);
+      return { ...p, waiverScore: wScore };
+    }).sort((a, b) => (b.waiverScore?.score ?? 0) - (a.waiverScore?.score ?? 0));
+
+    const waiverBlock = scoredWaiver.slice(0, 10).map((p, i) => {
+      const statsObj = p.stats || {};
+      const parts = Object.entries(statsObj)
+        .filter(([id, v]) => STAT_MAP[id] && v !== '-' && v !== '' && v !== undefined && v !== null && v !== '0')
+        .map(([id, v]) => `${STAT_MAP[id]}:${v}`);
+      const statStr = parts.length ? parts.join(' ') : 'no stats yet';
+      return `  ${i + 1}. ${p.name} (${p.position}, ${p.team || '?'}) Score:${p.waiverScore?.score} Priority:${p.waiverScore?.priority}\n     Stats: ${statStr}\n     Reason: ${p.waiverScore?.reasoning || 'N/A'}`;
+    }).join('\n') || '  None';
+
     const totalVOR  = vorTable.reduce((s, p) => s + (p.vor || 0), 0);
     const avgVOR    = vorTable.length ? Math.round(totalVOR / vorTable.length) : 0;
     const topPlayer = vorTable[0];
@@ -284,6 +356,9 @@ ${rosterBlock}
 
 ON IL (⛔ these players occupy IL-ONLY slots — dropping them does NOT open an active spot):
 ${ilPlayers.length ? ilPlayers.map(p => `  • ${p.name} (${p.position}) [⛔ IL SLOT — ${p.status || 'injured'}]`).join('\n') : '  None'}
+
+AVAILABLE FREE AGENTS (use ONLY these players for waiver adds):
+${waiverBlock}
 
 CATEGORY NEEDS (engine-computed):
 ${diagnosis.promptBlock || 'N/A'}
@@ -323,7 +398,7 @@ Respond ONLY with valid JSON (no markdown fences). Do NOT include vorByPlayer �
     "[cite specific gap or player + VOR]"
   ],
   "moves": [
-    {"action": "[Drop X / Add Y — real names from the roster data]", "priority": "immediate", "reasoning": "[why, citing VOR numbers and stats]"},
+    {"action": "[Drop X / Add Y — real names from the roster data and free agent list above]", "priority": "immediate", "reasoning": "[why, citing VOR numbers and stats]"},
     {"action": "[Move 2 — real names]", "priority": "high", "reasoning": "[why]"},
     {"action": "[Move 3 — real names]", "priority": "medium", "reasoning": "[why]"}
   ]
@@ -338,6 +413,12 @@ Respond ONLY with valid JSON (no markdown fences). Do NOT include vorByPlayer �
     } catch {
       parsed = { grade: '?', raw };
     }
+
+    parsed = sanitizeAnalysis(parsed, {
+      roster: activePlayers,
+      freeAgents: scoredWaiver,
+      totalVOR
+    });
 
     const result = {
       ...parsed,

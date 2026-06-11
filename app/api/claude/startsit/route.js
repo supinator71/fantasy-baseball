@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session';
 import { callClaudeFast } from '@/lib/claude';
 import { db } from '@/lib/database';
 import * as mlbStats from '@/lib/mlbStatsService';
+import * as brain from '@/lib/fantasyBrain';
 
 // Yahoo stat ID → readable label (same map used in audit route)
 const STAT_MAP = {
@@ -74,6 +75,19 @@ Teams PLAYING today: ${[...teamsPlaying.abbrs].join(', ')}`
     const ilPlayers  = playerList.filter(p => IL_STATUSES.has(String(p.status||'').toUpperCase()) || IL_STATUSES.has(String(p.slot||'').toUpperCase()));
     const activePlayers = playerList.filter(p => !ilPlayers.includes(p));
 
+    // ── Run lineup optimizer using fantasyBrain ──────────────────────────────
+    const weekSchedule = {};
+    activePlayers.forEach(p => {
+      const team = String(p.team || '').toUpperCase();
+      weekSchedule[team] = brain.getWeeklyGameCount(team, settings.current_week || 1);
+    });
+    const lineupOpt = brain.optimizeLineup(activePlayers, weekSchedule, settings.scoring_type, settings.num_teams || 10);
+    const diagnosis = brain.buildRosterDiagnosis(playerList, settings, null, pitching);
+
+    const lineupOptStarters = lineupOpt.starters?.map(p => `  • ${p.player_name} (${p.position}) — score: ${p.startScore}, confidence: ${p.confidence}\n    Reasoning: ${p.reasoning}`).join('\n') || '  (none)';
+    const lineupOptBench = lineupOpt.bench?.map(p => `  • ${p.player_name} (${p.position}) — score: ${p.startScore}, confidence: ${p.confidence}\n    Reasoning: ${p.reasoning}`).join('\n') || '  (none)';
+    const volumePlays = lineupOpt.volumePlays?.map(p => p.player_name).join(', ') || 'None';
+
     const rosterBlock = [
       'ACTIVE PLAYERS (only recommend these):',
       ...activePlayers.map(p => {
@@ -87,6 +101,8 @@ Teams PLAYING today: ${[...teamsPlaying.abbrs].join(', ')}`
 
     const prompt = `You are Goin' Yard HQ — a fantasy baseball lineup optimizer for the 2026 MLB season.
 
+🚨 CRITICAL DIRECTIVE: You are NOT the analyst. The fantasyBrain.js algorithm is the analyst. Your ONLY job is to convert the algorithm's numeric scores, priorities, and optimizeLineup recommendations into natural, engaging human language.
+
 ⛔ ABSOLUTE DATA RULE: You must use ONLY the player names and stats listed in MY ROSTER below.
 DO NOT mention any player not listed (e.g. Tyler Glasnow, Logan Webb, Tarik Skubal, or any player from your training data).
 DO NOT invent or estimate any stat values. If a stat is missing, say "no stats yet."
@@ -96,9 +112,21 @@ DO NOT recommend starting IL/UNAVAILABLE players.
 1. Pay attention to the tags: [Fantasy Slot: BN] means the player is on your Fantasy Bench. [Fantasy Slot: C/1B/OF/Util/SP/RP] means they are in your Active Lineup.
 2. Pay attention to the MLB tags: [MLB: Starting Today] means they have a game and are confirmed starting. [MLB: Not Starting/Bench] means they have a game but are benched in real life. [MLB: No Game/Unknown] means their team is off today or their lineup isn't posted yet.
 3. ADVICE MUST RECOGNIZE BENCHINGS: Do not recommend "starting" a player who is already in an active Fantasy Slot. If a player is marked [MLB: Not Starting/Bench] or [MLB: No Game/Unknown], DO NOT tell the user to start them today, and recommend moving them to the Fantasy Bench [BN] if they are currently active.
+4. You MUST recommend starting the players who have the highest start scores in the LINEUP OPTIMIZER RESULTS below. Do not contradict the engine's ratings.
 
 SCORING FORMAT: ${scoringLabel}
 LEAGUE: ${settings.name || league_key || 'Unknown'}
+
+${diagnosis.promptBlock}
+
+=== LINEUP OPTIMIZER RESULTS (engine-computed) ===
+Top recommended starters:
+${lineupOptStarters}
+
+Recommended sits / bench options:
+${lineupOptBench}
+
+Volume Plays (7-game teams): ${volumePlays}
 
 MY ROSTER — 2026 Yahoo season stats:
 ${rosterBlock}
@@ -120,10 +148,10 @@ CONFIRMED PITCHING SCHEDULE:
 
 Context from manager: ${matchup_context || 'Evaluate my full roster for today. Who are must-starts? Who should sit or be moved to bench?'}
 
-Give concrete lineup advice using ONLY my roster. Include:
-1. Must-starts (active slot confirmed, team playing, likely in MLB lineup)
-2. Automatic sits (no game today, IL, or [Slot:BN] with no reason to activate)
-3. Moves to make (BN → active or active → BN swaps)
+Give concrete lineup advice using ONLY my roster and the LINEUP OPTIMIZER RESULTS. Include:
+1. Must-starts (active slot confirmed, team playing, likely in MLB lineup, high startScore)
+2. Automatic sits (no game today, IL, or [Slot:BN] with no reason to activate, low startScore)
+3. Moves to make (BN → active or active → BN swaps based on startScore VOR difference)
 4. Top 3 toughest decisions`;
 
     const text = await callClaudeFast([{ role: 'user', content: prompt }], 1200);

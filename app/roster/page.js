@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { useLeague } from '@/lib/context/LeagueContext';
+import RosterAudit from '@/components/RosterAudit/RosterAudit';
 
 export default function RosterPage() {
   const { leagues, selectedLeague, setSelectedLeague } = useLeague();
   const [roster, setRoster] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('lineup'); // 'lineup' | 'audit'
 
   const fetchRoster = useCallback(async (leagueKey) => {
     setLoading(true);
@@ -50,21 +52,65 @@ export default function RosterPage() {
         )}
       </div>
 
-      {loading ? (
-        <div className="loading">Loading your roster from Yahoo...</div>
-      ) : roster.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
-          <p style={{ color: 'var(--text-muted)' }}>
-            No roster data available. Make sure your Yahoo league is active and try refreshing.
-          </p>
-        </div>
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 1 }}>
+        <button
+          onClick={() => setActiveTab('lineup')}
+          style={{
+            background: 'none',
+            border: 'none',
+            borderBottom: activeTab === 'lineup' ? '3px solid var(--primary)' : '3px solid transparent',
+            color: activeTab === 'lineup' ? 'var(--text-main)' : 'var(--text-muted)',
+            padding: '10px 16px',
+            fontSize: 16,
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'var(--font-heading)',
+            transition: 'all 0.2s',
+            marginBottom: -2
+          }}
+        >
+          📋 My Lineup
+        </button>
+        <button
+          onClick={() => setActiveTab('audit')}
+          style={{
+            background: 'none',
+            border: 'none',
+            borderBottom: activeTab === 'audit' ? '3px solid var(--primary)' : '3px solid transparent',
+            color: activeTab === 'audit' ? 'var(--text-main)' : 'var(--text-muted)',
+            padding: '10px 16px',
+            fontSize: 16,
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'var(--font-heading)',
+            transition: 'all 0.2s',
+            marginBottom: -2
+          }}
+        >
+          🔬 AI Roster Audit
+        </button>
+      </div>
+
+      {activeTab === 'lineup' ? (
+        loading ? (
+          <div className="loading">Loading your roster from Yahoo...</div>
+        ) : roster.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
+            <p style={{ color: 'var(--text-muted)' }}>
+              No roster data available. Make sure your Yahoo league is active and try refreshing.
+            </p>
+          </div>
+        ) : (
+          <>
+            <RosterSection title="Active Lineup" players={active} color="#00a86b" />
+            <RosterSection title="Bench" players={bench} color="#f59e0b" />
+            <RosterSection title="Injured List (IL)" players={il} color="#ef4444" />
+          </>
+        )
       ) : (
-        <>
-          <RosterSection title="Active Lineup" players={active} color="#00a86b" />
-          <RosterSection title="Bench" players={bench} color="#f59e0b" />
-          <RosterSection title="Injured List (IL)" players={il} color="#ef4444" />
-        </>
+        <RosterAudit />
       )}
     </div>
   );

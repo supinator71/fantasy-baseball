@@ -15,14 +15,9 @@ export default function Sidebar({ authenticated, isOpen, onClose, subscription }
     { href: '/roster',      label: 'My Roster',             icon: '👥' },
     { href: '/waiver',      label: 'Waiver Wire',           icon: '🔄' },
     { href: '/startsit',    label: 'Start / Sit',           icon: '⚡' },
-    { href: '/trade',       label: 'Trade Analyzer',        icon: '⇌' },
-    { href: '/pitching',    label: 'Pitching Intel',        icon: '🎯' },
+    { href: '/trade',       label: 'Trades',                icon: '⇌' },
     { href: '/standings',   label: 'Standings',             icon: '🏆' },
     { href: '/matchup',     label: 'Matchup Predictor',     icon: '⚔️' },
-    { href: '/audit',       label: 'Team Audit',            icon: '📊' },
-    { href: '/tradefinder', label: 'Trade Finder',          icon: '💡' },
-    { href: '/gameplan',    label: 'Weekly Game Plan',      icon: '📅' },
-    { href: '/baseball101', label: 'Baseball 101',          icon: '🎓' },
     { href: '/tradeblock',  label: 'League Trade Block',    icon: '🤝' },
     { href: '/trophy',      label: 'Collector\'s Album',    icon: '🎴' },
     { href: '/vault',       label: 'Vault (Gallery)',       icon: '🏛️' },
@@ -53,7 +48,7 @@ export default function Sidebar({ authenticated, isOpen, onClose, subscription }
         </div>
 
         <div style={{ overflowY: 'auto', flex: 1, paddingBottom: 20 }}>
-          {navItems.filter(item => galacticModeEnabled || !['/trophy', '/vault', '/store'].includes(item.href)).map(item => {
+          {navItems.filter(item => galacticModeEnabled || !['/tradeblock', '/trophy', '/vault', '/store'].includes(item.href)).map(item => {
             const isActive = pathname === item.href;
             return (
               <Link key={item.href} href={item.href} onClick={onClose}

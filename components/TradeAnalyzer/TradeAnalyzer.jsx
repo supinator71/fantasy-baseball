@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useLeague } from '@/lib/context/LeagueContext';
 import { evaluateTrade } from '@/lib/fantasyBrain';
