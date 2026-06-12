@@ -32,7 +32,7 @@
 | Number | Name | Position | Home Planet |
 |---|---|---|---|
 | #93 | Diego Garcia | Cyborg Pitcher | Venus Cloud City |
-| #57 | Cole Thomas | Bionic Shortstop | Kepler-186f |
+| #57 | Jaxon Riley | Bionic Shortstop | Kepler-186f |
 | #69 | Unit 52-F | Heavy Artillery (1B) | Titan Station |
 | #82 | Laser Wire | Laser Outfielder | Venus Cloud City |
 | #39 | Synth Code | Utility Android | Proxima Centauri b |

@@ -31,7 +31,21 @@ function extractPotentialNames(text) {
     'Tigers', 'Kansas', 'City', 'Royals', 'Minnesota', 'Twins', 'Cleveland', 'Guardians',
     'St', 'Louis', 'Cardinals', 'Milwaukee', 'Brewers', 'Pittsburgh', 'Pirates',
     'Cincinnati', 'Reds', 'Colorado', 'Rockies', 'San', 'Diego', 'Padres', 'Arizona', 'Diamondbacks',
-    'Philadelphia', 'Phillies', 'Washington', 'Nationals', 'Baltimore', 'Orioles'
+    'Philadelphia', 'Phillies', 'Washington', 'Nationals', 'Baltimore', 'Orioles',
+    'Today', 'Tonight', 'Tomorrow', 'Yesterday', 'Must', 'Start', 'Starts', 'Sit', 'Sits',
+    'Decision', 'Decisions', 'Analysis', 'Context', 'Real', 'Time', 'Data', 'IL', 'FA', 'BN',
+    'Current', 'Active', 'Healthy', 'Injured', 'Unavailable', 'Bench', 'Slot', 'Score',
+    'Points', 'Categories', 'H2H', 'Rotisserie', 'Roto', 'Priority', 'Pickup', 'Recommendation',
+    'Upside', 'Floor', 'Ceiling', 'Pitching', 'Hitting', 'Schedule', 'Yes', 'No', 'Not',
+    'But', 'And', 'Or', 'For', 'To', 'With', 'From', 'Sunday', 'Monday', 'Tuesday',
+    'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Jan', 'Feb', 'Mar', 'Apr', 'May',
+    'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'January', 'February', 'March',
+    'April', 'June', 'July', 'August', 'September', 'October', 'November', 'December',
+    'Top', 'Bottom', 'High', 'Low', 'Best', 'Worst', 'Eligible', 'Activated', 'Hot', 'Seat',
+    'SP', 'RP', 'P', 'C', '1B', '2B', '3B', 'SS', 'OF', 'DH', 'Util', 'UTIL',
+    'ARI', 'AZ', 'ATL', 'BAL', 'BOS', 'CHC', 'CHW', 'CWS', 'CIN', 'CLE', 'COL', 'DET',
+    'HOU', 'KC', 'KCR', 'LAA', 'LAD', 'MIA', 'MIL', 'MIN', 'NYM', 'NYY', 'OAK', 'ATH',
+    'PHI', 'PIT', 'SD', 'SDP', 'SEA', 'SF', 'SFG', 'STL', 'TB', 'TBR', 'TEX', 'TOR', 'WSH', 'WAS'
   ]);
 
   const potential = [];
@@ -134,8 +148,20 @@ export async function POST(request) {
         faBlock = `TOP AVAILABLE FREE AGENTS:\n${freeAgents.slice(0, 15).map(getPlayerLine).join('\n')}`;
       }
 
-      // Search for any mentioned players in the user's question
-      const queryNames = extractPotentialNames(question);
+      // Search for any mentioned players in the user's question AND in the analysis context
+      const rosterNames = new Set(roster.map(p => p.name.toLowerCase()));
+      const faNames = new Set(freeAgents.slice(0, 15).map(p => p.name.toLowerCase()));
+
+      const rawQueryNames = [
+        ...extractPotentialNames(question),
+        ...extractPotentialNames(context)
+      ];
+
+      const queryNames = [...new Set(rawQueryNames)].filter(name => {
+        const lower = name.toLowerCase();
+        return !rosterNames.has(lower) && !faNames.has(lower);
+      }).slice(0, 8); // Limit to at most 8 searches to avoid API spam
+
       console.log('[ask] Extracted potential names:', queryNames);
 
       if (queryNames.length) {
@@ -157,7 +183,7 @@ export async function POST(request) {
           }
         }
         if (searchedPlayers.length) {
-          searchBlock = `SEARCHED PLAYERS (FROM USER QUESTION):\n${searchedPlayers.map(getPlayerLine).join('\n')}`;
+          searchBlock = `SEARCHED PLAYERS:\n${searchedPlayers.map(getPlayerLine).join('\n')}`;
         }
       }
     } catch (e) {
