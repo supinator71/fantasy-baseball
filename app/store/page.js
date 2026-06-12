@@ -10,7 +10,13 @@ export default function Store() {
   const [loading, setLoading] = useState(false);
   const [packOpening, setPackOpening] = useState(false);
   const [awardedCard, setAwardedCard] = useState(null);
-  const [tokens, setTokens] = useState({ premium_hobby: 0, titan_drop: 0 });
+  const [tokens, setTokens] = useState({
+    premium_hobby: 0,
+    titan_drop: 0,
+    pitching_precision: 0,
+    slugger_shards: 0,
+    generals_credits: 0
+  });
  
   const fetchTokens = useCallback(async () => {
     try {
@@ -57,6 +63,39 @@ export default function Store() {
       buttonText: 'Open Free Pack',
       disabled: false,
       instructions: 'Unlimited free pack openings!'
+    },
+    {
+      id: 'precision_pitching',
+      name: 'Precision Pitching Pack',
+      price: `${tokens.pitching_precision} / 10 🎯 Available`,
+      color: '#10b981',
+      description: 'Contains 3 digital collectibles.',
+      guarantee: 'Guarantees 1 Rare or Epic Pitcher card.',
+      buttonText: tokens.pitching_precision >= 10 ? `Open Pack (Cost: 10 🎯)` : 'Need 10 Precision 🎯',
+      disabled: tokens.pitching_precision < 10,
+      instructions: 'Earn tokens by streaming a winning starting pitcher using the Streamonator tool!'
+    },
+    {
+      id: 'slugger_shards',
+      name: 'Slugger Shards Pack',
+      price: `${tokens.slugger_shards} / 10 ⚡ Available`,
+      color: '#f59e0b',
+      description: 'Contains 3 digital collectibles.',
+      guarantee: 'Guarantees 1 Rare or Epic Hitter card.',
+      buttonText: tokens.slugger_shards >= 10 ? `Open Pack (Cost: 10 ⚡)` : 'Need 10 Shards ⚡',
+      disabled: tokens.slugger_shards < 10,
+      instructions: 'Earn tokens by beating daily Hittertron projections!'
+    },
+    {
+      id: 'generals_trade',
+      name: "General's Trade Pack",
+      price: `${tokens.generals_credits} / 10 🛡️ Available`,
+      color: '#3b82f6',
+      description: 'Contains 3 digital collectibles.',
+      guarantee: 'Guarantees 1 Rare or Epic C/SS/2B/3B card.',
+      buttonText: tokens.generals_credits >= 10 ? `Open Pack (Cost: 10 🛡️)` : 'Need 10 Credits 🛡️',
+      disabled: tokens.generals_credits < 10,
+      instructions: 'Earn tokens by making active roster moves and evaluating trades!'
     },
     {
       id: 'premium_hobby',
