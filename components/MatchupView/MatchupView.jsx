@@ -28,7 +28,7 @@ export default function MatchupView() {
   const [aiPredError, setAiPredError]       = useState('');
 
   // SWR automatically handles caching, deduping, and background refresh!
-  const { data: matchup, error, isLoading: loading } = useSWR(
+  const { data: matchup, error, isLoading: loading, mutate } = useSWR(
     selectedLeague ? `/api/yahoo/league/${selectedLeague}/matchup` : null
   );
 
@@ -37,12 +37,12 @@ export default function MatchupView() {
     setAiPrediction(null);
   }, [selectedLeague]);
 
-  // Auto-run prediction when matchup data loads
+  // Auto-run prediction when matchup data loads and is not loading
   useEffect(() => {
-    if (matchup && !aiPrediction && !aiPredLoading) {
+    if (matchup && !loading && !aiPrediction && !aiPredLoading) {
       runMatchupPrediction();
     }
-  }, [matchup]);
+  }, [matchup, loading, aiPrediction, aiPredLoading]);
 
   async function runMatchupPrediction() {
     setAiPredLoading(true);
@@ -74,6 +74,24 @@ export default function MatchupView() {
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginBottom: 12 }}>
           <img src="/cyborg_mascot_homerun.png" alt="Home Run Mascot" style={{ height: 56, objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(74,175,219,0.5))' }} />
           <div style={{ fontSize: 11, color: '#7aafc4', textTransform: 'uppercase', letterSpacing: 2 }}>Week {matchup.week} — Live Score</div>
+          <button 
+            onClick={async () => {
+              try {
+                await mutate();
+                await runMatchupPrediction();
+                toast.success('Matchup & prediction refreshed!');
+              } catch (e) {
+                toast.error('Refresh failed.');
+              }
+            }}
+            disabled={loading || aiPredLoading}
+            style={{ 
+              fontSize: 11, background: 'none', border: '1px solid #1e3d5c', borderRadius: 4, 
+              padding: '2px 8px', color: '#7aafc4', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4
+            }}
+          >
+            {loading || aiPredLoading ? '⟳ ...' : '↻ Refresh'}
+          </button>
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 40 }}>
           <div>
@@ -133,7 +151,7 @@ export default function MatchupView() {
             <MarkdownRenderer text={aiPrediction} />
           </div>
           <button className="btn btn-ghost" style={{ marginTop: 12, fontSize: 12 }} onClick={runMatchupPrediction} disabled={aiPredLoading}>
-            ↻ Re-run Prediction
+            {aiPredLoading ? '⟳ Re-running...' : '↻ Re-run Prediction'}
           </button>
         </div>
       ) : (
